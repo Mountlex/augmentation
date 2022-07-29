@@ -4,7 +4,7 @@ use num_rational::Rational64;
 use petgraph::algo::connected_components;
 use petgraph::dot::{Config, Dot};
 
-use crate::bridges::has_bridges;
+use crate::bridges::compute_bridges;
 use crate::comps::*;
 
 mod bridges;
@@ -83,7 +83,7 @@ fn check_credit_invariant(graph: Graph, matching: EdgeList, credits: Rational64)
                 continue;
             }
 
-            if !has_bridges(&graph_copy) {
+            if compute_bridges(&graph_copy).is_empty() {
                 if credits - b + s >= Rational64::from_integer(2) {
                     return;
                 } else {
