@@ -1,7 +1,7 @@
 use std::borrow::BorrowMut;
 
 use itertools::Itertools;
-use nice_path::prove_cycle_case;
+use nice_path::prove_nice_path_progress;
 use num_rational::Rational64;
 use petgraph::algo::connected_components;
 use petgraph::dot::{Config, Dot};
@@ -17,7 +17,7 @@ fn main() {
     let inv = DefaultCredits::new(Rational64::new(1, 3));
     let comps = vec![three_cycle(), four_cycle(), five_cycle(), large_component()];
     prove_all_local_merges(comps.clone(), inv.clone());
-    prove_cycle_case(comps, inv);
+    prove_nice_path_progress(comps, inv);
 }
 
 fn prove_all_local_merges<C: CreditInvariant>(comps: Vec<Component>, credit_inv: C) {
@@ -84,7 +84,7 @@ fn prove_local_merge<C: CreditInvariant>(left: &Component, right: &Component, cr
     }
 
     // If we found shortcuts for every matching, this combination is valid
-    println!("Checked  {} and {}!", left, right);
+    println!("Proved local merge between {} and {}!", left, right);
 }
 
 fn find_local_merge_with_matching<C: CreditInvariant>(
@@ -146,6 +146,8 @@ where
                 if previous_credits - buy_credits + sell_credits
                     >= credit_inv.credits(&Component::Large)
                 {
+                    //println!("Sell {:?}", sell);
+                    //println!("Credits = {} - {} + {}", previous_credits, buy_credits, sell_credits);
                     return true;
                 } else {
                     //println!("Shortcut: {:?}. no bridges, but credit {} - {} + {}", shortcut, credits, b, s);
@@ -153,6 +155,6 @@ where
             }
         }
     }
-
+    println!("False");
     return false;
 }

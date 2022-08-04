@@ -20,18 +20,16 @@ impl Node {
     fn get_graph(&self) -> Graph {
         match self {
             Node::NicePair(_) => {
-                let mut g = Graph::new();
-                g.add_node(0);
-                g
+                Graph::from_edges(vec![(0,0,EdgeType::Fixed)])
             }
             Node::Any(comp) => comp.graph(),
         }
     }
 
-    fn as_comp<'a>(&'a self) -> &'a Component {
+    fn credit<C: CreditInvariant>(&self, credit_inv: C) -> Rational64 {
         match self {
-            Node::NicePair(c) => c,
-            Node::Any(c) => c,
+            Node::NicePair(c) => credit_inv.credits(c) + Rational64::from_integer(1),
+            Node::Any(c) => credit_inv.credits(c),
         }
     }
 }
@@ -54,11 +52,11 @@ fn all_tuples<T: Eq + Copy>(list: Vec<T>) -> Vec<(T, T)> {
 fn sum_of_credits<C: CreditInvariant>(nodes: Vec<&Node>, credit_inv: C) -> Rational64 {
     nodes
         .into_iter()
-        .map(|n| credit_inv.credits(n.as_comp()))
+        .map(|n| n.credit(credit_inv.clone()))
         .sum()
 }
 
-pub fn prove_cycle_case<C: CreditInvariant>(comps: Vec<Component>, credit_inv: C) {
+pub fn prove_nice_path_progress<C: CreditInvariant>(comps: Vec<Component>, credit_inv: C) {
     for f in &comps {
         let nf = Node::Any(f.clone());
 
@@ -82,7 +80,7 @@ pub fn prove_cycle_case<C: CreditInvariant>(comps: Vec<Component>, credit_inv: C
                 };
 
                 prove_nice_path(path, credit_inv.clone());
-                println!("Checked nice path {} -- {} -- {}!", f, p, l);
+                println!("Proved nice path {} -- {} -- {}!", f, p, l);
             }
         }
     }
@@ -98,6 +96,10 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) {
     let f_nodes: Vec<u32> = first_graph.nodes().collect();
     let p_nodes: Vec<u32> = prelast_graph.nodes().collect();
     let l_nodes: Vec<u32> = last_graph.nodes().collect();
+
+    // dbg!("{:?}", Dot::with_config(&first_graph, &[Config::EdgeNoLabel]));
+    // dbg!("{:?}", Dot::with_config(&prelast_graph, &[Config::EdgeNoLabel]));
+    // dbg!("{:?}", Dot::with_config(&last_graph, &[Config::EdgeNoLabel]));
 
     for f_perm in f_nodes.iter().combinations_with_replacement(2) {
         for (&f_out, &f_in) in all_tuples(f_perm) {
@@ -116,10 +118,9 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) {
                                 credit_inv.clone(),
                             );
 
-                            let t = vec![cycle];
                             let result = enumerate_and_check(
                                 &graph,
-                                t.into_iter(),
+                                vec![cycle].into_iter(),
                                 sellable.into_iter().powerset(),
                                 credit_inv.clone(),
                                 previous_credits,
