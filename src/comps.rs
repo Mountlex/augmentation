@@ -61,12 +61,7 @@ impl Component {
         }
     }
 
-    pub fn credits(&self, c: Rational64) -> Rational64 {
-        match self {
-            Component::Large => Rational64::from_integer(2),
-            Component::Simple(list) =>  c * Rational64::from_integer(list.len() as i64),
-        }
-    }
+    
 }
 
 impl Display for Component {
@@ -74,6 +69,31 @@ impl Display for Component {
         match self {
             Component::Large => write!(f, "Large"),
             Component::Simple(list) => write!(f, "{}-Cycle", list.len()),
+        }
+    }
+}
+
+
+pub trait CreditInvariant: Clone {
+    fn credits(&self, comp: &Component) -> Rational64;
+}
+
+#[derive(Clone, Debug)]
+pub struct DefaultCredits {
+    c: Rational64,
+}
+
+impl DefaultCredits {
+    pub fn new(c: Rational64) -> Self {
+        DefaultCredits { c }
+    }
+}
+
+impl CreditInvariant for DefaultCredits {
+    fn credits(&self, comp: &Component) -> Rational64 {
+        match comp {
+            Component::Large => Rational64::from_integer(2),
+            Component::Simple(list) => self.c * Rational64::from_integer(list.len() as i64),
         }
     }
 }

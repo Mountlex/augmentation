@@ -47,72 +47,7 @@ where
     }
 }
 
-// pub fn has_bridges<G>(g: G) -> bool
-// where
-//     G: IntoNeighbors + Visitable + IntoNodeIdentifiers + NodeIndexable,
-//     G::NodeId: std::fmt::Debug
-// {
-//     let mut parent = vec![None; g.node_bound()];
-//     let mut disc = vec![0; g.node_bound()];
-//     let mut low = vec![0; g.node_bound()];
-//     let mut time = 0;
-//     let mut num_bridges = 0;
 
-//     if let Some(start) = g.node_identifiers().next() {
-//         bridges(
-//             start,
-//             &g,
-//             &mut g.visit_map(),
-//             &mut disc,
-//             &mut low,
-//             &mut parent,
-//             &mut time,
-//             &mut num_bridges,
-//         );
-//         return num_bridges > 0;
-//     } else {
-//         false
-//     }
-// }
-
-// fn bridges<G>(
-//     u: G::NodeId,
-//     g: &G,
-//     map: &mut <G as Visitable>::Map,
-//     disc: &mut Vec<u32>,
-//     low: &mut Vec<u32>,
-//     parent: &mut Vec<Option<G::NodeId>>,
-//     time: &mut u32,
-//     num_bridges: &mut u32,
-// ) -> bool
-// where
-//     G: IntoNeighbors + Visitable + IntoNodeIdentifiers + NodeIndexable,
-//     G::NodeId: std::fmt::Debug
-// {
-//     map.visit(u);
-
-//     *time += 1;
-//     disc[g.to_index(u)] = *time;
-//     low[g.to_index(u)] = *time;
-
-//     for v in g.neighbors(u) {
-//         if !map.is_visited(&v) {
-//             parent[g.to_index(v)] = Some(u);
-
-//             bridges(v, g, map, disc, low, parent, time, num_bridges);
-
-//             low[g.to_index(u)] = low[g.to_index(v)].min(low[g.to_index(u)]);
-
-//             if low[g.to_index(v)] > disc[g.to_index(u)] {
-//                 println!("detected bridge between {:?} and {:?}", u, v);
-//                 *num_bridges += 1;
-//             }
-//         } else if parent[g.to_index(u)] != Some(v) {
-//             low[g.to_index(u)] = disc[g.to_index(v)].min(low[g.to_index(u)]);
-//         }
-//     }
-//     false
-// }
 
 #[cfg(test)]
 mod test_bridge_detection {
