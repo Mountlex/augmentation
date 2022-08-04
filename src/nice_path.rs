@@ -79,14 +79,17 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(comps: Vec<Component>, credi
                     last: nl.clone(),
                 };
 
-                prove_nice_path(path, credit_inv.clone());
-                println!("Proved nice path {} -- {} -- {}!", f, p, l);
+                if prove_nice_path(path, credit_inv.clone()) {
+                    println!("Nice path progress for {} -- {} -- {}: ✔️", f, p, l);
+                } else {
+                    println!("Nice path progress for {} -- {} -- {}: ❌", f, p, l);
+                }
             }
         }
     }
 }
 
-fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) {
+fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
     let mut first_graph = path.first.get_graph();
     let mut prelast_graph = path.prelast.get_graph();
     let mut last_graph = path.last.get_graph();
@@ -126,8 +129,8 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) {
                                 previous_credits,
                             );
                             if !result {
-                                println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
-                                panic!("Graph cannot be shortcutted!");
+                                //println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
+                                return false
                             }
                         }
                     }
@@ -135,4 +138,6 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) {
             }
         }
     }
+
+    return true
 }

@@ -24,7 +24,11 @@ fn prove_all_local_merges<C: CreditInvariant>(comps: Vec<Component>, credit_inv:
     // Enumerate every graph combination and prove merge
     for left in &comps {
         for right in &comps {
-            prove_local_merge(left, right, credit_inv.clone());
+            if prove_local_merge(left, right, credit_inv.clone()) {
+                println!("Local merge between {} and {}: ✔️", left, right);
+            } else {
+                println!("Local merge between {} and {}: ❌", left, right);
+            }
         }
     }
 }
@@ -47,14 +51,18 @@ pub fn merge_graphs(graphs: Vec<&Graph>) -> Graph {
 }
 
 pub fn edges_of_type<'a>(graph: &'a Graph, typ: EdgeType) -> Vec<(u32, u32, EdgeType)> {
-   graph
+    graph
         .all_edges()
         .filter(|(_, _, t)| **t == typ)
-        .map(|(a,b,c)| (a,b, c.clone()))
+        .map(|(a, b, c)| (a, b, c.clone()))
         .collect()
 }
 
-fn prove_local_merge<C: CreditInvariant>(left: &Component, right: &Component, credit_inv: C) {
+fn prove_local_merge<C: CreditInvariant>(
+    left: &Component,
+    right: &Component,
+    credit_inv: C,
+) -> bool {
     let mut left_graph = left.graph();
     let mut right_graph = right.graph();
     relabel_nodes(vec![&mut left_graph, &mut right_graph]);
@@ -73,18 +81,21 @@ fn prove_local_merge<C: CreditInvariant>(left: &Component, right: &Component, cr
                     .map(|(&l, r)| (l, r, EdgeType::Zero))
                     .collect();
 
-                find_local_merge_with_matching(
+                if !find_local_merge_with_matching(
                     &graph,
                     matching,
                     credit_inv.clone(),
                     previous_credits,
-                )
+                ) {
+                    return false;
+                }
             }
         }
     }
 
+    return true;
+
     // If we found shortcuts for every matching, this combination is valid
-    println!("Proved local merge between {} and {}!", left, right);
 }
 
 fn find_local_merge_with_matching<C: CreditInvariant>(
@@ -92,7 +103,7 @@ fn find_local_merge_with_matching<C: CreditInvariant>(
     matching: EdgeList,
     credit_inv: C,
     previous_credits: Rational64,
-) {
+) -> bool {
     let m = graph.edge_count();
     let n = graph.node_count();
 
@@ -109,10 +120,12 @@ fn find_local_merge_with_matching<C: CreditInvariant>(
         previous_credits,
     );
 
-    if !result {
-        println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
-        panic!("Graph cannot be shortcutted!");
-    }
+    // if !result {
+    //     println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
+    //     panic!("Graph cannot be shortcutted!");
+    // }
+
+    result
 }
 
 fn enumerate_and_check<'a, B, S, C: CreditInvariant>(
@@ -155,6 +168,5 @@ where
             }
         }
     }
-    println!("False");
     return false;
 }
