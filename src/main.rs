@@ -1,10 +1,10 @@
-use std::borrow::BorrowMut;
+
 
 use itertools::Itertools;
 use nice_path::prove_nice_path_progress;
 use num_rational::Rational64;
 use petgraph::algo::connected_components;
-use petgraph::dot::{Config, Dot};
+
 
 use crate::bridges::compute_bridges;
 use crate::comps::*;
@@ -54,7 +54,7 @@ pub fn edges_of_type<'a>(graph: &'a Graph, typ: EdgeType) -> Vec<(u32, u32, Edge
     graph
         .all_edges()
         .filter(|(_, _, t)| **t == typ)
-        .map(|(a, b, c)| (a, b, c.clone()))
+        .map(|(a, b, c)| (a, b, *c))
         .collect()
 }
 
@@ -93,7 +93,7 @@ fn prove_local_merge<C: CreditInvariant>(
         }
     }
 
-    return true;
+    true
 
     // If we found shortcuts for every matching, this combination is valid
 }
@@ -109,8 +109,15 @@ fn find_local_merge_with_matching<C: CreditInvariant>(
 
     let num_matching = matching.len();
     let sellable = edges_of_type(graph, EdgeType::One);
-    let result = enumerate_and_check(
-        &graph,
+    
+
+    // if !result {
+    //     println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
+    //     panic!("Graph cannot be shortcutted!");
+    // }
+
+    enumerate_and_check(
+        graph,
         matching.into_iter().powerset().filter(|p| p.len() >= 2),
         sellable
             .into_iter()
@@ -118,14 +125,7 @@ fn find_local_merge_with_matching<C: CreditInvariant>(
             .filter(|p| m + num_matching - p.len() >= n - 1),
         credit_inv,
         previous_credits,
-    );
-
-    // if !result {
-    //     println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
-    //     panic!("Graph cannot be shortcutted!");
-    // }
-
-    result
+    )
 }
 
 fn enumerate_and_check<'a, B, S, C: CreditInvariant>(
@@ -168,5 +168,5 @@ where
             }
         }
     }
-    return false;
+    false
 }

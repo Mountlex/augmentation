@@ -1,9 +1,6 @@
 use itertools::Itertools;
 use num_rational::Rational64;
-use petgraph::{
-    data::Build,
-    dot::{Config, Dot},
-};
+
 
 use crate::{
     comps::{Component, CreditInvariant, EdgeType, Graph},
@@ -137,5 +134,5 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
         }
     }
 
-    return true;
+    true
 }
