@@ -47,8 +47,6 @@ where
     }
 }
 
-
-
 #[cfg(test)]
 mod test_bridge_detection {
     use super::*;

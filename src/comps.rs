@@ -63,8 +63,6 @@ impl Component {
             Component::Simple(list) => list.clone(),
         }
     }
-
-    
 }
 
 impl Display for Component {
@@ -75,7 +73,6 @@ impl Display for Component {
         }
     }
 }
-
 
 pub trait CreditInvariant: Clone {
     fn credits(&self, comp: &Component) -> Rational64;
@@ -96,7 +93,9 @@ impl CreditInvariant for DefaultCredits {
     fn credits(&self, comp: &Component) -> Rational64 {
         match comp {
             Component::Large => Rational64::from_integer(2),
-            Component::Simple(graph) => self.c * Rational64::from_integer(graph.edge_count() as i64),
+            Component::Simple(graph) => {
+                self.c * Rational64::from_integer(graph.edge_count() as i64)
+            }
         }
     }
 }

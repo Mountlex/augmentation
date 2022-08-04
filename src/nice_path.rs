@@ -19,9 +19,7 @@ enum Node {
 impl Node {
     fn get_graph(&self) -> Graph {
         match self {
-            Node::NicePair(_) => {
-                Graph::from_edges(vec![(0,0,EdgeType::Fixed)])
-            }
+            Node::NicePair(_) => Graph::from_edges(vec![(0, 0, EdgeType::Fixed)]),
             Node::Any(comp) => comp.graph(),
         }
     }
@@ -130,7 +128,7 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
                             );
                             if !result {
                                 //println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
-                                return false
+                                return false;
                             }
                         }
                     }
@@ -139,5 +137,5 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
         }
     }
 
-    return true
+    return true;
 }
