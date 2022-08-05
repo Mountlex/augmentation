@@ -1,10 +1,7 @@
-
-
 use itertools::Itertools;
 use nice_path::prove_nice_path_progress;
 use num_rational::Rational64;
 use petgraph::algo::connected_components;
-
 
 use crate::bridges::compute_bridges;
 use crate::comps::*;
@@ -109,7 +106,6 @@ fn find_local_merge_with_matching<C: CreditInvariant>(
 
     let num_matching = matching.len();
     let sellable = edges_of_type(graph, EdgeType::One);
-    
 
     // if !result {
     //     println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
