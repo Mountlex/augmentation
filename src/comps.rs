@@ -80,7 +80,7 @@ pub trait CreditInvariant: Clone {
 
 #[derive(Clone, Debug)]
 pub struct DefaultCredits {
-    c: Rational64,
+    pub c: Rational64,
 }
 
 impl DefaultCredits {

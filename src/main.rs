@@ -15,6 +15,8 @@ fn main() {
     let inv = DefaultCredits::new(Rational64::new(1, 3));
     //let inv = DefaultCredits::new(Rational64::new(3, 10));
     let comps = vec![three_cycle(), four_cycle(), five_cycle(), large_component()];
+
+    println!("========== Proof for c = {} ==========", inv.c);
     prove_all_local_merges(comps.clone(), inv.clone());
     prove_nice_path_progress(comps, inv);
 }
