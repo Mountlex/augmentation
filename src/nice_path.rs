@@ -66,9 +66,9 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(comps: Vec<Component>, credi
                 };
 
                 if prove_nice_path(path, credit_inv.clone()) {
-                    println!("Nice path progress for {} -- {} -- {}: ✔️", f, p, l);
+                    println!("✔️ Nice path progress for {} -- {} -- {}", f, p, l);
                 } else {
-                    println!("Nice path progress for {} -- {} -- {}: ❌", f, p, l);
+                    println!("❌ Nice path progress for {} -- {} -- {}", f, p, l);
                 }
             }
         }
