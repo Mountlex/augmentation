@@ -31,7 +31,7 @@ fn main() {
 }
 
 
-
+// TODO
 pub fn relabel_nodes(graphs: Vec<&mut Graph>) {
     let mut offset = 0;
     for graph in graphs {
@@ -40,7 +40,7 @@ pub fn relabel_nodes(graphs: Vec<&mut Graph>) {
             *w1 += offset;
             *w2 += offset
         });
-        offset += graph.node_count() as u32;
+        offset += graph.nodes().max().unwrap() as u32 + 1;
         *graph = Graph::from_edges(edges);
     }
 }

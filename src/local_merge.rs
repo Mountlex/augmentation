@@ -8,45 +8,95 @@ pub fn prove_all_local_merges<C: CreditInvariant>(comps: Vec<Component>, credit_
     // Enumerate every graph combination and prove merge
     for left in &comps {
         for right in &comps {
-            if prove_local_merge(left, right, credit_inv.clone()) {
-                println!("✔️ Local merge between {} and {}", left, right);
+            println!("Local merge between {} and {}", left, right);
+            if prove_local_merge(left, right, &comps, credit_inv.clone()) {
+                println!("== proved ✔️")
             } else {
-                println!("❌ Local merge between {} and {}", left, right);
+                println!("== disproved ❌")
             }
         }
     }
 }
 
+
+fn print_matching(matching: &EdgeList, comps: &Vec<Graph>) {
+    for (v1,v2,_) in matching {
+        let c1 = comps.iter().find(|c| c.contains_node(*v1)).unwrap();
+        let p1 = c1.nodes().position(|v| v == *v1).unwrap();
+        let c2 = comps.iter().find(|c| c.contains_node(*v2)).unwrap();
+        let p2 = c2.nodes().position(|v| v == *v2).unwrap();
+        print!("(v{},u{})",p1,p2);
+    } 
+}
+
 fn prove_local_merge<C: CreditInvariant>(
     left: &Component,
-    right: &Component,
+    middle: &Component,
+    comps: &Vec<Component>,
     credit_inv: C,
 ) -> bool {
     let mut left_graph = left.graph();
-    let mut right_graph = right.graph();
-    relabel_nodes(vec![&mut left_graph, &mut right_graph]);
+    let mut middle_graph = middle.graph();
+    relabel_nodes(vec![&mut left_graph, &mut middle_graph]);
     // Build combined graph
-    let graph = merge_graphs(vec![&left_graph, &right_graph]);
-    let previous_credits = credit_inv.credits(left) + credit_inv.credits(right);
+    let graph = merge_graphs(vec![&left_graph, &middle_graph]);
+    let previous_credits = credit_inv.credits(left) + credit_inv.credits(middle);
 
     // Enumerate all possible matchings (adversarial)
     for left_matched in left_graph.nodes().powerset().filter(|p| p.len() == 3) {
-        for right_matched in right_graph.nodes().powerset().filter(|p| p.len() == 3) {
-            for right_perm in right_matched.into_iter().permutations(3) {
+        for middle_left_matched in middle_graph.nodes().powerset().filter(|p| p.len() == 3) {
+            for middle_left_perm in middle_left_matched.into_iter().permutations(3) {
                 // Compute edges of matching
-                let matching: EdgeList = left_matched
+                let left_matching: EdgeList = left_matched
                     .iter()
-                    .zip(right_perm.into_iter())
+                    .zip(middle_left_perm.into_iter())
                     .map(|(&l, r)| (l, r, EdgeType::Zero))
                     .collect();
 
-                if !find_local_merge_with_matching(
+                
+                let proved = find_local_merge_with_matching(
                     &graph,
-                    matching,
+                    &left_matching,
                     credit_inv.clone(),
                     previous_credits,
-                ) {
-                    return false;
+                );
+
+                if !proved {
+                    print!("   Proof with two components unsuccessful for matching {{");
+                    print_matching(&left_matching, &vec![left_graph.clone(), middle_graph.clone()]);
+                    println!("}}. Using three components now!");
+                    for right in comps {
+                        let mut right_graph = right.graph();
+                        // preserves labels of middle and left
+                        relabel_nodes(vec![&mut left_graph.clone(), &mut middle_graph.clone(), &mut right_graph]);
+                        let graph = merge_graphs(vec![&left_graph, &middle_graph, &right_graph]);
+                        let previous_credits = credit_inv.credits(left) + credit_inv.credits(middle) + credit_inv.credits(right);
+
+                        for right_matched in right_graph.nodes().powerset().filter(|p| p.len() == 3) {
+                            for middle_right_matched in middle_graph.nodes().powerset().filter(|p| p.len() == 3) {
+                                for middle_right_perm in middle_right_matched.into_iter().permutations(3) {
+                                    let mut right_matching: EdgeList = right_matched
+                                    .iter()
+                                    .zip(middle_right_perm.into_iter())
+                                    .map(|(&l, r)| (l, r, EdgeType::Zero))
+                                    .collect();
+
+                                    right_matching.append(&mut left_matching.clone());
+
+                                    let prove_simple_merge = find_local_merge_with_matching(
+                                        &graph,
+                                        &right_matching,
+                                        credit_inv.clone(),
+                                        previous_credits,
+                                    );
+
+                                    if !prove_simple_merge {
+                                        return false
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -59,7 +109,7 @@ fn prove_local_merge<C: CreditInvariant>(
 
 fn find_local_merge_with_matching<C: CreditInvariant>(
     graph: &Graph,
-    matching: EdgeList,
+    matching: &EdgeList,
     credit_inv: C,
     previous_credits: Rational64,
 ) -> bool {
@@ -69,14 +119,9 @@ fn find_local_merge_with_matching<C: CreditInvariant>(
     let num_matching = matching.len();
     let sellable = edges_of_type(graph, EdgeType::One);
 
-    // if !result {
-    //     println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
-    //     panic!("Graph cannot be shortcutted!");
-    // }
-
     enumerate_and_check(
         graph,
-        matching.into_iter().powerset().filter(|p| p.len() >= 2),
+        matching.into_iter().cloned().powerset().filter(|p| p.len() >= 2),
         sellable
             .into_iter()
             .powerset()

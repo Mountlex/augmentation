@@ -12,8 +12,15 @@ pub enum EdgeType {
     Zero,
 }
 
-pub type Graph = petgraph::graphmap::UnGraphMap<u32, EdgeType>;
-pub type EdgeList = Vec<(u32, u32, EdgeType)>;
+impl Default for EdgeType {
+    fn default() -> Self {
+        EdgeType::Fixed
+    }
+}
+
+pub type Node = u32;
+pub type Graph = petgraph::graphmap::UnGraphMap<Node, EdgeType>;
+pub type EdgeList = Vec<(Node, Node, EdgeType)>;
 
 pub fn three_cycle() -> Component {
     Component::Simple(Graph::from_edges(vec![
