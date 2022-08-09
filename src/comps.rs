@@ -41,6 +41,16 @@ pub fn five_cycle() -> Component {
         (4, 0, EdgeType::One),
     ]))
 }
+pub fn six_cycle() -> Component {
+    Component::Simple(Graph::from_edges(vec![
+        (0, 1, EdgeType::One),
+        (1, 2, EdgeType::One),
+        (2, 3, EdgeType::One),
+        (3, 4, EdgeType::One),
+        (4, 5, EdgeType::One),
+        (5, 0, EdgeType::One),
+    ]))
+}
 
 pub fn large_component() -> Component {
     Component::Large

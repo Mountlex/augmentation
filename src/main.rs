@@ -1,3 +1,4 @@
+use clap::Parser;
 use local_merge::prove_all_local_merges;
 use nice_path::prove_nice_path_progress;
 use num_rational::Rational64;
@@ -10,11 +11,19 @@ mod bridges;
 mod comps;
 mod nice_path;
 mod local_merge;
+mod contract;
+
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+struct Cli {
+    c_numer: i64,
+    c_demon: i64,
+}
 
 fn main() {
-    let inv = DefaultCredits::new(Rational64::new(1, 3));
-    //let inv = DefaultCredits::new(Rational64::new(3, 10));
-    let comps = vec![three_cycle(), four_cycle(), five_cycle(), large_component()];
+    let cli = Cli::parse();
+    let inv = DefaultCredits::new(Rational64::new(cli.c_numer, cli.c_demon));
+    let comps = vec![three_cycle(), four_cycle(), five_cycle(), six_cycle(), large_component()];
 
     println!("========== Proof for c = {} ==========", inv.c);
     prove_all_local_merges(comps.clone(), inv.clone());
