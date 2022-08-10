@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use num_rational::Rational64;
+use petgraph::stable_graph::StableUnGraph;
 
 use crate::{comps::{CreditInvariant, Component, EdgeList, EdgeType, Graph}, relabel_nodes, merge_graphs, edges_of_type, enumerate_and_check};
 
@@ -53,7 +54,6 @@ fn prove_local_merge<C: CreditInvariant>(
                     .map(|(&l, r)| (l, r, EdgeType::Zero))
                     .collect();
 
-                
                 let proved = find_local_merge_with_matching(
                     &graph,
                     &left_matching,

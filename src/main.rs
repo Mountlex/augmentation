@@ -1,17 +1,23 @@
+use bridges::has_at_least_one_bridge;
 use clap::Parser;
 use local_merge::prove_all_local_merges;
 use nice_path::prove_nice_path_progress;
 use num_rational::Rational64;
 use petgraph::algo::connected_components;
+use petgraph::prelude::UnGraph;
+use petgraph::stable_graph::{StableGraph, EdgeIndex, StableUnGraph, NodeIndex};
+use petgraph::visit::{
+    Dfs, EdgeCount, GraphRef, IntoNeighbors, IntoNodeIdentifiers, NodeCount, Visitable,
+};
 
 use crate::bridges::compute_bridges;
 use crate::comps::*;
 
 mod bridges;
 mod comps;
-mod nice_path;
-mod local_merge;
 mod contract;
+mod local_merge;
+mod nice_path;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -23,13 +29,18 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
     let inv = DefaultCredits::new(Rational64::new(cli.c_numer, cli.c_demon));
-    let comps = vec![three_cycle(), four_cycle(), five_cycle(), six_cycle(), large_component()];
+    let comps = vec![
+        three_cycle(),
+        four_cycle(),
+        five_cycle(),
+        six_cycle(),
+        large_component(),
+    ];
 
     println!("========== Proof for c = {} ==========", inv.c);
     prove_all_local_merges(comps.clone(), inv.clone());
-    prove_nice_path_progress(comps, inv);
+    //prove_nice_path_progress(comps, inv);
 }
-
 
 // TODO
 pub fn relabel_nodes(graphs: Vec<&mut Graph>) {
@@ -57,7 +68,25 @@ pub fn edges_of_type<'a>(graph: &'a Graph, typ: EdgeType) -> Vec<(u32, u32, Edge
         .collect()
 }
 
+fn is_connected<G>(graph: G) -> bool
+where
+    G: GraphRef + Visitable + IntoNodeIdentifiers + IntoNeighbors + NodeCount + EdgeCount,
+{
+    if let Some(start) = graph.node_identifiers().next() {
+        if graph.edge_count() + 1 < graph.node_count() {
+            return false;
+        }
 
+        let mut count = 0;
+        let mut dfs = Dfs::new(&graph, start);
+        while let Some(nx) = dfs.next(&graph) {
+            count += 1;
+        }
+        count == graph.node_count()
+    } else {
+        true
+    }
+}
 
 fn enumerate_and_check<'a, B, S, C: CreditInvariant>(
     graph: &Graph,
@@ -67,13 +96,14 @@ fn enumerate_and_check<'a, B, S, C: CreditInvariant>(
     previous_credits: Rational64,
 ) -> bool
 where
-    B: Iterator<Item = Vec<(u32, u32, EdgeType)>>,
-    S: Iterator<Item = Vec<(u32, u32, EdgeType)>> + Clone,
+    B: Iterator<Item = Vec<(u32, u32, EdgeType)>>+ Clone,
+    S: Iterator<Item = Vec<(u32, u32, EdgeType)>> ,
 {
-    for buy in buy_iter {
-        for sell in sell_iter.clone() {
-            let sell_credits = Rational64::from_integer(sell.len() as i64);
+    for sell in sell_iter {
+        for buy in buy_iter.clone() {
             let buy_credits = Rational64::from_integer(buy.len() as i64);
+            let sell_credits = Rational64::from_integer(sell.len() as i64);
+
             let mut graph_copy = graph.clone();
             for (u, v, _) in &sell {
                 graph_copy.remove_edge(*u, *v);
@@ -81,12 +111,12 @@ where
             for (u, v, _) in &buy {
                 graph_copy.add_edge(*u, *v, EdgeType::One);
             }
-
-            if connected_components(&graph_copy) > 1 {
+            
+            if !is_connected(&graph_copy) {
                 continue;
             }
 
-            if compute_bridges(&graph_copy).is_empty() {
+            if !has_at_least_one_bridge(&graph_copy) {
                 if previous_credits - buy_credits + sell_credits
                     >= credit_inv.credits(&Component::Large)
                 {
@@ -100,4 +130,30 @@ where
         }
     }
     false
+}
+
+#[cfg(test)]
+mod test_connected {
+    use petgraph::prelude::UnGraph;
+
+    use super::*;
+
+    #[test]
+    fn triangle() {
+        let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0)]);
+        assert!(is_connected(&g));
+    }
+
+    #[test]
+    fn parallel_edges() {
+        let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (2, 3)]);
+        assert!(!is_connected(&g));
+    }
+
+    #[test]
+    fn two_triangles() {
+        let g: UnGraph<(), ()> =
+            UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3)]);
+        assert!(!is_connected(&g));
+    }
 }

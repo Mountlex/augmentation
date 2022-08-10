@@ -47,6 +47,51 @@ where
     }
 }
 
+pub fn has_at_least_one_bridge<G>(g: G) -> bool
+where
+    G: IntoNeighbors + Visitable + IntoNodeIdentifiers + NodeIndexable,
+    G::NodeId: std::fmt::Debug,
+{
+    let mut parent = vec![None; g.node_bound()];
+    let mut disc = vec![0; g.node_bound()];
+    let mut low = vec![0; g.node_bound()];
+    
+    if let Some(start) = g.node_identifiers().next() {
+        let mut bridges = false;
+        depth_first_search(&g, Some(start), |event| -> Control<()> {
+            match event {
+                DfsEvent::TreeEdge(u, v) => {
+                    parent[g.to_index(v)] = Some(u);
+                }
+                DfsEvent::Discover(u, time) => {
+                    low[g.to_index(u)] = time.0;
+                    disc[g.to_index(u)] = time.0;
+                }
+                DfsEvent::Finish(v, _) => {
+                    if let Some(u) = parent[g.to_index(v)] {
+                        low[g.to_index(u)] = low[g.to_index(v)].min(low[g.to_index(u)]);
+
+                        if low[g.to_index(v)] > disc[g.to_index(u)] {
+                            bridges = true;
+                            return Control::Break(())
+                        }
+                    }
+                }
+                DfsEvent::BackEdge(u, v) | DfsEvent::CrossForwardEdge(u, v) => {
+                    if parent[g.to_index(u)] != Some(v) {
+                        low[g.to_index(u)] = disc[g.to_index(v)].min(low[g.to_index(u)]);
+                    }
+                }
+            }
+            Control::Continue
+        });
+
+        bridges
+    } else {
+        false
+    }
+}
+
 #[cfg(test)]
 mod test_bridge_detection {
     use super::*;
