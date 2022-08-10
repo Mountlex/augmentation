@@ -1,16 +1,17 @@
 use bridges::has_at_least_one_bridge;
 use clap::Parser;
 use local_merge::prove_all_local_merges;
-use nice_path::prove_nice_path_progress;
+
 use num_rational::Rational64;
-use petgraph::algo::connected_components;
-use petgraph::prelude::UnGraph;
-use petgraph::stable_graph::{StableGraph, EdgeIndex, StableUnGraph, NodeIndex};
+
+
+
+
 use petgraph::visit::{
     Dfs, EdgeCount, GraphRef, IntoNeighbors, IntoNodeIdentifiers, NodeCount, Visitable,
 };
 
-use crate::bridges::compute_bridges;
+
 use crate::comps::*;
 
 mod bridges;
@@ -38,7 +39,7 @@ fn main() {
     ];
 
     println!("========== Proof for c = {} ==========", inv.c);
-    prove_all_local_merges(comps.clone(), inv.clone());
+    prove_all_local_merges(comps, inv);
     //prove_nice_path_progress(comps, inv);
 }
 
@@ -60,11 +61,11 @@ pub fn merge_graphs(graphs: Vec<&Graph>) -> Graph {
     Graph::from_edges(graphs.into_iter().flat_map(|g| g.all_edges()))
 }
 
-pub fn edges_of_type<'a>(graph: &'a Graph, typ: EdgeType) -> Vec<(u32, u32, EdgeType)> {
+pub fn edges_of_type<'a>(graph: &'a Graph, typ: EdgeType) -> Vec<(Node,Node)> {
     graph
         .all_edges()
         .filter(|(_, _, t)| **t == typ)
-        .map(|(a, b, c)| (a, b, *c))
+        .map(|(a, b, _)| (a, b))
         .collect()
 }
 
@@ -79,7 +80,7 @@ where
 
         let mut count = 0;
         let mut dfs = Dfs::new(&graph, start);
-        while let Some(nx) = dfs.next(&graph) {
+        while let Some(_nx) = dfs.next(&graph) {
             count += 1;
         }
         count == graph.node_count()
@@ -96,8 +97,8 @@ fn enumerate_and_check<'a, B, S, C: CreditInvariant>(
     previous_credits: Rational64,
 ) -> bool
 where
-    B: Iterator<Item = Vec<(u32, u32, EdgeType)>>+ Clone,
-    S: Iterator<Item = Vec<(u32, u32, EdgeType)>> ,
+    B: Iterator<Item = Vec<(u32, u32)>>+ Clone,
+    S: Iterator<Item = Vec<(u32, u32)>> ,
 {
     for sell in sell_iter {
         for buy in buy_iter.clone() {
@@ -105,10 +106,10 @@ where
             let sell_credits = Rational64::from_integer(sell.len() as i64);
 
             let mut graph_copy = graph.clone();
-            for (u, v, _) in &sell {
+            for (u, v) in &sell {
                 graph_copy.remove_edge(*u, *v);
             }
-            for (u, v, _) in &buy {
+            for (u, v) in &buy {
                 graph_copy.add_edge(*u, *v, EdgeType::One);
             }
             

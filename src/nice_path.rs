@@ -95,9 +95,9 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
         l_nodes
     ) {
         let cycle = vec![
-            (f_out, l_in, EdgeType::Zero),
-            (l_out, p_in, EdgeType::Zero),
-            (p_out, f_in, EdgeType::Zero),
+            (f_out, l_in),
+            (l_out, p_in),
+            (p_out, f_in),
         ];
         let sellable = edges_of_type(&graph, EdgeType::One);
         let previous_credits = sum_of_credits(

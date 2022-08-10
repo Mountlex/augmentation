@@ -14,3 +14,4 @@ petgraph-graphml = "3.0.0"
 itertools = "0.10.3"
 num-rational = "0.4.1"
 clap = { version = "3.2.16", features = ["derive"] }
+rayon = "1.5.3"
