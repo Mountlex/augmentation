@@ -1,6 +1,6 @@
 use petgraph::visit::{
     depth_first_search, Control, DfsEvent, IntoNeighbors, IntoNodeIdentifiers, NodeIndexable,
-    Visitable,
+    Visitable, NodeCount, GraphRef, EdgeCount, Dfs,
 };
 
 pub fn compute_bridges<G>(g: G) -> Vec<(G::NodeId, G::NodeId)>
@@ -47,6 +47,72 @@ where
     }
 }
 
+pub fn no_bridges_and_connected<G>(g: G) -> bool where
+G: IntoNeighbors + Visitable + IntoNodeIdentifiers + NodeIndexable + NodeCount,
+G::NodeId: std::fmt::Debug, {
+
+    let mut parent = vec![None; g.node_bound()];
+    let mut disc = vec![0; g.node_bound()];
+    let mut low = vec![0; g.node_bound()];
+    let mut node_count = 0;
+
+    if let Some(start) = g.node_identifiers().next() {
+        let mut bridges = false;
+        depth_first_search(&g, Some(start), |event| -> Control<()> {
+            match event {
+                DfsEvent::TreeEdge(u, v) => {
+                    parent[g.to_index(v)] = Some(u);
+                }
+                DfsEvent::Discover(u, time) => {
+                    node_count += 1;
+                    low[g.to_index(u)] = time.0;
+                    disc[g.to_index(u)] = time.0;
+                }
+                DfsEvent::Finish(v, _) => {
+                    if let Some(u) = parent[g.to_index(v)] {
+                        low[g.to_index(u)] = low[g.to_index(v)].min(low[g.to_index(u)]);
+
+                        if low[g.to_index(v)] > disc[g.to_index(u)] {
+                            bridges = true;
+                            return Control::Break(());
+                        }
+                    }
+                }
+                DfsEvent::BackEdge(u, v) | DfsEvent::CrossForwardEdge(u, v) => {
+                    if parent[g.to_index(u)] != Some(v) {
+                        low[g.to_index(u)] = disc[g.to_index(v)].min(low[g.to_index(u)]);
+                    }
+                }
+            }
+            Control::Continue
+        });
+
+        !bridges && node_count == g.node_count()
+    } else {
+        true
+    }
+}
+
+fn is_connected<G>(graph: G) -> bool
+where
+    G: GraphRef + Visitable + IntoNodeIdentifiers + IntoNeighbors + NodeCount + EdgeCount,
+{
+    if let Some(start) = graph.node_identifiers().next() {
+        if graph.edge_count() + 1 < graph.node_count() {
+            return false;
+        }
+
+        let mut count = 0;
+        let mut dfs = Dfs::new(&graph, start);
+        while let Some(_nx) = dfs.next(&graph) {
+            count += 1;
+        }
+        count == graph.node_count()
+    } else {
+        true
+    }
+}
+
 pub fn has_at_least_one_bridge<G>(g: G) -> bool
 where
     G: IntoNeighbors + Visitable + IntoNodeIdentifiers + NodeIndexable,
@@ -55,7 +121,7 @@ where
     let mut parent = vec![None; g.node_bound()];
     let mut disc = vec![0; g.node_bound()];
     let mut low = vec![0; g.node_bound()];
-    
+
     if let Some(start) = g.node_identifiers().next() {
         let mut bridges = false;
         depth_first_search(&g, Some(start), |event| -> Control<()> {
@@ -73,7 +139,7 @@ where
 
                         if low[g.to_index(v)] > disc[g.to_index(u)] {
                             bridges = true;
-                            return Control::Break(())
+                            return Control::Break(());
                         }
                     }
                 }
@@ -89,6 +155,32 @@ where
         bridges
     } else {
         false
+    }
+}
+
+#[cfg(test)]
+mod test_connected {
+    use petgraph::prelude::UnGraph;
+
+    use super::*;
+
+    #[test]
+    fn triangle() {
+        let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0)]);
+        assert!(is_connected(&g));
+    }
+
+    #[test]
+    fn parallel_edges() {
+        let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (2, 3)]);
+        assert!(!is_connected(&g));
+    }
+
+    #[test]
+    fn two_triangles() {
+        let g: UnGraph<(), ()> =
+            UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3)]);
+        assert!(!is_connected(&g));
     }
 }
 

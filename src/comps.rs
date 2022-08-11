@@ -90,6 +90,78 @@ impl Display for Component {
     }
 }
 
+/// Adds nodes and edges from `others` to `base` and relabels and return node weights of those.
+/// The node weights of `base` will not be changed!
+///
+/// Example:
+/// 0 - 1    0 - 1
+///  \ /      \ /
+///   3        2
+/// base      others
+///
+/// gives
+///
+/// 0 - 1    4 - 5
+///  \ /      \ /
+///   3        6
+///       base      
+///
+/// and returns [[4,5,6]]
+pub fn merge_to_base(mut base: Graph, others: Vec<&Graph>) -> (Graph, Vec<Vec<Node>>) {
+    let mut offset: u32 = base.nodes().max().unwrap() + 1;
+    let mut indices = vec![];
+    for graph in others {
+        let nodes = graph.nodes().collect::<Vec<Node>>();
+        let edges: Vec<(Node, Node, EdgeType)> = graph
+            .all_edges()
+            .map(|(w1, w2, t)| {
+                (
+                    (nodes.iter().position(|n| n == &w1).unwrap() as u32 + offset),
+                    (nodes.iter().position(|n| n == &w2).unwrap() as u32 + offset),
+                    *t,
+                )
+            })
+            .collect();
+        base.extend(edges);
+        indices.push((offset..(offset + nodes.len() as u32)).collect::<Vec<Node>>());
+        offset += nodes.len() as u32;
+    }
+
+    (base, indices)
+}
+
+pub fn edges_of_type<'a>(graph: &'a Graph, typ: EdgeType) -> Vec<(Node, Node)> {
+    graph
+        .all_edges()
+        .filter(|(_, _, t)| **t == typ)
+        .map(|(a, b, _)| (a, b))
+        .collect()
+}
+
+pub fn merge(graphs: Vec<&Graph>) -> (Graph, Vec<Vec<Node>>) {
+    let mut offset: u32 = 0;
+    let mut indices = vec![];
+    let mut base = Graph::new();
+    for graph in graphs {
+        let nodes = graph.nodes().collect::<Vec<Node>>();
+        let edges: Vec<(Node, Node, EdgeType)> = graph
+            .all_edges()
+            .map(|(w1, w2, t)| {
+                (
+                    (nodes.iter().position(|n| n == &w1).unwrap() as u32 + offset),
+                    (nodes.iter().position(|n| n == &w2).unwrap() as u32 + offset),
+                    *t,
+                )
+            })
+            .collect();
+        base.extend(edges);
+        indices.push((offset..(offset + nodes.len() as u32)).collect::<Vec<Node>>());
+        offset += nodes.len() as u32;
+    }
+
+    (base, indices)
+}
+
 pub trait CreditInvariant: Clone {
     fn credits(&self, comp: &Component) -> Rational64;
 }
@@ -113,5 +185,33 @@ impl CreditInvariant for DefaultCredits {
                 self.c * Rational64::from_integer(graph.edge_count() as i64)
             }
         }
+    }
+}
+
+
+#[cfg(test)]
+mod test_merge {
+    use super::*;
+
+    #[test]
+    fn test_two_triangles() {
+        let base = three_cycle().graph();
+        let other = three_cycle().graph();
+        let (base, nodes) = merge_to_base(base, vec![&other]);
+
+        assert_eq!(base.node_count(), 6);
+        assert_eq!(nodes[0], vec![3, 4, 5])
+    }
+
+    #[test]
+    fn test_three_triangles() {
+        let base = three_cycle().graph();
+        let other1 = three_cycle().graph();
+        let other2 = three_cycle().graph();
+        let (base, nodes) = merge_to_base(base, vec![&other1, &other2]);
+
+        assert_eq!(base.node_count(), 9);
+        assert_eq!(nodes[0], vec![3, 4, 5]);
+        assert_eq!(nodes[1], vec![6, 7, 8]);
     }
 }
