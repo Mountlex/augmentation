@@ -86,14 +86,19 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
         itertools::iproduct!(&f_nodes, &f_nodes, &p_nodes, &p_nodes, &l_nodes, &l_nodes)
     {
         let cycle = vec![(f_out, l_in), (l_out, p_in), (p_out, f_in)];
-        let sellable = edges_of_type(&graph, EdgeType::One);
+        let sellable = edges_of_type(&graph, EdgeType::Sellable);
         let previous_credits = sum_of_credits(
             vec![&path.first, &path.prelast, &path.last],
             credit_inv.clone(),
         );
 
+        let mut graph_copy = graph.clone();
+        for (v1,v2) in &cycle {
+            graph_copy.add_edge(*v1, *v2, EdgeType::Buyable);
+        }
+
         let result = enumerate_and_check(
-            &graph,
+            &graph_copy,
             vec![cycle].into_iter(),
             sellable.into_iter().powerset(),
             credit_inv.clone(),

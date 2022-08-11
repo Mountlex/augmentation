@@ -7,15 +7,9 @@ pub enum EdgeType {
     // Not sellable
     Fixed,
     // sellable
-    One,
+    Sellable,
     // buyable
-    Zero,
-}
-
-impl Default for EdgeType {
-    fn default() -> Self {
-        EdgeType::Fixed
-    }
+    Buyable,
 }
 
 pub type Node = u32;
@@ -23,38 +17,38 @@ pub type Graph = petgraph::graphmap::UnGraphMap<Node, EdgeType>;
 
 pub fn three_cycle() -> Component {
     Component::Simple(Graph::from_edges(vec![
-        (0, 1, EdgeType::One),
-        (1, 2, EdgeType::One),
-        (2, 0, EdgeType::One),
+        (0, 1, EdgeType::Sellable),
+        (1, 2, EdgeType::Sellable),
+        (2, 0, EdgeType::Sellable),
     ]))
 }
 
 pub fn four_cycle() -> Component {
     Component::Simple(Graph::from_edges(vec![
-        (0, 1, EdgeType::One),
-        (1, 2, EdgeType::One),
-        (2, 3, EdgeType::One),
-        (3, 0, EdgeType::One),
+        (0, 1, EdgeType::Sellable),
+        (1, 2, EdgeType::Sellable),
+        (2, 3, EdgeType::Sellable),
+        (3, 0, EdgeType::Sellable),
     ]))
 }
 
 pub fn five_cycle() -> Component {
     Component::Simple(Graph::from_edges(vec![
-        (0, 1, EdgeType::One),
-        (1, 2, EdgeType::One),
-        (2, 3, EdgeType::One),
-        (3, 4, EdgeType::One),
-        (4, 0, EdgeType::One),
+        (0, 1, EdgeType::Sellable),
+        (1, 2, EdgeType::Sellable),
+        (2, 3, EdgeType::Sellable),
+        (3, 4, EdgeType::Sellable),
+        (4, 0, EdgeType::Sellable),
     ]))
 }
 pub fn six_cycle() -> Component {
     Component::Simple(Graph::from_edges(vec![
-        (0, 1, EdgeType::One),
-        (1, 2, EdgeType::One),
-        (2, 3, EdgeType::One),
-        (3, 4, EdgeType::One),
-        (4, 5, EdgeType::One),
-        (5, 0, EdgeType::One),
+        (0, 1, EdgeType::Sellable),
+        (1, 2, EdgeType::Sellable),
+        (2, 3, EdgeType::Sellable),
+        (3, 4, EdgeType::Sellable),
+        (4, 5, EdgeType::Sellable),
+        (5, 0, EdgeType::Sellable),
     ]))
 }
 

@@ -1,20 +1,31 @@
 use itertools::{iproduct, Itertools};
 use num_rational::Rational64;
+use petgraph::visit::{IntoNodeReferences, EdgeFiltered, NodeCount};
 use rayon::prelude::*;
 use std::fmt::Display;
 
 use crate::{
     bridges::no_bridges_and_connected,
     comps::{Component, CreditInvariant, EdgeType, Graph, Node},
-    edges_of_type, merge_to_base,
+    edges_of_type, merge_to_base, Credit,
 };
 
-pub fn prove_all_local_merges<C: CreditInvariant + Sync>(comps: Vec<Component>, credit_inv: C) {
+pub fn prove_all_local_merges<C: CreditInvariant + Sync>(comps: Vec<Component>, credit_inv: C, depth: usize) {
     // Enumerate every graph combination and prove merge
     let combinations: Vec<(&Component, &Component)> = iproduct!(&comps, &comps).collect_vec();
     combinations.into_iter().for_each(|(left, right)| {
         log::info!("Proving local merge between {} and {} ...", left, right);
-        if prove_local_merge(left, &right, &comps, credit_inv.clone()) {
+        let left_graph = left.graph();
+        let left_nodes = left_graph.nodes().collect();
+        if prove_local_merge(
+            left_graph,
+            credit_inv.credits(left),
+            left_nodes,
+            &right,
+            &comps,
+            credit_inv.clone(),
+            depth
+        ) {
             log::info!("✔️ Proved local merge between {} and {} ", left, right);
         } else {
             log::warn!("❌ Disproved local merge between {} and {} ", left, right);
@@ -83,7 +94,6 @@ fn prove_local_merge_between_three<C: CreditInvariant>(
 
                     let prove_simple_merge = find_local_merge_with_matching(
                         &graph,
-                        &right_matching,
                         credit_inv.clone(),
                         previous_credits,
                     );
@@ -111,54 +121,63 @@ fn prove_local_merge_between_three<C: CreditInvariant>(
 }
 
 fn prove_local_merge<C: CreditInvariant>(
-    left: &Component,
-    middle: &Component,
+    left: Graph,
+    left_comp_credit: Credit,
+    left_matching_end: Vec<Node>,
+    right: &Component,
     comps: &Vec<Component>,
     credit_inv: C,
+    depth: usize,
 ) -> bool {
-    let left_graph = left.graph();
-    let middle_graph = middle.graph();
-    let left_nodes: Vec<Node> = left_graph.nodes().collect();
+    let right_graph = right.graph();
     // Build combined graph
-    let (graph, nodes) = merge_to_base(left_graph, vec![&middle_graph]);
-    let middle_nodes = &nodes[0];
+    let (graph, nodes) = merge_to_base(left, vec![&right_graph]);
+    let right_nodes = &nodes[0];
 
-    let previous_credits = credit_inv.credits(left) + credit_inv.credits(middle);
+    let previous_credits = left_comp_credit + credit_inv.credits(right);
 
     // Enumerate all possible matchings (adversarial)
-    for left_matched in left_nodes.iter().powerset().filter(|p| p.len() == 3) {
-        for middle_left_matched in middle_nodes.iter().powerset().filter(|p| p.len() == 3) {
-            for middle_left_perm in middle_left_matched.into_iter().permutations(3) {
-                // Compute edges of matching
-                let left_matching = Matching {
-                    edges: left_matched
-                        .iter()
-                        .zip(middle_left_perm.into_iter())
-                        .map(|(l, r)| (**l, *r))
-                        .collect(),
-                    graph_nodes: vec![&left_nodes, &middle_nodes],
-                };
+    for left_matched in left_matching_end.iter().powerset().filter(|p| p.len() == 3) {
+        let right_iter: Vec<Vec<&u32>> = match right {
+            Component::Simple(_) => right_nodes.iter().permutations(3).map(|p| p).collect(),
+            Component::Large => vec![right_nodes.iter().collect()],
+        };
+        for perm in right_iter {
+            // Compute edges of matching
+            let matching = Matching {
+                edges: left_matched
+                    .iter()
+                    .zip(perm.into_iter())
+                    .map(|(l, r)| (**l, *r))
+                    .collect(),
+                graph_nodes: vec![&left_matching_end, &right_nodes],
+            };
 
-                let mut proved = find_local_merge_with_matching(
-                    &graph,
-                    &left_matching,
-                    credit_inv.clone(),
-                    previous_credits,
-                );
+            let mut matching_graph = graph.clone();
+            for (m1, m2) in &matching.edges {
+                matching_graph.add_edge(*m1, *m2, EdgeType::Buyable);
+            }
 
-                if !proved {
-                    proved = prove_local_merge_between_three(
-                        left,
-                        middle,
-                        graph.clone(),
-                        left_nodes.clone(),
-                        middle_nodes.clone(),
-                        left_matching.clone(),
+            let proved = find_local_merge_with_matching(
+                &matching_graph,
+                credit_inv.clone(),
+                previous_credits,
+            );
+
+            if !proved {
+                if depth == 0 {
+                    return false;
+                }
+                for next in comps {
+                    if !prove_local_merge(
+                        matching_graph.clone(),
+                        previous_credits,
+                        right_nodes.clone(),
+                        next,
                         comps,
                         credit_inv.clone(),
-                    );
-
-                    if !proved {
+                        depth - 1,
+                    ) {
                         return false;
                     }
                 }
@@ -173,36 +192,31 @@ fn prove_local_merge<C: CreditInvariant>(
 
 fn find_local_merge_with_matching<C: CreditInvariant>(
     graph: &Graph,
-    matching: &Matching,
     credit_inv: C,
     previous_credits: Rational64,
 ) -> bool {
-    let m = graph.edge_count();
-    let n = graph.node_count();
 
-    let num_matching = matching.edges.len();
-    let sellable = edges_of_type(graph, EdgeType::One);
+    let sellable = edges_of_type(graph, EdgeType::Sellable);
+    let buyable = edges_of_type(graph, EdgeType::Buyable);
+
+    //dbg!(&buyable);
+    //dbg!(&sellable);
 
     let result = enumerate_and_check(
         graph,
-        matching
-            .edges
-            .iter()
-            .cloned()
+        buyable.into_iter()
             .powerset()
             .filter(|p| p.len() >= 2),
         sellable
             .into_iter()
-            .powerset()
-            .filter(|p| m + num_matching - p.len() >= n - 1),
+            .powerset(),
         credit_inv,
         previous_credits,
     );
 
     if !result {
         log::trace!(
-            "   Couldn't find local merge with matching edges {}",
-            matching
+            "   Couldn't find local merge with matching edges "
         );
     }
 
@@ -225,15 +239,18 @@ where
             let buy_credits = Rational64::from_integer(buy.len() as i64);
             let sell_credits = Rational64::from_integer(sell.len() as i64);
 
-            let mut graph_copy = graph.clone();
-            for (u, v) in &sell {
-                graph_copy.remove_edge(*u, *v);
-            }
-            for (u, v) in &buy {
-                graph_copy.add_edge(*u, *v, EdgeType::One);
-            }
+            let check_graph = EdgeFiltered::from_fn(graph, |(v1,v2,t)| {
+                if t == &EdgeType::Sellable && sell.contains(&(v1,v2)) || sell.contains(&(v2,v1)) {
+                    false
+                } else if t == &EdgeType::Buyable && !buy.contains(&(v1,v2)) && !buy.contains(&(v2,v1)) {
+                    false
+                } else {
+                    true
+                }
+            });
 
-            if no_bridges_and_connected(&graph_copy) {
+          
+            if no_bridges_and_connected(&check_graph) {
                 if previous_credits - buy_credits + sell_credits
                     >= credit_inv.credits(&Component::Large)
                 {

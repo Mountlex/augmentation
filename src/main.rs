@@ -22,9 +22,15 @@ struct Cli {
     c_numer: i64,
     c_demon: i64,
 
+    #[clap(short,long,default_value = "0")]
+    depth: usize,
+
     #[clap(short,long,default_value = "false")]
     verbose: bool,
 }
+
+
+pub type Credit = Rational64;
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -35,12 +41,12 @@ fn main() -> anyhow::Result<()> {
         three_cycle(),
         four_cycle(),
         five_cycle(),
-        six_cycle(),
+        //six_cycle(),
         large_component(),
     ];
 
     println!("========== Proof for c = {} ==========", inv.c);
-    prove_all_local_merges(comps.clone(), inv.clone());
+    prove_all_local_merges(comps.clone(), inv.clone(), cli.depth);
     nice_path::prove_nice_path_progress(comps, inv);
 
     Ok(())
