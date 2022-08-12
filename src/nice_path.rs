@@ -3,7 +3,7 @@ use num_rational::Rational64;
 
 use crate::{
     comps::{Component, CreditInvariant, EdgeType, Graph},
-    edges_of_type,  merge, local_merge::enumerate_and_check,
+    edges_of_type,  merge, local_merge::find_feasible_configuration,
 };
 
 #[derive(Clone)]
@@ -97,7 +97,7 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
             graph_copy.add_edge(*v1, *v2, EdgeType::Buyable);
         }
 
-        let result = enumerate_and_check(
+        let result = find_feasible_configuration(
             &graph_copy,
             vec![cycle].into_iter(),
             sellable.into_iter().powerset(),

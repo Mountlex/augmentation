@@ -1,6 +1,6 @@
 use itertools::{iproduct, Itertools};
 use num_rational::Rational64;
-use petgraph::visit::{IntoNodeReferences, EdgeFiltered, NodeCount};
+use petgraph::visit::EdgeFiltered;
 use rayon::prelude::*;
 use std::fmt::Display;
 
@@ -10,7 +10,11 @@ use crate::{
     edges_of_type, merge_to_base, Credit,
 };
 
-pub fn prove_all_local_merges<C: CreditInvariant + Sync>(comps: Vec<Component>, credit_inv: C, depth: usize) {
+pub fn prove_all_local_merges<C: CreditInvariant + Sync>(
+    comps: Vec<Component>,
+    credit_inv: C,
+    depth: usize,
+) {
     // Enumerate every graph combination and prove merge
     let combinations: Vec<(&Component, &Component)> = iproduct!(&comps, &comps).collect_vec();
     combinations.into_iter().for_each(|(left, right)| {
@@ -24,7 +28,7 @@ pub fn prove_all_local_merges<C: CreditInvariant + Sync>(comps: Vec<Component>, 
             &right,
             &comps,
             credit_inv.clone(),
-            depth
+            depth,
         ) {
             log::info!("✔️ Proved local merge between {} and {} ", left, right);
         } else {
@@ -51,73 +55,6 @@ impl Display for Matching<'_> {
         }
         write!(f, "}}")
     }
-}
-
-fn prove_local_merge_between_three<C: CreditInvariant>(
-    left: &Component,
-    middle: &Component,
-    graph: Graph,
-    left_nodes: Vec<Node>,
-    middle_nodes: Vec<Node>,
-    left_matching: Matching,
-    comps: &Vec<Component>,
-    credit_inv: C,
-) -> bool {
-    for right in comps {
-        // log::trace!(
-        //     "   Proving merge between {} and {} and {} ...",
-        //     left,
-        //     middle,
-        //     right
-        // );
-        let right_graph = right.graph();
-        let (graph, nodes) = merge_to_base(graph.clone(), vec![&right_graph]);
-        let right_nodes = &nodes[0];
-        let previous_credits =
-            credit_inv.credits(left) + credit_inv.credits(middle) + credit_inv.credits(right);
-
-        for right_matched in right_nodes.iter().powerset().filter(|p| p.len() == 3) {
-            for middle_right_matched in middle_nodes.iter().powerset().filter(|p| p.len() == 3) {
-                for middle_right_perm in middle_right_matched.into_iter().permutations(3) {
-                    let mut right_matching = Matching {
-                        edges: right_matched
-                            .iter()
-                            .zip(middle_right_perm.into_iter())
-                            .map(|(&l, r)| (*l, *r))
-                            .collect(),
-                        graph_nodes: vec![&left_nodes, &middle_nodes, &right_nodes],
-                    };
-
-                    right_matching
-                        .edges
-                        .append(&mut left_matching.edges.clone());
-
-                    let prove_simple_merge = find_local_merge_with_matching(
-                        &graph,
-                        credit_inv.clone(),
-                        previous_credits,
-                    );
-
-                    if !prove_simple_merge {
-                        log::trace!(
-                            "   disproved merge between {} and {} and {} ❌ ",
-                            left,
-                            middle,
-                            right
-                        );
-                        return false;
-                    }
-                }
-            }
-        }
-        log::trace!(
-            "   Proved merge between {} and {} and {} ✔️",
-            left,
-            middle,
-            right
-        );
-    }
-    true
 }
 
 fn prove_local_merge<C: CreditInvariant>(
@@ -195,35 +132,28 @@ fn find_local_merge_with_matching<C: CreditInvariant>(
     credit_inv: C,
     previous_credits: Rational64,
 ) -> bool {
-
     let sellable = edges_of_type(graph, EdgeType::Sellable);
     let buyable = edges_of_type(graph, EdgeType::Buyable);
 
     //dbg!(&buyable);
     //dbg!(&sellable);
 
-    let result = enumerate_and_check(
+    let result = find_feasible_configuration(
         graph,
-        buyable.into_iter()
-            .powerset()
-            .filter(|p| p.len() >= 2),
-        sellable
-            .into_iter()
-            .powerset(),
+        buyable.into_iter().powerset().filter(|p| p.len() >= 2),
+        sellable.into_iter().powerset(),
         credit_inv,
         previous_credits,
     );
 
     if !result {
-        log::trace!(
-            "   Couldn't find local merge with matching edges "
-        );
+        log::trace!("   Couldn't find local merge with matching edges ");
     }
 
     result
 }
 
-pub fn enumerate_and_check<'a, B, S, C: CreditInvariant>(
+pub fn find_feasible_configuration<'a, B, S, C: CreditInvariant>(
     graph: &Graph,
     buy_iter: B,
     sell_iter: S,
@@ -235,31 +165,34 @@ where
     S: Iterator<Item = Vec<(u32, u32)>>,
 {
     for sell in sell_iter {
+        let sell_credits = Rational64::from_integer(sell.len() as i64);
+        let prev_plus_sell = previous_credits+ sell_credits;
+
         for buy in buy_iter.clone() {
             let buy_credits = Rational64::from_integer(buy.len() as i64);
-            let sell_credits = Rational64::from_integer(sell.len() as i64);
 
-            let check_graph = EdgeFiltered::from_fn(graph, |(v1,v2,t)| {
-                if t == &EdgeType::Sellable && sell.contains(&(v1,v2)) || sell.contains(&(v2,v1)) {
+            let check_graph = EdgeFiltered::from_fn(graph, |(v1, v2, t)| {
+                if t == &EdgeType::Sellable && sell.contains(&(v1, v2)) || sell.contains(&(v2, v1))
+                {
                     false
-                } else if t == &EdgeType::Buyable && !buy.contains(&(v1,v2)) && !buy.contains(&(v2,v1)) {
+                } else if t == &EdgeType::Buyable
+                    && !buy.contains(&(v1, v2))
+                    && !buy.contains(&(v2, v1))
+                {
                     false
                 } else {
                     true
                 }
             });
 
-          
+            if prev_plus_sell - buy_credits < credit_inv.credits(&Component::Large)
+            {
+                continue;
+            }
+
+            // Do the most expensive check last!
             if no_bridges_and_connected(&check_graph) {
-                if previous_credits - buy_credits + sell_credits
-                    >= credit_inv.credits(&Component::Large)
-                {
-                    //println!("Sell {:?}", sell);
-                    //println!("Credits = {} - {} + {}", previous_credits, buy_credits, sell_credits);
-                    return true;
-                } else {
-                    //println!("Shortcut: {:?}. no bridges, but credit {} - {} + {}", shortcut, credits, b, s);
-                }
+                return true;                
             }
         }
     }
