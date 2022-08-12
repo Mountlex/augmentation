@@ -2,6 +2,8 @@ use std::fmt::Display;
 
 use num_rational::Rational64;
 
+use crate::Credit;
+
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub enum EdgeType {
     // Not sellable
@@ -53,24 +55,50 @@ pub fn six_cycle() -> Component {
 }
 
 pub fn large_component() -> Component {
-    Component::Large
+    Component::Large(Graph::from_edges(vec![
+        (0, 1, EdgeType::Fixed),
+        (1, 2, EdgeType::Fixed),
+        (0, 2, EdgeType::Fixed),
+    ]))
+}
+
+pub fn complex_component() -> Component {
+    Component::Complex(Graph::from_edges(vec![
+        (0, 1, EdgeType::Fixed),
+        (1, 2, EdgeType::Fixed),
+        (0, 2, EdgeType::Fixed),
+    ]))
 }
 
 #[derive(Clone, Debug)]
 pub enum Component {
     Simple(Graph),
-    Large,
+    Large(Graph),
+    Complex(Graph),
 }
 
 impl Component {
-    pub fn graph(&self) -> Graph {
+    pub fn graph(&self) -> &Graph {
         match self {
-            Component::Large => Graph::from_edges(vec![
-                (0, 1, EdgeType::Fixed),
-                (1, 2, EdgeType::Fixed),
-                (0, 2, EdgeType::Fixed),
-            ]),
-            Component::Simple(list) => list.clone(),
+            Component::Simple(g) => g,
+            Component::Large(g) => g,
+            Component::Complex(g) => g,
+        }
+    }
+
+    pub fn graph_mut(&mut self) -> &mut Graph {
+        match self {
+            Component::Simple(g) => g,
+            Component::Large(g) => g,
+            Component::Complex(g) => g,
+        }
+    }
+
+    pub fn to_graph(self) -> Graph {
+        match self {
+            Component::Simple(g) => g,
+            Component::Large(g) => g,
+            Component::Complex(g) => g,
         }
     }
 }
@@ -78,7 +106,8 @@ impl Component {
 impl Display for Component {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Component::Large => write!(f, "Large"),
+            Component::Large(_) => write!(f, "Large"),
+            Component::Complex(_) => write!(f, "Complex"),
             Component::Simple(graph) => write!(f, "{}-Cycle", graph.node_count()),
         }
     }
@@ -101,10 +130,9 @@ impl Display for Component {
 ///       base      
 ///
 /// and returns [[4,5,6]]
-pub fn merge_to_base(mut base: Graph, others: Vec<&Graph>) -> (Graph, Vec<Vec<Node>>) {
-    let mut offset: u32 = base.nodes().max().unwrap() + 1;
-    let mut indices = vec![];
-    for graph in others {
+pub fn merge_graphs_to_base(mut base: Graph, mut others: Vec<Graph>) -> (Graph, Vec<Graph>) {
+    let mut offset: u32 = base.nodes().max().unwrap_or_else(|| 0) + 1;
+    for graph in &mut others {
         let nodes = graph.nodes().collect::<Vec<Node>>();
         let edges: Vec<(Node, Node, EdgeType)> = graph
             .all_edges()
@@ -116,12 +144,19 @@ pub fn merge_to_base(mut base: Graph, others: Vec<&Graph>) -> (Graph, Vec<Vec<No
                 )
             })
             .collect();
-        base.extend(edges);
-        indices.push((offset..(offset + nodes.len() as u32)).collect::<Vec<Node>>());
+        base.extend(&edges);
+        *graph = Graph::from_edges(edges);
         offset += nodes.len() as u32;
     }
 
-    (base, indices)
+    (base, others)
+}
+
+pub fn merge_components_to_base(base: Graph, mut others: Vec<Component>) -> (Graph, Vec<Component>) {
+    let graphs = others.iter().map(|c| c.graph().clone()).collect();
+    let (graph, graphs) = merge_graphs_to_base(base, graphs);
+    others.iter_mut().zip(graphs).for_each(|(c, g)| *c.graph_mut() = g);
+    (graph, others)
 }
 
 pub fn edges_of_type<'a>(graph: &'a Graph, typ: EdgeType) -> Vec<(Node, Node)> {
@@ -132,32 +167,21 @@ pub fn edges_of_type<'a>(graph: &'a Graph, typ: EdgeType) -> Vec<(Node, Node)> {
         .collect()
 }
 
-pub fn merge(graphs: Vec<&Graph>) -> (Graph, Vec<Vec<Node>>) {
-    let mut offset: u32 = 0;
-    let mut indices = vec![];
-    let mut base = Graph::new();
-    for graph in graphs {
-        let nodes = graph.nodes().collect::<Vec<Node>>();
-        let edges: Vec<(Node, Node, EdgeType)> = graph
-            .all_edges()
-            .map(|(w1, w2, t)| {
-                (
-                    (nodes.iter().position(|n| n == &w1).unwrap() as u32 + offset),
-                    (nodes.iter().position(|n| n == &w2).unwrap() as u32 + offset),
-                    *t,
-                )
-            })
-            .collect();
-        base.extend(edges);
-        indices.push((offset..(offset + nodes.len() as u32)).collect::<Vec<Node>>());
-        offset += nodes.len() as u32;
-    }
-
-    (base, indices)
+pub fn merge_graphs(graphs: Vec<Graph>) -> (Graph, Vec<Graph>) {
+    merge_graphs_to_base(Graph::new(), graphs)
 }
 
 pub trait CreditInvariant: Clone {
-    fn credits(&self, comp: &Component) -> Rational64;
+    fn credits(&self, comp: &Component) -> Credit {
+        match comp {
+            Component::Complex(_) => self.complex(),
+            Component::Large(_) => self.large(),
+            Component::Simple(graph) => self.simple(graph)
+        }
+    }
+    fn simple(&self, graph: &Graph) -> Credit;
+    fn complex(&self) -> Credit;
+    fn large(&self) -> Credit;
 }
 
 #[derive(Clone, Debug)]
@@ -172,13 +196,16 @@ impl DefaultCredits {
 }
 
 impl CreditInvariant for DefaultCredits {
-    fn credits(&self, comp: &Component) -> Rational64 {
-        match comp {
-            Component::Large => Rational64::from_integer(2),
-            Component::Simple(graph) => {
-                self.c * Rational64::from_integer(graph.edge_count() as i64)
-            }
-        }
+    fn simple(&self, graph: &Graph) -> Credit {
+        self.c * Credit::from_integer(graph.edge_count() as i64)
+    }
+
+    fn complex(&self) -> Credit {
+        Credit::from_integer(13) * self.c - Credit::from_integer(2)
+    }
+
+    fn large(&self) -> Credit {
+        Credit::from_integer(2)
     }
 }
 
@@ -189,23 +216,23 @@ mod test_merge {
 
     #[test]
     fn test_two_triangles() {
-        let base = three_cycle().graph();
-        let other = three_cycle().graph();
-        let (base, nodes) = merge_to_base(base, vec![&other]);
+        let base = three_cycle().to_graph();
+        let other = three_cycle();
+        let (base, comps) = merge_components_to_base(base, vec![other]);
 
         assert_eq!(base.node_count(), 6);
-        assert_eq!(nodes[0], vec![3, 4, 5])
+        assert_eq!(comps[0].graph().nodes().collect::<Vec<u32>>(), vec![3, 4, 5])
     }
 
     #[test]
     fn test_three_triangles() {
-        let base = three_cycle().graph();
-        let other1 = three_cycle().graph();
-        let other2 = three_cycle().graph();
-        let (base, nodes) = merge_to_base(base, vec![&other1, &other2]);
+        let base = three_cycle().to_graph();
+        let other1 = three_cycle();
+        let other2 = three_cycle();
+        let (base, comps) = merge_components_to_base(base, vec![other1, other2]);
 
         assert_eq!(base.node_count(), 9);
-        assert_eq!(nodes[0], vec![3, 4, 5]);
-        assert_eq!(nodes[1], vec![6, 7, 8]);
+        assert_eq!(comps[0].graph().nodes().collect::<Vec<u32>>(), vec![3, 4, 5]);
+        assert_eq!(comps[1].graph().nodes().collect::<Vec<u32>>(), vec![6, 7, 8]);
     }
 }

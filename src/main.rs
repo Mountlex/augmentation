@@ -2,13 +2,12 @@
 use std::fs::OpenOptions;
 
 use clap::Parser;
-use local_merge::prove_all_local_merges;
 
 use num_rational::Rational64;
 
 
 
-use crate::comps::*;
+use crate::{comps::*, local_merge::TreeCaseProof};
 
 mod bridges;
 mod comps;
@@ -41,13 +40,15 @@ fn main() -> anyhow::Result<()> {
         three_cycle(),
         four_cycle(),
         five_cycle(),
-        //six_cycle(),
+        six_cycle(),
         large_component(),
+        complex_component(),
     ];
 
     println!("========== Proof for c = {} ==========", inv.c);
-    prove_all_local_merges(comps.clone(), inv.clone(), cli.depth);
-    nice_path::prove_nice_path_progress(comps, inv);
+    let proof1 = TreeCaseProof::new(comps.clone(), inv.clone(), cli.depth);
+    proof1.prove();
+    //nice_path::prove_nice_path_progress(comps, inv);
 
     Ok(())
 }

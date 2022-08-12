@@ -2,8 +2,9 @@ use itertools::Itertools;
 use num_rational::Rational64;
 
 use crate::{
-    comps::{Component, CreditInvariant, EdgeType, Graph},
-    edges_of_type,  merge, local_merge::find_feasible_configuration,
+    comps::{merge_graphs, Component, CreditInvariant, EdgeType, Graph},
+    edges_of_type,
+    local_merge::find_feasible_configuration,
 };
 
 #[derive(Clone)]
@@ -16,7 +17,7 @@ impl Node {
     fn get_graph(&self) -> Graph {
         match self {
             Node::NicePair(_) => Graph::from_edges(vec![(0, 0, EdgeType::Fixed)]),
-            Node::Any(comp) => comp.graph(),
+            Node::Any(comp) => comp.graph().clone(),
         }
     }
 
@@ -79,21 +80,26 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
     let first_graph = path.first.get_graph();
     let prelast_graph = path.prelast.get_graph();
     let last_graph = path.last.get_graph();
-    let (graph, nodes) = merge(vec![&first_graph, &prelast_graph, &last_graph]);
-    let [f_nodes, p_nodes, l_nodes] = <[Vec<u32>; 3]>::try_from(nodes).ok().unwrap();
+    let (graph, nodes) = merge_graphs(vec![first_graph, prelast_graph, last_graph]);
+    let [first_graph, prelast_graph, last_graph] = <[Graph; 3]>::try_from(nodes).ok().unwrap();
 
-    for (&f_out, &f_in, &p_out, &p_in, &l_out, &l_in) in
-        itertools::iproduct!(&f_nodes, &f_nodes, &p_nodes, &p_nodes, &l_nodes, &l_nodes)
-    {
+    for (f_out, f_in, p_out, p_in, l_out, l_in) in itertools::iproduct!(
+        first_graph.nodes(),
+        first_graph.nodes(),
+        prelast_graph.nodes(),
+        prelast_graph.nodes(),
+        last_graph.nodes(),
+        last_graph.nodes()
+    ) {
         let cycle = vec![(f_out, l_in), (l_out, p_in), (p_out, f_in)];
         let sellable = edges_of_type(&graph, EdgeType::Sellable);
-        let previous_credits = sum_of_credits(
+        let total_component_credits = sum_of_credits(
             vec![&path.first, &path.prelast, &path.last],
             credit_inv.clone(),
         );
 
         let mut graph_copy = graph.clone();
-        for (v1,v2) in &cycle {
+        for (v1, v2) in &cycle {
             graph_copy.add_edge(*v1, *v2, EdgeType::Buyable);
         }
 
@@ -101,8 +107,8 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
             &graph_copy,
             vec![cycle].into_iter(),
             sellable.into_iter().powerset(),
-            credit_inv.clone(),
-            previous_credits,
+            credit_inv.large(),
+            total_component_credits,
         );
         if !result {
             //println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
