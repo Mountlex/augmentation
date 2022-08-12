@@ -1,27 +1,177 @@
+use core::fmt;
 use itertools::{iproduct, Itertools};
 use num_rational::Rational64;
-use petgraph::visit::{EdgeFiltered, IntoNeighbors};
+use petgraph::visit::EdgeFiltered;
 use rayon::prelude::*;
-use std::fmt::Display;
+use std::fmt::{Display, Write};
 
 use crate::{
     bridges::no_bridges_and_connected,
-    comps::{six_cycle, Component, CreditInvariant, EdgeType, Graph, Node},
+    comps::{
+        complex_component, large_component, six_cycle, three_cycle, Component, CreditInvariant,
+        EdgeType, Graph, Node,
+    },
     edges_of_type, merge_components_to_base, Credit,
 };
 
+trait Tree<N>
+where
+    N: Tree<N>,
+{
+    fn childs(&self) -> Option<&[ProofNode]>;
+    fn msg(&self) -> String;
 
+    fn print_tree<W: Write>(&self, writer: &mut W, depth: usize) -> anyhow::Result<()> {
+        (0..depth).try_for_each(|_| write!(writer, "    "))?;
+        writeln!(writer, "{}", self.msg())?;
+        if let Some(childs) = self.childs() {
+            for c in childs {
+                c.print_tree(writer, depth + 1)?;
+            }
+        }
+        Ok(())
+    }
+}
 
+enum ProofNode {
+    Leaf {
+        msg: String,
+        success: bool,
+    },
+    All {
+        msg: String,
+        success: bool,
+        childs: Vec<ProofNode>,
+    },
+    Any {
+        msg: String,
+        success: bool,
+        childs: Vec<ProofNode>,
+    },
+}
+
+impl ProofNode {
+    fn new_leaf(msg: String, success: bool) -> Self {
+        ProofNode::Leaf { msg, success }
+    }
+
+    fn new_all(msg: String) -> Self {
+        ProofNode::All {
+            msg,
+            success: false,
+            childs: vec![],
+        }
+    }
+
+    fn new_any(msg: String) -> Self {
+        ProofNode::Any {
+            msg,
+            success: false,
+            childs: vec![],
+        }
+    }
+
+    fn add_child(&mut self, node: ProofNode) {
+        match self {
+            ProofNode::Leaf { msg: _, success: _ } => panic!(),
+            ProofNode::All {
+                msg: _,
+                success: _,
+                childs,
+            } => childs.push(node),
+            ProofNode::Any {
+                msg: _,
+                success: _,
+                childs,
+            } => childs.push(node),
+        }
+    }
+
+    fn eval(&mut self) -> bool {
+        match self {
+            ProofNode::Leaf { msg: _, success } => *success,
+            ProofNode::All {
+                msg: _,
+                success,
+                childs,
+            } => {
+                *success = childs.iter_mut().all(|c| c.eval());
+                *success
+            }
+            ProofNode::Any {
+                msg: _,
+                success,
+                childs,
+            } => {
+                *success = childs.iter_mut().any(|c| c.eval());
+                *success
+            }
+        }
+    }
+}
+
+impl Tree<ProofNode> for ProofNode {
+    fn msg(&self) -> String {
+        format!("{}", self)
+    }
+
+    fn childs(&self) -> Option<&[ProofNode]> {
+        match self {
+            ProofNode::Leaf { msg: _, success: _ } => None,
+            ProofNode::All {
+                msg: _,
+                success: _,
+                childs,
+            }
+            | ProofNode::Any {
+                msg: _,
+                success: _,
+                childs,
+            } => Some(childs),
+        }
+    }
+}
+
+impl Display for ProofNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ProofNode::Leaf { msg, success }
+            | ProofNode::All {
+                msg,
+                success,
+                childs: _,
+            }
+            | ProofNode::Any {
+                msg,
+                success,
+                childs: _,
+            } => {
+                if *success {
+                    write!(f, "{} ✔️", msg)
+                } else {
+                    write!(f, "{} ❌", msg)
+                }
+            }
+        }
+    }
+}
 
 pub struct TreeCaseProof<C> {
+    leaf_comps: Vec<Component>,
     comps: Vec<Component>,
     credit_inv: C,
     start_depth: usize,
 }
 
-impl<C: CreditInvariant> TreeCaseProof<C> {
-    pub fn new(comps: Vec<Component>, credit_inv: C, start_depth: usize) -> Self {
+impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
+    pub fn new(
+        leaf_comps: Vec<Component>,
+        comps: Vec<Component>,
+        credit_inv: C,
+        start_depth: usize,
+    ) -> Self {
         TreeCaseProof {
+            leaf_comps,
             comps,
             credit_inv,
             start_depth,
@@ -30,22 +180,42 @@ impl<C: CreditInvariant> TreeCaseProof<C> {
 
     pub fn prove(&self) {
         // Enumerate every graph combination and prove merge
-        let temp = vec![six_cycle()];
         let combinations: Vec<(&Component, &Component)> =
-            iproduct!(&self.comps, &temp).collect_vec();
-        combinations.into_iter().for_each(|(left, right)| {
+            iproduct!(&self.leaf_comps, &self.comps).collect_vec();
+        combinations.into_par_iter().for_each(|(left, right)| {
             log::info!("Proving local merge between {} and {} ...", left, right);
+
             let left_graph = left.graph();
-            if self.prove_local_merge(
+
+            let mut root = ProofNode::new_all("Proof".into());
+            let result = self.prove_local_merge(
                 left_graph.clone(),
                 vec![&left],
                 right.clone(),
                 self.start_depth,
-            ) {
+                &mut root,
+            );
+
+            let filename = if result {
                 log::info!("✔️ Proved local merge between {} and {} ", left, right);
+                format!(
+                    "proofs/proof_{}-{}.txt",
+                    left.short_name(),
+                    right.short_name()
+                )
             } else {
                 log::warn!("❌ Disproved local merge between {} and {} ", left, right);
-            }
+                format!(
+                    "proofs/wrong_proof_{}-{}.txt",
+                    left.short_name(),
+                    right.short_name()
+                )
+            };
+
+            let mut buf = String::new();
+            root.eval();
+            root.print_tree(&mut buf, 0).expect("Unable to format tree");
+            std::fs::write(filename, buf).expect("Unable to write file");
         });
     }
 
@@ -54,12 +224,19 @@ impl<C: CreditInvariant> TreeCaseProof<C> {
         left_graph: Graph,
         left_comps: Vec<&Component>,
         right_comp: Component,
-        depth: usize,
+        current_depth: usize,
+        p_node: &mut ProofNode,
     ) -> bool {
         // Build combined graph and update node indices
         let (graph, mut nodes) = merge_components_to_base(left_graph, vec![right_comp]);
         let right_comp = nodes.remove(0);
         let right_comp_ref = &right_comp;
+
+        let mut proof_node = ProofNode::new_all(format!(
+            "Local merge between {} and {}",
+            left_comps.iter().map(|c| format!("{}", c)).join(", "),
+            right_comp
+        ));
 
         let mut graph_components = left_comps;
         let last_comp = graph_components.last().unwrap().clone();
@@ -79,151 +256,206 @@ impl<C: CreditInvariant> TreeCaseProof<C> {
             };
             'match_loop: for perm in right_iter {
                 // Compute edges of matching
+                let matching: Vec<(u32, u32)> = left_matched
+                    .iter()
+                    .zip(perm.into_iter())
+                    .map(|(l, r)| (*l, r))
+                    .collect();
 
-                let matching = Matching {
-                    edges: left_matched
-                        .iter()
-                        .zip(perm.into_iter())
-                        .map(|(l, r)| (*l, r))
-                        .collect(),
-                    graph_nodes: vec![
-                        last_comp.graph().nodes().collect(),
-                        right_comp_ref.graph().nodes().collect(),
-                    ],
-                };
+                let mut matching_node = ProofNode::new_any(format!("Matching {:?}", matching));
 
                 let mut graph_with_matching = graph.clone();
-                for (m1, m2) in &matching.edges {
+                for (m1, m2) in &matching {
                     graph_with_matching.add_edge(*m1, *m2, EdgeType::Buyable);
                 }
 
-                let proved = find_local_merge_with_matching(
+                // Proof #1
+                if prove_via_direct_merge(
                     &graph_with_matching,
                     graph_components.clone(),
                     self.credit_inv.clone(),
-                );
+                    &mut matching_node,
+                ) {
+                    proof_node.add_child(matching_node);
+                    continue 'match_loop;
+                }
 
-                if !proved {
-                    log::trace!(
-                        "   Couldn't find local merge with matching edges {}",
-                        matching
-                    );
-
-                    
-
-                    if matches!(last_comp, Component::Simple(g) if g.node_count() == 6) {
-                        println!("six cycle");
-
-                        // last_comp is H
-                        let mut necessary_edges = 0;
-                        let mut inner_vertices = vec![];
-                        for v in last_comp.graph().nodes() {
-                            if graph_with_matching
-                                .neighbors(v)
-                                .all(|u| last_comp.graph().contains_node(u))
-                            {
-                                // v has only neighbors in H, i.e. no incident matching edges
-                                inner_vertices.push(v);
-                                necessary_edges += 2;
-                            }
-                        }
-
-                        for edge in inner_vertices.iter().combinations(2) {
-                            let u = edge[0];
-                            let v = edge[1];
-
-                            if graph_with_matching.contains_edge(*u, *v) {
-                                necessary_edges -= 1;
-                            }
-                        }
-
-                        if necessary_edges == 6 {
-                            dbg!(&inner_vertices);
-
-                            if inner_vertices.iter().combinations(2).all(|edge| {
-                                let u = edge[0];
-                                let v = edge[1];
-
-                                let mut graph_with_added_edge = graph_with_matching.clone();
-                                graph_with_added_edge.add_edge(*u, *v, EdgeType::Buyable);
-
-                                find_local_merge_with_matching(
-                                    &graph_with_added_edge,
-                                    graph_components.clone(),
-                                    self.credit_inv.clone(),
-                                )
-                            }) {
-                                continue 'match_loop;
-                            }
-                        }
-                    }
-
-                    if depth == 0 {
-                        return false;
-                    }
-
-                    for next in &self.comps {
-                        if !self.prove_local_merge(
-                            graph_with_matching.clone(),
-                            graph_components.clone(),
-                            next.clone(),
-                            depth - 1,
-                        ) {
-                            return false;
-                        }
+                // Proof #2 check if any component is contractible (TODO check combinations)
+                for comp in &graph_components {
+                    if self.prove_via_contractable_arguments(
+                        comp,
+                        &graph_with_matching,
+                        &graph_components,
+                        &mut matching_node,
+                    ) {
+                        proof_node.add_child(matching_node);
+                        continue 'match_loop;
                     }
                 }
+
+
+                // Proof #3
+                if self.prove_via_contractable_arguments(
+                    &right_comp,
+                    &graph_with_matching,
+                    &graph_components,
+                    &mut matching_node,
+                ) {
+                    proof_node.add_child(matching_node);
+                    continue 'match_loop;
+                }
+
+                // Proof #4
+                if self.prove_via_enumerating_neighbors(
+                    &graph_with_matching,
+                    &graph_components,
+                    current_depth,
+                    &mut matching_node,
+                ) {
+                    proof_node.add_child(matching_node);
+                    continue 'match_loop;
+                }
+
+                // If we reach here, no proof was successful for this matching!
+                proof_node.add_child(matching_node);
+                p_node.add_child(proof_node);
+                return false;
             }
         }
-
+        p_node.add_child(proof_node);
         true
 
         // If we found shortcuts for every matching, this combination is valid
     }
-}
 
-#[derive(Clone, Debug)]
-struct Matching {
-    edges: Vec<(Node, Node)>,
-    graph_nodes: Vec<Vec<Node>>,
-}
-
-impl Display for Matching {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{")?;
-        for (v1, v2) in &self.edges {
-            let c1 = self.graph_nodes.iter().find(|c| c.contains(v1)).unwrap();
-            let p1 = c1.iter().position(|v| v == v1).unwrap();
-            let c2 = self.graph_nodes.iter().find(|c| c.contains(v2)).unwrap();
-            let p2 = c2.iter().position(|v| v == v2).unwrap();
-            write!(f, "(v{},u{}),", p1, p2)?;
+    fn prove_via_enumerating_neighbors(
+        &self,
+        graph: &Graph,
+        graph_components: &Vec<&Component>,
+        current_depth: usize,
+        proof_node: &mut ProofNode,
+    ) -> bool {
+        if current_depth == 0 {
+            proof_node.add_child(ProofNode::new_leaf(
+                format!("Max depth ({}) reached!", self.start_depth),
+                false,
+            ));
+            return false;
         }
-        write!(f, "}}")
+
+        let mut add_comp_node =
+            ProofNode::new_all("Larger merge with any component on the right".into());
+
+        let mut success = true;
+
+        for next in &self.comps {
+            if !self.prove_local_merge(
+                graph.clone(),
+                graph_components.clone(),
+                next.clone(),
+                current_depth - 1,
+                &mut add_comp_node,
+            ) {
+                success = false;
+                break;
+            }
+        }
+
+        proof_node.add_child(add_comp_node);
+        success
+    }
+
+    fn prove_via_contractable_arguments(
+        &self,
+        comp: &Component,
+        graph: &Graph,
+        graph_components: &Vec<&Component>,
+        proof_node: &mut ProofNode,
+    ) -> bool {
+        if matches!(comp, Component::Simple(g) if g.node_count() == 6) {
+            // comp is H
+            let mut necessary_edges = 0;
+            let mut inner_vertices = vec![];
+            for v in comp.graph().nodes() {
+                if graph.neighbors(v).all(|u| comp.graph().contains_node(u)) {
+                    // v has only neighbors in H, i.e. no incident matching edges
+                    inner_vertices.push(v);
+                    necessary_edges += 2;
+                }
+            }
+
+            for edge in inner_vertices.iter().combinations(2) {
+                let u = edge[0];
+                let v = edge[1];
+
+                if graph.contains_edge(*u, *v) {
+                    necessary_edges -= 1;
+                }
+            }
+
+            if necessary_edges == 6 {
+                let mut cont_node = ProofNode::new_all(format!(
+                    "Component {}-contractible! Adding single edges now and checking again",
+                    necessary_edges as f32 / 6 as f32
+                ));
+
+                let mut verify = true;
+                for edge in inner_vertices.iter().combinations(2) {
+                    let u = edge[0];
+                    let v = edge[1];
+
+                    let mut graph_with_added_edge = graph.clone();
+                    graph_with_added_edge.add_edge(*u, *v, EdgeType::Buyable);
+
+                    let mut edge_node = ProofNode::new_any(format!("Added edge {}-{}", u, v));
+
+                    let res = prove_via_direct_merge(
+                        &graph_with_added_edge,
+                        graph_components.clone(),
+                        self.credit_inv.clone(),
+                        &mut edge_node,
+                    );
+                    cont_node.add_child(edge_node);
+                    if !res {
+                        verify = false;
+                        break;
+                    }
+                }
+                proof_node.add_child(cont_node);
+
+                return verify;
+            }
+
+            proof_node.add_child(ProofNode::new_leaf(
+                format!("No contractible 6-cycle!"),
+                false,
+            ));
+        }
+        // if comp is no 6-cycle, we don't add something to the tree.
+        return false;
     }
 }
 
-fn find_local_merge_with_matching<C: CreditInvariant>(
+fn prove_via_direct_merge<C: CreditInvariant>(
     graph: &Graph,
     graph_components: Vec<&Component>,
     credit_inv: C,
+    proof_node: &mut ProofNode,
 ) -> bool {
     let sellable = edges_of_type(graph, EdgeType::Sellable);
     let buyable = edges_of_type(graph, EdgeType::Buyable);
-
-    //dbg!(&buyable);
-    //dbg!(&sellable);
 
     let total_component_credits = graph_components.iter().map(|c| credit_inv.credits(c)).sum();
     let new_component_credit = if graph_components
         .iter()
         .any(|c| matches!(c, Component::Complex(_)))
     {
-        credit_inv.complex()
+        credit_inv.complex_comp() + credit_inv.complex_block() // we create a component and a block!
     } else {
         credit_inv.large()
     };
 
-    let result = find_feasible_configuration(
+    let result = find_feasible_merge(
         graph,
         buyable.into_iter().powerset().filter(|p| p.len() >= 2),
         sellable.into_iter().powerset(),
@@ -231,16 +463,41 @@ fn find_local_merge_with_matching<C: CreditInvariant>(
         total_component_credits,
     );
 
-    result
+    match result {
+        MergeResult::Feasible(merge) => {
+            proof_node.add_child(ProofNode::new_leaf(format!("Direct merge possible [bought = {:?}, sold = {:?}, credits: {} + {} - {} >= {}]", merge.bought_edges, merge.sold_edges, total_component_credits, merge.sold_edges.len(), merge.bought_edges.len(), new_component_credit), true));
+            true
+        }
+        MergeResult::Impossible => {
+            proof_node.add_child(ProofNode::new_leaf(
+                format!(
+                    "Direct merge impossible [available credits: {}, target credits: {}]",
+                    total_component_credits, new_component_credit
+                ),
+                false,
+            ));
+            false
+        }
+    }
 }
 
-pub fn find_feasible_configuration<'a, B, S>(
+pub struct FeasibleMerge {
+    bought_edges: Vec<(Node, Node)>,
+    sold_edges: Vec<(Node, Node)>,
+}
+
+pub enum MergeResult {
+    Feasible(FeasibleMerge),
+    Impossible,
+}
+
+pub fn find_feasible_merge<'a, B, S>(
     graph: &Graph,
     buy_iter: B,
     sell_iter: S,
     new_component_credit: Credit,
     total_component_credits: Credit,
-) -> bool
+) -> MergeResult
 where
     B: Iterator<Item = Vec<(u32, u32)>> + Clone,
     S: Iterator<Item = Vec<(u32, u32)>>,
@@ -272,9 +529,12 @@ where
 
             // Do the most expensive check last!
             if no_bridges_and_connected(&check_graph) {
-                return true;
+                return MergeResult::Feasible(FeasibleMerge {
+                    bought_edges: buy.clone(),
+                    sold_edges: sell.clone(),
+                });
             }
         }
     }
-    false
+    return MergeResult::Impossible;
 }

@@ -4,7 +4,7 @@ use num_rational::Rational64;
 use crate::{
     comps::{merge_graphs, Component, CreditInvariant, EdgeType, Graph},
     edges_of_type,
-    local_merge::find_feasible_configuration,
+    local_merge::{find_feasible_merge, FeasibleMerge, MergeResult},
 };
 
 #[derive(Clone)]
@@ -103,14 +103,14 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
             graph_copy.add_edge(*v1, *v2, EdgeType::Buyable);
         }
 
-        let result = find_feasible_configuration(
+        let result = find_feasible_merge(
             &graph_copy,
             vec![cycle].into_iter(),
             sellable.into_iter().powerset(),
             credit_inv.large(),
             total_component_credits,
         );
-        if !result {
+        if let MergeResult::Feasible(_) = result {
             //println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
             return false;
         }

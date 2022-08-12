@@ -36,6 +36,13 @@ fn main() -> anyhow::Result<()> {
     setup_logging(false)?;
 
     let inv = DefaultCredits::new(Rational64::new(cli.c_numer, cli.c_demon));
+    let leaf_comps = vec![
+        four_cycle(),
+        five_cycle(),
+        six_cycle(),
+        large_component(),
+        complex_component(),
+    ];
     let comps = vec![
         three_cycle(),
         four_cycle(),
@@ -46,7 +53,7 @@ fn main() -> anyhow::Result<()> {
     ];
 
     println!("========== Proof for c = {} ==========", inv.c);
-    let proof1 = TreeCaseProof::new(comps.clone(), inv.clone(), cli.depth);
+    let proof1 = TreeCaseProof::new(leaf_comps, comps.clone(), inv.clone(), cli.depth);
     proof1.prove();
     //nice_path::prove_nice_path_progress(comps, inv);
 

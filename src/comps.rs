@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use itertools::Itertools;
 use num_rational::Rational64;
 
 use crate::Credit;
@@ -78,6 +79,14 @@ pub enum Component {
 }
 
 impl Component {
+    pub fn short_name(&self) -> String {
+        match self {
+            Component::Large(_) => format!("large"),
+            Component::Complex(_) => format!("complex"),
+            Component::Simple(graph) => format!("{}c", graph.node_count()),
+        }
+    }
+
     pub fn graph(&self) -> &Graph {
         match self {
             Component::Simple(g) => g,
@@ -108,7 +117,7 @@ impl Display for Component {
         match self {
             Component::Large(_) => write!(f, "Large"),
             Component::Complex(_) => write!(f, "Complex"),
-            Component::Simple(graph) => write!(f, "{}-Cycle", graph.node_count()),
+            Component::Simple(graph) => write!(f, "{}-Cycle [{}]", graph.node_count(), graph.nodes().map(|n| format!("{}", n)).join("-")),
         }
     }
 }
@@ -131,7 +140,7 @@ impl Display for Component {
 ///
 /// and returns [[4,5,6]]
 pub fn merge_graphs_to_base(mut base: Graph, mut others: Vec<Graph>) -> (Graph, Vec<Graph>) {
-    let mut offset: u32 = base.nodes().max().unwrap_or_else(|| 0) + 1;
+    let mut offset: u32 = if let Some(max) = base.nodes().max() { max + 1} else {0};
     for graph in &mut others {
         let nodes = graph.nodes().collect::<Vec<Node>>();
         let edges: Vec<(Node, Node, EdgeType)> = graph
@@ -174,13 +183,15 @@ pub fn merge_graphs(graphs: Vec<Graph>) -> (Graph, Vec<Graph>) {
 pub trait CreditInvariant: Clone {
     fn credits(&self, comp: &Component) -> Credit {
         match comp {
-            Component::Complex(_) => self.complex(),
+            Component::Complex(_) => self.complex_comp() + self.complex_black(2) + self.complex_black(2), // black vertex credit!
             Component::Large(_) => self.large(),
             Component::Simple(graph) => self.simple(graph)
         }
     }
     fn simple(&self, graph: &Graph) -> Credit;
-    fn complex(&self) -> Credit;
+    fn complex_comp(&self) -> Credit;
+    fn complex_black(&self, deg: i64) -> Credit;
+    fn complex_block(&self) -> Credit;
     fn large(&self) -> Credit;
 }
 
@@ -200,8 +211,16 @@ impl CreditInvariant for DefaultCredits {
         self.c * Credit::from_integer(graph.edge_count() as i64)
     }
 
-    fn complex(&self) -> Credit {
-        Credit::from_integer(13) * self.c - Credit::from_integer(2)
+    fn complex_comp(&self) -> Credit {
+        (Credit::from_integer(13) * self.c) - Credit::from_integer(2)
+    }
+
+    fn complex_black(&self, deg: i64) -> Credit {
+        Credit::from_integer(deg) * self.c * Credit::new(1,2)
+    }
+
+    fn complex_block(&self) -> Credit {
+        Credit::from_integer(1) 
     }
 
     fn large(&self) -> Credit {
