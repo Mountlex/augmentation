@@ -48,13 +48,13 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(comps: Vec<Component>, credi
         let nf = Node::Any(f.clone());
 
         for p in &comps {
-            let np = if let Component::Simple(_) = p {
+            let np = if let Component::Cycle(_) = p {
                 Node::NicePair(p.clone())
             } else {
                 Node::Any(p.clone())
             };
             for l in &comps {
-                let nl = if let Component::Simple(_) = l {
+                let nl = if let Component::Cycle(_) = l {
                     Node::NicePair(l.clone())
                 } else {
                     Node::Any(l.clone())
@@ -108,9 +108,10 @@ fn prove_nice_path<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {
             vec![cycle].into_iter(),
             sellable.into_iter().powerset(),
             credit_inv.large(),
-            total_component_credits,
+            credit_inv.clone(),
+            todo!(),
         );
-        if let MergeResult::Feasible(_) = result {
+        if let MergeResult::FeasibleLarge(_) | MergeResult::FeasibleComplex(_) = result {
             //println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
             return false;
         }

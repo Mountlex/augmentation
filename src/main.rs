@@ -37,19 +37,19 @@ fn main() -> anyhow::Result<()> {
 
     let inv = DefaultCredits::new(Rational64::new(cli.c_numer, cli.c_demon));
     let leaf_comps = vec![
-        four_cycle(),
-        five_cycle(),
-        six_cycle(),
-        large_component(),
-        complex_component(),
+        ComponentType::Cycle(4),
+        ComponentType::Cycle(5),
+        ComponentType::Cycle(6),
+        ComponentType::Large,
+        ComponentType::Complex,
     ];
     let comps = vec![
-        three_cycle(),
-        four_cycle(),
-        five_cycle(),
-        six_cycle(),
-        large_component(),
-        complex_component(),
+        ComponentType::Cycle(3),
+        ComponentType::Cycle(4),
+        ComponentType::Cycle(5),
+        ComponentType::Cycle(6),
+        ComponentType::Large,
+        ComponentType::Complex,
     ];
 
     println!("========== Proof for c = {} ==========", inv.c);

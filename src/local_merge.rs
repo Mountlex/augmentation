@@ -1,15 +1,18 @@
 use core::fmt;
 use itertools::{iproduct, Itertools};
 use num_rational::Rational64;
-use petgraph::visit::EdgeFiltered;
+use petgraph::{algo::connected_components, visit::EdgeFiltered};
 use rayon::prelude::*;
-use std::fmt::{Display, Write};
+use std::{
+    fmt::{Display, Write},
+    num,
+};
 
 use crate::{
-    bridges::no_bridges_and_connected,
+    bridges::{is_complex, no_bridges_and_connected, ComplexCheckResult},
     comps::{
-        complex_component, large_component, six_cycle, three_cycle, Component, CreditInvariant,
-        EdgeType, Graph, Node,
+        compute_number_of_blocks, large_component, six_cycle, three_cycle, Component,
+        ComponentType, CreditInvariant, EdgeType, Graph, Node,
     },
     edges_of_type, merge_components_to_base, Credit,
 };
@@ -157,16 +160,16 @@ impl Display for ProofNode {
 }
 
 pub struct TreeCaseProof<C> {
-    leaf_comps: Vec<Component>,
-    comps: Vec<Component>,
+    leaf_comps: Vec<ComponentType>,
+    comps: Vec<ComponentType>,
     credit_inv: C,
     start_depth: usize,
 }
 
 impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
     pub fn new(
-        leaf_comps: Vec<Component>,
-        comps: Vec<Component>,
+        leaf_comps: Vec<ComponentType>,
+        comps: Vec<ComponentType>,
         credit_inv: C,
         start_depth: usize,
     ) -> Self {
@@ -180,8 +183,11 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
 
     pub fn prove(&self) {
         // Enumerate every graph combination and prove merge
-        let combinations: Vec<(&Component, &Component)> =
-            iproduct!(&self.leaf_comps, &self.comps).collect_vec();
+        let combinations: Vec<(Component, Component)> = iproduct!(
+            self.leaf_comps.iter().flat_map(|c| c.components()),
+            self.comps.iter().flat_map(|c| c.components())
+        )
+        .collect_vec();
         combinations.into_par_iter().for_each(|(left, right)| {
             log::info!("Proving local merge between {} and {} ...", left, right);
 
@@ -198,18 +204,10 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
 
             let filename = if result {
                 log::info!("✔️ Proved local merge between {} and {} ", left, right);
-                format!(
-                    "proofs/proof_{}-{}.txt",
-                    left.short_name(),
-                    right.short_name()
-                )
+                format!("proofs/proof_{}-{}.txt", left, right)
             } else {
                 log::warn!("❌ Disproved local merge between {} and {} ", left, right);
-                format!(
-                    "proofs/wrong_proof_{}-{}.txt",
-                    left.short_name(),
-                    right.short_name()
-                )
+                format!("proofs/wrong_proof_{}-{}.txt", left, right)
             };
 
             let mut buf = String::new();
@@ -243,16 +241,10 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
         graph_components.push(&right_comp);
 
         // Enumerate all possible matchings (adversarial)
-        for left_matched in last_comp
-            .graph()
-            .nodes()
-            .powerset()
-            .filter(|p| p.len() == 3)
-        {
+        for left_matched in last_comp.possible_matchings() {
             let right_iter: Vec<Vec<u32>> = match right_comp_ref {
-                Component::Simple(g) => g.nodes().permutations(3).map(|p| p).collect(),
-                Component::Large(g) => vec![g.nodes().collect()],
-                Component::Complex(g) => vec![g.nodes().collect()],
+                Component::Cycle(g) => g.nodes().permutations(3).map(|p| p).collect(),
+                _ => right_comp_ref.possible_matchings(),
             };
             'match_loop: for perm in right_iter {
                 // Compute edges of matching
@@ -292,7 +284,6 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
                         continue 'match_loop;
                     }
                 }
-
 
                 // Proof #3
                 if self.prove_via_contractable_arguments(
@@ -348,7 +339,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
 
         let mut success = true;
 
-        for next in &self.comps {
+        for next in self.comps.iter().flat_map(|c| c.components()) {
             if !self.prove_local_merge(
                 graph.clone(),
                 graph_components.clone(),
@@ -372,7 +363,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
         graph_components: &Vec<&Component>,
         proof_node: &mut ProofNode,
     ) -> bool {
-        if matches!(comp, Component::Simple(g) if g.node_count() == 6) {
+        if matches!(comp, Component::Cycle(g) if g.node_count() == 6) {
             // comp is H
             let mut necessary_edges = 0;
             let mut inner_vertices = vec![];
@@ -446,33 +437,40 @@ fn prove_via_direct_merge<C: CreditInvariant>(
     let buyable = edges_of_type(graph, EdgeType::Buyable);
 
     let total_component_credits = graph_components.iter().map(|c| credit_inv.credits(c)).sum();
-    let new_component_credit = if graph_components
-        .iter()
-        .any(|c| matches!(c, Component::Complex(_)))
-    {
-        credit_inv.complex_comp() + credit_inv.complex_block() // we create a component and a block!
-    } else {
-        credit_inv.large()
-    };
+    // let new_component_credit = if graph_components
+    //     .iter()
+    //     .any(|c| matches!(c, Component::Complex(_)))
+    // {
+    //     credit_inv.complex_comp() + credit_inv.complex_block() // we create a component and a block!
+    // } else {
+    //     credit_inv.large()
+    // };
 
     let result = find_feasible_merge(
         graph,
-        buyable.into_iter().powerset().filter(|p| p.len() >= 2),
+        buyable.into_iter().powerset().filter(|p| p.len() >= 1),
         sellable.into_iter().powerset(),
-        new_component_credit,
         total_component_credits,
+        credit_inv.clone(),
+        graph_components
+            .iter()
+            .any(|c| matches!(c, Component::ComplexPath(_,_)) || matches!(c, Component::ComplexY(_,_))),
     );
 
     match result {
-        MergeResult::Feasible(merge) => {
-            proof_node.add_child(ProofNode::new_leaf(format!("Direct merge possible [bought = {:?}, sold = {:?}, credits: {} + {} - {} >= {}]", merge.bought_edges, merge.sold_edges, total_component_credits, merge.sold_edges.len(), merge.bought_edges.len(), new_component_credit), true));
+        MergeResult::FeasibleLarge(merge) => {
+            proof_node.add_child(ProofNode::new_leaf(format!("Direct merge to large possible [bought = {:?}, sold = {:?}, credits: {} + {} - {} >= {}]", merge.bought_edges, merge.sold_edges, total_component_credits, merge.sold_edges.len(), merge.bought_edges.len(), merge.new_comp_credit), true));
+            true
+        }
+        MergeResult::FeasibleComplex(merge) => {
+            proof_node.add_child(ProofNode::new_leaf(format!("Direct merge to complex possible [bought = {:?}, sold = {:?}, credits: {} + {} - {} >= {}]", merge.bought_edges, merge.sold_edges, total_component_credits, merge.sold_edges.len(), merge.bought_edges.len(), merge.new_comp_credit), true));
             true
         }
         MergeResult::Impossible => {
             proof_node.add_child(ProofNode::new_leaf(
                 format!(
-                    "Direct merge impossible [available credits: {}, target credits: {}]",
-                    total_component_credits, new_component_credit
+                    "Direct merge impossible [available credits: {}]",
+                    total_component_credits
                 ),
                 false,
             ));
@@ -484,19 +482,22 @@ fn prove_via_direct_merge<C: CreditInvariant>(
 pub struct FeasibleMerge {
     bought_edges: Vec<(Node, Node)>,
     sold_edges: Vec<(Node, Node)>,
+    new_comp_credit: Credit,
 }
 
 pub enum MergeResult {
-    Feasible(FeasibleMerge),
+    FeasibleLarge(FeasibleMerge),
+    FeasibleComplex(FeasibleMerge),
     Impossible,
 }
 
-pub fn find_feasible_merge<'a, B, S>(
+pub fn find_feasible_merge<'a, B, S, C: CreditInvariant>(
     graph: &Graph,
     buy_iter: B,
     sell_iter: S,
-    new_component_credit: Credit,
     total_component_credits: Credit,
+    credit_inv: C,
+    one_is_complex: bool,
 ) -> MergeResult
 where
     B: Iterator<Item = Vec<(u32, u32)>> + Clone,
@@ -523,16 +524,46 @@ where
                 }
             });
 
-            if total_plus_sell - buy_credits < new_component_credit {
-                continue;
+            if !one_is_complex {
+                if total_plus_sell - buy_credits < credit_inv.large() {
+                    continue;
+                }
             }
 
-            // Do the most expensive check last!
-            if no_bridges_and_connected(&check_graph) {
-                return MergeResult::Feasible(FeasibleMerge {
-                    bought_edges: buy.clone(),
-                    sold_edges: sell.clone(),
-                });
+            match is_complex(&check_graph) {
+                ComplexCheckResult::Complex(bridges, black_vertices) => {
+                    let blocks_graph = EdgeFiltered::from_fn(&check_graph, |(v, u, _)| {
+                        !black_vertices.contains(&v) && !black_vertices.contains(&u)
+                    });
+                    let num_blocks = connected_components(&blocks_graph) - black_vertices.len();
+                    let black_deg: usize = black_vertices
+                        .iter()
+                        .map(|v| bridges.iter().filter(|(a, b)| a == v || b == v).count())
+                        .sum();
+                    let new_credits = Credit::from_integer(num_blocks as i64)
+                        * credit_inv.complex_block()
+                        + credit_inv.complex_black(black_deg as i64)
+                        + credit_inv.complex_comp();
+
+                    if total_plus_sell - buy_credits >= new_credits {
+                        return MergeResult::FeasibleComplex(FeasibleMerge {
+                            bought_edges: buy.clone(),
+                            sold_edges: sell.clone(),
+                            new_comp_credit: new_credits,
+                        });
+                    }
+                }
+                ComplexCheckResult::NoBridges => {
+                    if total_plus_sell - buy_credits >= credit_inv.large() {
+                        return MergeResult::FeasibleLarge(FeasibleMerge {
+                            bought_edges: buy.clone(),
+                            sold_edges: sell.clone(),
+                            new_comp_credit: credit_inv.large(),
+                        });
+                    }
+                }
+                ComplexCheckResult::BlackLeaf => continue,
+                ComplexCheckResult::NotConnected | ComplexCheckResult::Empty => continue,
             }
         }
     }

@@ -1,7 +1,22 @@
+use std::hash::Hash;
+
+use itertools::Itertools;
 use petgraph::visit::{
-    depth_first_search, Control, DfsEvent, IntoNeighbors, IntoNodeIdentifiers, NodeIndexable,
-    Visitable, NodeCount, GraphRef, EdgeCount, Dfs,
+    depth_first_search, Control, Dfs, DfsEvent, EdgeCount, GraphRef, IntoNeighbors,
+    IntoNodeIdentifiers, NodeCount, NodeIndexable, Visitable,
 };
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ComplexCheckResult<G>
+where
+    G: NodeIndexable,
+{
+    Complex(Vec<(G::NodeId, G::NodeId)>, Vec<G::NodeId>),
+    NoBridges,
+    BlackLeaf,
+    NotConnected,
+    Empty,
+}
 
 pub fn compute_bridges<G>(g: G) -> Vec<(G::NodeId, G::NodeId)>
 where
@@ -47,10 +62,83 @@ where
     }
 }
 
-pub fn no_bridges_and_connected<G>(g: G) -> bool where
-G: IntoNeighbors + Visitable + IntoNodeIdentifiers + NodeIndexable + NodeCount,
-G::NodeId: std::fmt::Debug, {
+pub fn is_complex<G>(g: G) -> ComplexCheckResult<G>
+where
+    G: IntoNeighbors + Visitable + IntoNodeIdentifiers + NodeIndexable + NodeCount,
+    G::NodeId: std::fmt::Debug + Eq + Hash,
+{
+    let mut parent = vec![None; g.node_bound()];
+    let mut disc = vec![0; g.node_bound()];
+    let mut low = vec![0; g.node_bound()];
+    let mut bridges = vec![];
+    let mut node_count = 0;
 
+    if let Some(start) = g.node_identifiers().next() {
+        depth_first_search(&g, Some(start), |event| -> Control<()> {
+            match event {
+                DfsEvent::TreeEdge(u, v) => {
+                    parent[g.to_index(v)] = Some(u);
+                }
+                DfsEvent::Discover(u, time) => {
+                    node_count += 1;
+                    low[g.to_index(u)] = time.0;
+                    disc[g.to_index(u)] = time.0;
+                }
+                DfsEvent::Finish(v, _) => {
+                    if let Some(u) = parent[g.to_index(v)] {
+                        low[g.to_index(u)] = low[g.to_index(v)].min(low[g.to_index(u)]);
+
+                        if low[g.to_index(v)] > disc[g.to_index(u)] {
+                            bridges.push((v, u));
+                        }
+                    }
+                }
+                DfsEvent::BackEdge(u, v) | DfsEvent::CrossForwardEdge(u, v) => {
+                    if parent[g.to_index(u)] != Some(v) {
+                        low[g.to_index(u)] = disc[g.to_index(v)].min(low[g.to_index(u)]);
+                    }
+                }
+            }
+            Control::Continue
+        });
+
+        if node_count != g.node_count() {
+            // graph not connected!
+            return ComplexCheckResult::NotConnected;
+        }
+
+        if bridges.is_empty() {
+            return ComplexCheckResult::NoBridges;
+        }
+
+        let bridge_vertices: Vec<G::NodeId> = bridges
+            .iter()
+            .flat_map(|(u, v)| vec![u, v])
+            .unique()
+            .cloned()
+            .collect();
+
+        let black_vertices: Vec<G::NodeId> = bridge_vertices
+            .iter()
+            .filter(|&&v| g.neighbors(v).all(|u| bridge_vertices.contains(&u)))
+            .cloned()
+            .collect();
+
+        if black_vertices.iter().any(|&v| g.neighbors(v).count() == 1) {
+            return ComplexCheckResult::BlackLeaf;
+        }
+
+        ComplexCheckResult::Complex(bridges, black_vertices)
+    } else {
+        ComplexCheckResult::Empty
+    }
+}
+
+pub fn no_bridges_and_connected<G>(g: G) -> bool
+where
+    G: IntoNeighbors + Visitable + IntoNodeIdentifiers + NodeIndexable + NodeCount,
+    G::NodeId: std::fmt::Debug,
+{
     let mut parent = vec![None; g.node_bound()];
     let mut disc = vec![0; g.node_bound()];
     let mut low = vec![0; g.node_bound()];
@@ -181,6 +269,60 @@ mod test_connected {
         let g: UnGraph<(), ()> =
             UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3)]);
         assert!(!is_connected(&g));
+    }
+}
+
+#[cfg(test)]
+mod test_complex {
+    use petgraph::graph::node_index as n;
+    use petgraph::prelude::UnGraph;
+
+    use crate::comps::{ComponentType, Graph};
+
+    use super::*;
+
+    #[test]
+    fn test_complex_base() {
+        let graphs = ComponentType::Complex.components();
+        let res0 = is_complex(graphs[0].graph());
+        let res1 = is_complex(graphs[1].graph());
+        assert!(matches!(res0, ComplexCheckResult::Complex(_,_)));
+        dbg!(&res1);
+        assert!(matches!(res1, ComplexCheckResult::Complex(_,_)));
+    }
+
+    #[test]
+    fn test_complex_triangle() {
+        let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0)]);
+        assert!(matches!(is_complex(&g), ComplexCheckResult::NoBridges));
+    }
+
+    #[test]
+    fn test_complex_two_edges() {
+        let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (2, 3)]);
+        assert!(matches!(is_complex(&g), ComplexCheckResult::NotConnected));
+    }
+
+    #[test]
+    fn test_complex_two_triangles() {
+        let g: UnGraph<(), ()> =
+            UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3), (2, 3)]);
+        assert!(matches!(is_complex(&g), ComplexCheckResult::Complex(_, _)));
+        if let ComplexCheckResult::Complex(bridges, blacks) = is_complex(&g) {
+            assert_eq!(bridges, vec![(n(3), n(2))]);
+            assert_eq!(blacks, vec![])
+        }
+    }
+
+    #[test]
+    fn test_complex_three_triangles() {
+        let g: UnGraph<(), ()> =
+            UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3), (6, 7), (7, 8), (8, 6), (9, 0), (9, 3), (9, 6)]);
+        assert!(matches!(is_complex(&g), ComplexCheckResult::Complex(_, _)));
+        if let ComplexCheckResult::Complex(bridges, blacks) = is_complex(&g) {
+            assert_eq!(bridges, vec![(n(6), n(9)), (n(3), n(9)), (n(9), n(0))]);
+            assert_eq!(blacks, vec![n(9)])
+        }
     }
 }
 
