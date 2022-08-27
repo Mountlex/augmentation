@@ -286,9 +286,9 @@ mod test_complex {
         let graphs = ComponentType::Complex.components();
         let res0 = is_complex(graphs[0].graph());
         let res1 = is_complex(graphs[1].graph());
-        assert!(matches!(res0, ComplexCheckResult::Complex(_,_)));
+        assert!(matches!(res0, ComplexCheckResult::Complex(_, _)));
         dbg!(&res1);
-        assert!(matches!(res1, ComplexCheckResult::Complex(_,_)));
+        assert!(matches!(res1, ComplexCheckResult::Complex(_, _)));
     }
 
     #[test]
@@ -316,8 +316,20 @@ mod test_complex {
 
     #[test]
     fn test_complex_three_triangles() {
-        let g: UnGraph<(), ()> =
-            UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3), (6, 7), (7, 8), (8, 6), (9, 0), (9, 3), (9, 6)]);
+        let g: UnGraph<(), ()> = UnGraph::from_edges(&[
+            (0, 1),
+            (1, 2),
+            (2, 0),
+            (3, 4),
+            (4, 5),
+            (5, 3),
+            (6, 7),
+            (7, 8),
+            (8, 6),
+            (9, 0),
+            (9, 3),
+            (9, 6),
+        ]);
         assert!(matches!(is_complex(&g), ComplexCheckResult::Complex(_, _)));
         if let ComplexCheckResult::Complex(bridges, blacks) = is_complex(&g) {
             assert_eq!(bridges, vec![(n(6), n(9)), (n(3), n(9)), (n(9), n(0))]);

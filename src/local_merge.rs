@@ -452,9 +452,9 @@ fn prove_via_direct_merge<C: CreditInvariant>(
         sellable.into_iter().powerset(),
         total_component_credits,
         credit_inv.clone(),
-        graph_components
-            .iter()
-            .any(|c| matches!(c, Component::ComplexPath(_,_)) || matches!(c, Component::ComplexY(_,_))),
+        graph_components.iter().any(|c| {
+            matches!(c, Component::ComplexPath(_, _)) || matches!(c, Component::ComplexY(_, _))
+        }),
     );
 
     match result {

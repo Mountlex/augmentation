@@ -1,11 +1,8 @@
-
 use std::fs::OpenOptions;
 
 use clap::Parser;
 
 use num_rational::Rational64;
-
-
 
 use crate::{comps::*, local_merge::TreeCaseProof};
 
@@ -21,13 +18,12 @@ struct Cli {
     c_numer: i64,
     c_demon: i64,
 
-    #[clap(short,long,default_value = "0")]
+    #[clap(short, long, default_value = "0")]
     depth: usize,
 
-    #[clap(short,long,default_value = "false")]
+    #[clap(short, long, default_value = "false")]
     verbose: bool,
 }
-
 
 pub type Credit = Rational64;
 
@@ -63,7 +59,7 @@ fn main() -> anyhow::Result<()> {
 fn setup_logging(verbose: bool) -> Result<(), fern::InitError> {
     let base_config = fern::Dispatch::new();
 
-        // Separate file config so we can include year, month and day in file logs
+    // Separate file config so we can include year, month and day in file logs
     let file_config = fern::Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
@@ -74,11 +70,13 @@ fn setup_logging(verbose: bool) -> Result<(), fern::InitError> {
             ))
         })
         .level(log::LevelFilter::Trace)
-        .chain(OpenOptions::new()
-        .truncate(true)
-        .write(true)
-        .create(true)
-        .open("program.log")?);
+        .chain(
+            OpenOptions::new()
+                .truncate(true)
+                .write(true)
+                .create(true)
+                .open("program.log")?,
+        );
 
     let stdout_config = fern::Dispatch::new()
         .format(|out, message, record| {
@@ -108,8 +106,3 @@ fn setup_logging(verbose: bool) -> Result<(), fern::InitError> {
 
     Ok(())
 }
-
-
-
-
-
