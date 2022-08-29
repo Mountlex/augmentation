@@ -2,11 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use itertools::Itertools;
 use num_rational::Rational64;
-use petgraph::{
-    algo::connected_components,
-    prelude::{GraphMap, UnGraphMap},
-    visit::{EdgeFiltered, IntoEdgeReferences, NodeCompactIndexable, NodeFiltered, NodeIndexable},
-};
+
 
 use crate::Credit;
 
@@ -68,6 +64,61 @@ pub fn large_component() -> Component {
     ]))
 }
 
+pub fn complex_path_component() -> Component {
+    Component::Complex(
+        Complex {
+            graph: Graph::from_edges(vec![
+                (0, 1, EdgeType::Fixed),
+                (0, 8, EdgeType::Fixed),
+                (8, 9, EdgeType::Fixed),
+                (9, 0, EdgeType::Fixed),
+                (1, 2, EdgeType::Sellable),
+                (2, 3, EdgeType::Sellable),
+                (3, 4, EdgeType::Sellable),
+                (4, 5, EdgeType::Sellable),
+                (5, 6, EdgeType::Sellable),
+                (6, 7, EdgeType::Fixed),
+                (7, 10, EdgeType::Fixed),
+                (10, 11, EdgeType::Fixed),
+                (11, 7, EdgeType::Fixed),
+            ]),
+            num_blocks: 2,
+            total_black_deg: 12
+        },
+        vec![1, 2, 3, 4, 5, 6],
+        "Complex-Path".into(),
+    )
+}
+
+pub fn complex_tree_component() -> Component {
+    Component::Complex(
+        Complex {
+            graph: Graph::from_edges(vec![
+                (0, 7, EdgeType::Fixed),
+                (7, 8, EdgeType::Fixed),
+                (8, 0, EdgeType::Fixed),
+                (0, 1, EdgeType::Fixed),
+                (1, 2, EdgeType::Fixed),
+                (2, 3, EdgeType::Fixed),
+                (3, 4, EdgeType::Fixed),
+                (4, 9, EdgeType::Fixed),
+                (9, 10, EdgeType::Fixed),
+                (10, 4, EdgeType::Fixed),
+                (2, 5, EdgeType::Fixed),
+                (5, 6, EdgeType::Fixed),
+                (6, 11, EdgeType::Fixed),
+                (11, 12, EdgeType::Fixed),
+                (12, 6, EdgeType::Fixed),
+            ]),
+            num_blocks: 3,
+            total_black_deg: 9
+        },
+        vec![1, 2, 3, 5],
+        "Complex-Tree".into(),
+    )
+}
+
+
 #[derive(Clone, Debug)]
 pub enum ComponentType {
     Cycle(u8),
@@ -93,50 +144,9 @@ impl ComponentType {
                     .map(|i| (i as u32, ((i + 1) % l) as u32, EdgeType::Sellable))
                     .collect::<Vec<(u32, u32, EdgeType)>>(),
             ))],
-            ComponentType::Large => vec![Component::Large(Graph::from_edges(vec![
-                (0, 1, EdgeType::Fixed),
-                (1, 2, EdgeType::Fixed),
-                (2, 0, EdgeType::Fixed),
-            ]))],
+            ComponentType::Large => vec![large_component()],
             ComponentType::Complex => vec![
-                Component::ComplexPath(
-                    Graph::from_edges(vec![
-                        (0, 1, EdgeType::Fixed),
-                        (0, 8, EdgeType::Fixed),
-                        (8, 9, EdgeType::Fixed),
-                        (9, 0, EdgeType::Fixed),
-                        (1, 2, EdgeType::Sellable),
-                        (2, 3, EdgeType::Sellable),
-                        (3, 4, EdgeType::Sellable),
-                        (4, 5, EdgeType::Sellable),
-                        (5, 6, EdgeType::Sellable),
-                        (6, 7, EdgeType::Fixed),
-                        (7, 10, EdgeType::Fixed),
-                        (10, 11, EdgeType::Fixed),
-                        (11, 7, EdgeType::Fixed),
-                    ]),
-                    vec![1, 2, 3, 4, 5, 6],
-                ),
-                Component::ComplexY(
-                    Graph::from_edges(vec![
-                        (0, 7, EdgeType::Fixed),
-                        (7, 8, EdgeType::Fixed),
-                        (8, 0, EdgeType::Fixed),
-                        (0, 1, EdgeType::Fixed),
-                        (1, 2, EdgeType::Fixed),
-                        (2, 3, EdgeType::Fixed),
-                        (3, 4, EdgeType::Fixed),
-                        (4, 9, EdgeType::Fixed),
-                        (9, 10, EdgeType::Fixed),
-                        (10, 4, EdgeType::Fixed),
-                        (2, 5, EdgeType::Fixed),
-                        (5, 6, EdgeType::Fixed),
-                        (6, 11, EdgeType::Fixed),
-                        (11, 12, EdgeType::Fixed),
-                        (12, 6, EdgeType::Fixed),
-                    ]),
-                    vec![1, 2, 3, 5],
-                ),
+                complex_path_component(), complex_tree_component()
             ],
         }
     }
@@ -146,40 +156,26 @@ impl ComponentType {
 pub enum Component {
     Cycle(Graph),
     Large(Graph),
-    ComplexPath(Graph, Vec<u32>),
-    ComplexY(Graph, Vec<u32>),
+    Complex(Complex, Vec<Node>, String),
 }
 
-pub enum BWNode {
-    Black(u32),
-    White(u32),
+#[derive(Clone, Debug)]
+pub struct Complex {
+    pub graph: Graph,
+    pub total_black_deg: usize,
+    pub num_blocks: usize,
 }
 
-pub type BWGraph = UnGraphMap<BWNode, EdgeType>;
 
 impl Component {
-    pub fn short_name(&self) -> String {
-        match self {
-            Component::Large(_) => format!("large"),
-            Component::ComplexPath(_, _) => format!("complex-path"),
-            Component::ComplexY(_, _) => format!("complex-y"),
-            Component::Cycle(graph) => format!("{}c", graph.node_count()),
-        }
-    }
-
+   
     pub fn possible_matchings(&self) -> Vec<Vec<u32>> {
         match self {
             Component::Cycle(g) => g.nodes().powerset().filter(|p| p.len() == 3).collect(),
             Component::Large(g) => vec![g.nodes().collect()],
-            Component::ComplexPath(g, black) => black
-                .clone()
-                .into_iter()
-                .powerset()
-                .filter(|p| p.len() == 3)
-                .collect(),
-            Component::ComplexY(g, black) => black
-                .clone()
-                .into_iter()
+            Component::Complex(_, nodes, _) => nodes
+                .iter()
+                .cloned()
                 .powerset()
                 .filter(|p| p.len() == 3)
                 .collect(),
@@ -190,17 +186,16 @@ impl Component {
         match self {
             Component::Cycle(g) => g,
             Component::Large(g) => g,
-            Component::ComplexPath(g, _) => g,
-            Component::ComplexY(g, _) => g,
+            Component::Complex(c,_,_) => &c.graph,
         }
     }
 
     pub fn update_graph(&mut self, update: Graph, mapping: HashMap<u32, u32>) {
         match self {
             Component::Cycle(g) | Component::Large(g) => *g = update,
-            Component::ComplexPath(g, blacks) | Component::ComplexY(g, blacks) => {
-                *g = update;
-                blacks.iter_mut().for_each(|b| *b = mapping[b]);
+            Component::Complex(c,nodes, _) => {
+                c.graph = update;
+                nodes.iter_mut().for_each(|b| *b = mapping[b]);
             }
         }
     }
@@ -209,8 +204,7 @@ impl Component {
         match self {
             Component::Cycle(g) => g,
             Component::Large(g) => g,
-            Component::ComplexPath(g, _) => g,
-            Component::ComplexY(g, _) => g,
+            Component::Complex(c,_,_) => c.graph,
         }
     }
 }
@@ -219,8 +213,7 @@ impl Display for Component {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Component::Large(_) => write!(f, "Large"),
-            Component::ComplexPath(_, _) => write!(f, "Complex-Path"),
-            Component::ComplexY(_, _) => write!(f, "Complex-Y"),
+            Component::Complex(_,_,name) => write!(f, "{}", name),
             Component::Cycle(graph) => write!(
                 f,
                 "{}-Cycle [{}]",
@@ -264,8 +257,8 @@ pub fn merge_graphs_to_base(
         let edges: Vec<(Node, Node, EdgeType)> = graph
             .all_edges()
             .map(|(w1, w2, t)| {
-                let w1_new = (nodes.iter().position(|n| n == &w1).unwrap() as u32 + offset);
-                let w2_new = (nodes.iter().position(|n| n == &w2).unwrap() as u32 + offset);
+                let w1_new = nodes.iter().position(|n| n == &w1).unwrap() as u32 + offset;
+                let w2_new = nodes.iter().position(|n| n == &w2).unwrap() as u32 + offset;
                 mapping.insert(w1, w1_new);
                 mapping.insert(w2, w2_new);
                 (w1_new, w2_new, *t)
@@ -307,46 +300,13 @@ pub fn merge_graphs(graphs: Vec<Graph>) -> (Graph, Vec<Graph>) {
     (g, others)
 }
 
-// pub struct ComplexStructure<G>
-// where
-//     G: NodeIndexable,
-// {
-//     bridges: Vec<(G::NodeId, G::NodeId)>,
-//     black_vertices: Vec<G::NodeId>,
-//     num_blocks: usize,
-// }
 
-pub fn compute_number_of_blocks<G>(
-    graph: &Graph,
-    bridges: &Vec<(Node, Node)>,
-    black_vertices: &Vec<Node>,
-) -> usize {
-    let blocks_graph = EdgeFiltered::from_fn(graph, |(v, u, _)| {
-        !(black_vertices.contains(&v) && !black_vertices.contains(&u))
-    });
-    let num_blocks = connected_components(&blocks_graph);
-    // ComplexStructure {
-    //     bridges,
-    //     black_vertices,
-    //     num_blocks,
-    //}
-    num_blocks
-}
 
 pub trait CreditInvariant: Clone {
     fn credits(&self, comp: &Component) -> Credit {
         match comp {
-            Component::ComplexPath(graph, _) => {
-                self.complex_comp()
-                    + Credit::from_integer(6) * self.complex_black(2)
-                    + Credit::from_integer(2) * self.complex_block()
-            }
-
-            Component::ComplexY(graph, _) => {
-                self.complex_comp()
-                    + Credit::from_integer(3) * self.complex_black(2)
-                    + self.complex_black(3)
-                    + Credit::from_integer(3) * self.complex_block()
+            Component::Complex(c, _, _) => {
+                self.complex(c)
             }
 
             Component::Large(_) => self.large(),
@@ -354,6 +314,9 @@ pub trait CreditInvariant: Clone {
         }
     }
     fn simple(&self, graph: &Graph) -> Credit;
+    fn complex(&self, complex: &Complex) -> Credit {
+        self.complex_comp() + Credit::from_integer(complex.num_blocks as i64) * self.complex_block() + self.complex_black(complex.total_black_deg as i64)
+    }
     fn complex_comp(&self) -> Credit;
     fn complex_black(&self, deg: i64) -> Credit;
     fn complex_block(&self) -> Credit;

@@ -1,163 +1,16 @@
-use core::fmt;
+use std::path::PathBuf;
+
 use itertools::{iproduct, Itertools};
 use num_rational::Rational64;
 use petgraph::{algo::connected_components, visit::EdgeFiltered};
 use rayon::prelude::*;
-use std::{
-    fmt::{Display, Write},
-    num,
-};
 
 use crate::{
-    bridges::{is_complex, no_bridges_and_connected, ComplexCheckResult},
-    comps::{
-        compute_number_of_blocks, large_component, six_cycle, three_cycle, Component,
-        ComponentType, CreditInvariant, EdgeType, Graph, Node,
-    },
-    edges_of_type, merge_components_to_base, Credit,
+    bridges::{is_complex, ComplexCheckResult},
+    comps::{Component, ComponentType, CreditInvariant, EdgeType, Graph, Node},
+    edges_of_type, merge_components_to_base, Credit, proof_tree::{ProofNode, Tree},
 };
 
-trait Tree<N>
-where
-    N: Tree<N>,
-{
-    fn childs(&self) -> Option<&[ProofNode]>;
-    fn msg(&self) -> String;
-
-    fn print_tree<W: Write>(&self, writer: &mut W, depth: usize) -> anyhow::Result<()> {
-        (0..depth).try_for_each(|_| write!(writer, "    "))?;
-        writeln!(writer, "{}", self.msg())?;
-        if let Some(childs) = self.childs() {
-            for c in childs {
-                c.print_tree(writer, depth + 1)?;
-            }
-        }
-        Ok(())
-    }
-}
-
-enum ProofNode {
-    Leaf {
-        msg: String,
-        success: bool,
-    },
-    All {
-        msg: String,
-        success: bool,
-        childs: Vec<ProofNode>,
-    },
-    Any {
-        msg: String,
-        success: bool,
-        childs: Vec<ProofNode>,
-    },
-}
-
-impl ProofNode {
-    fn new_leaf(msg: String, success: bool) -> Self {
-        ProofNode::Leaf { msg, success }
-    }
-
-    fn new_all(msg: String) -> Self {
-        ProofNode::All {
-            msg,
-            success: false,
-            childs: vec![],
-        }
-    }
-
-    fn new_any(msg: String) -> Self {
-        ProofNode::Any {
-            msg,
-            success: false,
-            childs: vec![],
-        }
-    }
-
-    fn add_child(&mut self, node: ProofNode) {
-        match self {
-            ProofNode::Leaf { msg: _, success: _ } => panic!(),
-            ProofNode::All {
-                msg: _,
-                success: _,
-                childs,
-            } => childs.push(node),
-            ProofNode::Any {
-                msg: _,
-                success: _,
-                childs,
-            } => childs.push(node),
-        }
-    }
-
-    fn eval(&mut self) -> bool {
-        match self {
-            ProofNode::Leaf { msg: _, success } => *success,
-            ProofNode::All {
-                msg: _,
-                success,
-                childs,
-            } => {
-                *success = childs.iter_mut().all(|c| c.eval());
-                *success
-            }
-            ProofNode::Any {
-                msg: _,
-                success,
-                childs,
-            } => {
-                *success = childs.iter_mut().any(|c| c.eval());
-                *success
-            }
-        }
-    }
-}
-
-impl Tree<ProofNode> for ProofNode {
-    fn msg(&self) -> String {
-        format!("{}", self)
-    }
-
-    fn childs(&self) -> Option<&[ProofNode]> {
-        match self {
-            ProofNode::Leaf { msg: _, success: _ } => None,
-            ProofNode::All {
-                msg: _,
-                success: _,
-                childs,
-            }
-            | ProofNode::Any {
-                msg: _,
-                success: _,
-                childs,
-            } => Some(childs),
-        }
-    }
-}
-
-impl Display for ProofNode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ProofNode::Leaf { msg, success }
-            | ProofNode::All {
-                msg,
-                success,
-                childs: _,
-            }
-            | ProofNode::Any {
-                msg,
-                success,
-                childs: _,
-            } => {
-                if *success {
-                    write!(f, "{} ✔️", msg)
-                } else {
-                    write!(f, "{} ❌", msg)
-                }
-            }
-        }
-    }
-}
 
 pub struct TreeCaseProof<C> {
     leaf_comps: Vec<ComponentType>,
@@ -181,7 +34,9 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
         }
     }
 
-    pub fn prove(&self) {
+    pub fn prove(&self, output_dir: PathBuf) {
+        std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
+
         // Enumerate every graph combination and prove merge
         let combinations: Vec<(Component, Component)> = iproduct!(
             self.leaf_comps.iter().flat_map(|c| c.components()),
@@ -204,10 +59,10 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
 
             let filename = if result {
                 log::info!("✔️ Proved local merge between {} and {} ", left, right);
-                format!("proofs/proof_{}-{}.txt", left, right)
+                output_dir.join(format!("proof_{}-{}.txt", left, right))
             } else {
                 log::warn!("❌ Disproved local merge between {} and {} ", left, right);
-                format!("proofs/wrong_proof_{}-{}.txt", left, right)
+                output_dir.join(format!("wrong_proof_{}-{}.txt", left, right))
             };
 
             let mut buf = String::new();
@@ -340,6 +195,17 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
         let mut success = true;
 
         for next in self.comps.iter().flat_map(|c| c.components()) {
+            if graph_components.len() == 2 {
+                match (graph_components[0], graph_components[1], &next) {
+                    (Component::Cycle(g0), Component::Cycle(g1), Component::Cycle(g2))
+                        if g0.edge_count() == 5 && g1.edge_count() == 4 && g2.edge_count() == 5 =>
+                    {
+                        continue
+                    }
+                    _ => (),
+                }
+            }
+
             if !self.prove_local_merge(
                 graph.clone(),
                 graph_components.clone(),
@@ -452,9 +318,9 @@ fn prove_via_direct_merge<C: CreditInvariant>(
         sellable.into_iter().powerset(),
         total_component_credits,
         credit_inv.clone(),
-        graph_components.iter().any(|c| {
-            matches!(c, Component::ComplexPath(_, _)) || matches!(c, Component::ComplexY(_, _))
-        }),
+        graph_components
+            .iter()
+            .any(|c| matches!(c, Component::Complex(_, _, _))),
     );
 
     match result {
