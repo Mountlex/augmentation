@@ -10,8 +10,8 @@ mod bridges;
 mod comps;
 mod contract;
 mod local_merge;
-mod proof_tree;
 mod nice_path;
+mod proof_tree;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]

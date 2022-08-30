@@ -1,4 +1,4 @@
-use std::fmt::{Display, self, Write};
+use std::fmt::{self, Display, Write};
 
 pub trait Tree<N>
 where

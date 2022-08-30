@@ -8,9 +8,10 @@ use rayon::prelude::*;
 use crate::{
     bridges::{is_complex, ComplexCheckResult},
     comps::{Component, ComponentType, CreditInvariant, EdgeType, Graph, Node},
-    edges_of_type, merge_components_to_base, Credit, proof_tree::{ProofNode, Tree},
+    edges_of_type, merge_components_to_base,
+    proof_tree::{ProofNode, Tree},
+    Credit,
 };
-
 
 pub struct TreeCaseProof<C> {
     leaf_comps: Vec<ComponentType>,
@@ -59,10 +60,18 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
 
             let filename = if result {
                 log::info!("✔️ Proved local merge between {} and {} ", left, right);
-                output_dir.join(format!("proof_{}-{}.txt", left, right))
+                output_dir.join(format!(
+                    "proof_{}-{}.txt",
+                    left.short_name(),
+                    right.short_name()
+                ))
             } else {
                 log::warn!("❌ Disproved local merge between {} and {} ", left, right);
-                output_dir.join(format!("wrong_proof_{}-{}.txt", left, right))
+                output_dir.join(format!(
+                    "wrong_proof_{}-{}.txt",
+                    left.short_name(),
+                    right.short_name()
+                ))
             };
 
             let mut buf = String::new();
@@ -303,14 +312,6 @@ fn prove_via_direct_merge<C: CreditInvariant>(
     let buyable = edges_of_type(graph, EdgeType::Buyable);
 
     let total_component_credits = graph_components.iter().map(|c| credit_inv.credits(c)).sum();
-    // let new_component_credit = if graph_components
-    //     .iter()
-    //     .any(|c| matches!(c, Component::Complex(_)))
-    // {
-    //     credit_inv.complex_comp() + credit_inv.complex_block() // we create a component and a block!
-    // } else {
-    //     credit_inv.large()
-    // };
 
     let result = find_feasible_merge(
         graph,
@@ -399,7 +400,7 @@ where
             match is_complex(&check_graph) {
                 ComplexCheckResult::Complex(bridges, black_vertices) => {
                     let blocks_graph = EdgeFiltered::from_fn(&check_graph, |(v, u, _)| {
-                        !black_vertices.contains(&v) && !black_vertices.contains(&u)
+                        !bridges.contains(&(v, u)) && !bridges.contains(&(u, v))
                     });
                     let num_blocks = connected_components(&blocks_graph) - black_vertices.len();
                     let black_deg: usize = black_vertices
@@ -412,6 +413,11 @@ where
                         + credit_inv.complex_comp();
 
                     if total_plus_sell - buy_credits >= new_credits {
+                        //dbg!(bridges);
+                        //dbg!(num_blocks);
+                        //dbg!(black_vertices);
+                        //dbg!(black_deg);
+
                         return MergeResult::FeasibleComplex(FeasibleMerge {
                             bought_edges: buy.clone(),
                             sold_edges: sell.clone(),

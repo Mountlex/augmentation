@@ -111,16 +111,14 @@ where
             return ComplexCheckResult::NoBridges;
         }
 
-        let bridge_vertices: Vec<G::NodeId> = bridges
+        let black_vertices: Vec<G::NodeId> = bridges
             .iter()
             .flat_map(|(u, v)| vec![u, v])
             .unique()
-            .cloned()
-            .collect();
-
-        let black_vertices: Vec<G::NodeId> = bridge_vertices
-            .iter()
-            .filter(|&&v| g.neighbors(v).all(|u| bridge_vertices.contains(&u)))
+            .filter(|&&v| {
+                g.neighbors(v)
+                    .all(|u| bridges.contains(&(v, u)) || bridges.contains(&(u, v)))
+            })
             .cloned()
             .collect();
 
@@ -277,7 +275,7 @@ mod test_complex {
     use petgraph::graph::node_index as n;
     use petgraph::prelude::UnGraph;
 
-    use crate::comps::{ComponentType};
+    use crate::comps::ComponentType;
 
     use super::*;
 
