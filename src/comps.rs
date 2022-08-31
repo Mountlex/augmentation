@@ -187,7 +187,7 @@ impl Component {
         }
     }
 
-    pub fn possible_matchings(&self) -> Vec<Vec<u32>> {
+    pub fn matching_sets(&self) -> Vec<Vec<Node>> {
         match self {
             Component::Cycle(g) => g.nodes().powerset().filter(|p| p.len() == 3).collect(),
             Component::Large(g) => vec![g.nodes().collect()],
@@ -196,6 +196,18 @@ impl Component {
                 .cloned()
                 .powerset()
                 .filter(|p| p.len() == 3)
+                .collect(),
+        }
+    }
+
+    pub fn matching_permutations(&self) -> Vec<Vec<Node>> {
+        match self {
+            Component::Cycle(g) => g.nodes().permutations(3).collect(),
+            Component::Large(g) => vec![g.nodes().collect()],
+            Component::Complex(_, nodes, _) => nodes
+                .iter()
+                .cloned()
+                .permutations(3)
                 .collect(),
         }
     }
@@ -318,7 +330,7 @@ pub fn merge_graphs(graphs: Vec<Graph>) -> (Graph, Vec<Graph>) {
     (g, others)
 }
 
-pub trait CreditInvariant: Clone {
+pub trait CreditInvariant: Clone + Display {
     fn credits(&self, comp: &Component) -> Credit {
         match comp {
             Component::Complex(c, _, _) => self.complex(c),
@@ -369,6 +381,12 @@ impl CreditInvariant for DefaultCredits {
 
     fn large(&self) -> Credit {
         Credit::from_integer(2)
+    }
+}
+
+impl Display for DefaultCredits {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Credit Scheme with c = {}", self.c)
     }
 }
 

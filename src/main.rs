@@ -22,6 +22,9 @@ struct Cli {
     #[clap(short, long, default_value = "0")]
     depth: usize,
 
+    #[clap(short, long)]
+    parallel: bool,
+
     #[clap(short, long, default_value = "proofs")]
     output_dir: PathBuf,
 
@@ -54,7 +57,7 @@ fn main() -> anyhow::Result<()> {
 
     println!("========== Proof for c = {} ==========", inv.c);
     let proof1 = TreeCaseProof::new(leaf_comps, comps.clone(), inv.clone(), cli.depth);
-    proof1.prove(cli.output_dir);
+    proof1.prove(cli.parallel, cli.output_dir);
     //nice_path::prove_nice_path_progress(comps, inv);
 
     Ok(())

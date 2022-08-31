@@ -4,6 +4,7 @@ use itertools::{iproduct, Itertools};
 use num_rational::Rational64;
 use petgraph::{algo::connected_components, visit::EdgeFiltered};
 use rayon::prelude::*;
+use std::fmt::Write;
 
 use crate::{
     bridges::{is_complex, ComplexCheckResult},
@@ -35,7 +36,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
         }
     }
 
-    pub fn prove(&self, output_dir: PathBuf) {
+    pub fn prove(&self, parallel: bool, output_dir: PathBuf) {
         std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
 
         // Enumerate every graph combination and prove merge
@@ -44,7 +45,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
             self.comps.iter().flat_map(|c| c.components())
         )
         .collect_vec();
-        combinations.into_par_iter().for_each(|(left, right)| {
+        combinations.into_iter().for_each(|(left, right)| {
             log::info!("Proving local merge between {} and {} ...", left, right);
 
             let left_graph = left.graph();
@@ -54,6 +55,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
                 left_graph.clone(),
                 vec![&left],
                 right.clone(),
+                parallel,
                 self.start_depth,
                 &mut root,
             );
@@ -75,6 +77,12 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
             };
 
             let mut buf = String::new();
+            writeln!(
+                &mut buf,
+                "============= Proof with {} ===============",
+                self.credit_inv
+            )
+            .expect("Unable to write file");
             root.eval();
             root.print_tree(&mut buf, 0).expect("Unable to format tree");
             std::fs::write(filename, buf).expect("Unable to write file");
@@ -86,6 +94,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
         left_graph: Graph,
         left_comps: Vec<&Component>,
         right_comp: Component,
+        parallel: bool,
         current_depth: usize,
         p_node: &mut ProofNode,
     ) -> bool {
@@ -104,83 +113,86 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
         let last_comp = graph_components.last().unwrap().clone();
         graph_components.push(&right_comp);
 
-        // Enumerate all possible matchings (adversarial)
-        for left_matched in last_comp.possible_matchings() {
-            let right_iter: Vec<Vec<u32>> = match right_comp_ref {
-                Component::Cycle(g) => g.nodes().permutations(3).map(|p| p).collect(),
-                _ => right_comp_ref.possible_matchings(),
-            };
-            'match_loop: for perm in right_iter {
-                // Compute edges of matching
-                let matching: Vec<(u32, u32)> = left_matched
-                    .iter()
-                    .zip(perm.into_iter())
-                    .map(|(l, r)| (*l, r))
-                    .collect();
+        let matchings = compute_possible_matching(&last_comp, right_comp_ref);
+        let mut matchings_with_nodes: Vec<(Vec<(Node, Node)>, Option<ProofNode>)> =
+            matchings.into_iter().map(|m| (m, None)).collect();
 
+        let result = if parallel {
+            matchings_with_nodes.par_iter_mut().all(|(matching, node)| {
                 let mut matching_node = ProofNode::new_any(format!("Matching {:?}", matching));
-
-                let mut graph_with_matching = graph.clone();
-                for (m1, m2) in &matching {
-                    graph_with_matching.add_edge(*m1, *m2, EdgeType::Buyable);
-                }
-
-                // Proof #1
-                if prove_via_direct_merge(
-                    &graph_with_matching,
-                    graph_components.clone(),
-                    self.credit_inv.clone(),
-                    &mut matching_node,
-                ) {
-                    proof_node.add_child(matching_node);
-                    continue 'match_loop;
-                }
-
-                // Proof #2 check if any component is contractible (TODO check combinations)
-                for comp in &graph_components {
-                    if self.prove_via_contractable_arguments(
-                        comp,
-                        &graph_with_matching,
-                        &graph_components,
-                        &mut matching_node,
-                    ) {
-                        proof_node.add_child(matching_node);
-                        continue 'match_loop;
-                    }
-                }
-
-                // Proof #3
-                if self.prove_via_contractable_arguments(
-                    &right_comp,
-                    &graph_with_matching,
-                    &graph_components,
-                    &mut matching_node,
-                ) {
-                    proof_node.add_child(matching_node);
-                    continue 'match_loop;
-                }
-
-                // Proof #4
-                if self.prove_via_enumerating_neighbors(
+                let graph_with_matching = add_matching_to_graph(&graph, matching);
+                let result = self.find_prove_for_matching(
                     &graph_with_matching,
                     &graph_components,
                     current_depth,
                     &mut matching_node,
-                ) {
-                    proof_node.add_child(matching_node);
-                    continue 'match_loop;
-                }
-
-                // If we reach here, no proof was successful for this matching!
-                proof_node.add_child(matching_node);
-                p_node.add_child(proof_node);
-                return false;
-            }
+                );
+                *node = Some(matching_node);
+                return result;
+            })
+        } else {
+            matchings_with_nodes.iter_mut().all(|(matching, node)| {
+                let mut matching_node = ProofNode::new_any(format!("Matching {:?}", matching));
+                let graph_with_matching = add_matching_to_graph(&graph, matching);
+                let result = self.find_prove_for_matching(
+                    &graph_with_matching,
+                    &graph_components,
+                    current_depth,
+                    &mut matching_node,
+                );
+                *node = Some(matching_node);
+                return result;
+            })
+        };
+        for node in matchings_with_nodes.into_iter().flat_map(|(_, n)| n) {
+            proof_node.add_child(node)
         }
         p_node.add_child(proof_node);
-        true
+        return result;
 
         // If we found shortcuts for every matching, this combination is valid
+    }
+
+    fn find_prove_for_matching(
+        &self,
+        graph_with_matching: &Graph,
+        graph_components: &Vec<&Component>,
+        current_depth: usize,
+        matching_node: &mut ProofNode,
+    ) -> bool {
+        // Proof #1
+        if prove_via_direct_merge(
+            &graph_with_matching,
+            graph_components.clone(),
+            self.credit_inv.clone(),
+            matching_node,
+        ) {
+            return true;
+        }
+
+        // Proof #2 check if any (except the last) component is contractible (TODO check combinations)
+        for comp in graph_components.split_last().unwrap().1 {
+            if self.prove_via_contractable_arguments(
+                comp,
+                &graph_with_matching,
+                &graph_components,
+                matching_node,
+            ) {
+                return true;
+            }
+        }
+
+        // Proof #3
+        if self.prove_via_enumerating_neighbors(
+            &graph_with_matching,
+            &graph_components,
+            current_depth,
+            matching_node,
+        ) {
+            return true;
+        }
+
+        return false;
     }
 
     fn prove_via_enumerating_neighbors(
@@ -219,6 +231,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
                 graph.clone(),
                 graph_components.clone(),
                 next.clone(),
+                false,
                 current_depth - 1,
                 &mut add_comp_node,
             ) {
@@ -300,6 +313,31 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
         // if comp is no 6-cycle, we don't add something to the tree.
         return false;
     }
+}
+
+fn add_matching_to_graph(graph: &Graph, matching: &Vec<(Node, Node)>) -> Graph {
+    let mut graph_with_matching = graph.clone();
+    for (m1, m2) in matching {
+        graph_with_matching.add_edge(*m1, *m2, EdgeType::Buyable);
+    }
+    graph_with_matching
+}
+
+fn compute_possible_matching(left: &Component, right: &Component) -> Vec<Vec<(Node, Node)>> {
+    // Enumerate all possible matchings (adversarial)
+    let right_iter: Vec<Vec<u32>> = right.matching_permutations();
+    left.matching_sets()
+        .into_iter()
+        .flat_map(|left_matched| {
+            right_iter.iter().map(move |right_matched| {
+                left_matched
+                    .iter()
+                    .zip(right_matched.into_iter())
+                    .map(|(l, r)| (*l, *r))
+                    .collect()
+            })
+        })
+        .collect()
 }
 
 fn prove_via_direct_merge<C: CreditInvariant>(
