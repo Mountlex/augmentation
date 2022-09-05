@@ -179,6 +179,31 @@ pub struct Complex {
 }
 
 impl Component {
+
+    pub fn is_c6(&self) -> bool {
+        matches!(self, Component::Cycle(graph) if graph.edge_count() == 6)
+    }
+
+    pub fn is_c5(&self) -> bool {
+        matches!(self, Component::Cycle(graph) if graph.edge_count() == 5)
+    }
+
+    pub fn is_c4(&self) -> bool {
+        matches!(self, Component::Cycle(graph) if graph.edge_count() == 4)
+    }
+
+    pub fn is_c3(&self) -> bool {
+        matches!(self, Component::Cycle(graph) if graph.edge_count() == 3)
+    }
+
+    pub fn is_complex(&self) -> bool {
+        matches!(self, Component::Complex(_, _, _))
+    }
+
+    pub fn is_large(&self) -> bool {
+        matches!(self, Component::Large(_))
+    }
+
     pub fn short_name(&self) -> String {
         match self {
             Component::Cycle(g) => format!("{}c", g.edge_count()),
@@ -200,14 +225,14 @@ impl Component {
         }
     }
 
-    pub fn matching_permutations(&self) -> Vec<Vec<Node>> {
+    pub fn matching_permutations(&self, size: usize) -> Vec<Vec<Node>> {
         match self {
-            Component::Cycle(g) => g.nodes().permutations(3).collect(),
-            Component::Large(g) => vec![g.nodes().collect()],
+            Component::Cycle(g) => g.nodes().permutations(size).collect(),
+            Component::Large(g) => vec![g.nodes().take(size).collect()],
             Component::Complex(_, nodes, _) => nodes
                 .iter()
                 .cloned()
-                .permutations(3)
+                .permutations(size)
                 .collect(),
         }
     }
@@ -235,6 +260,16 @@ impl Component {
             Component::Cycle(g) => g,
             Component::Large(g) => g,
             Component::Complex(c, _, _) => c.graph,
+        }
+    }
+
+    pub fn is_nice_pair(&self, v1: Node, v2: Node) -> bool {
+        assert!(self.graph().contains_node(v1));
+        assert!(self.graph().contains_node(v2));
+        match self {
+            Component::Cycle(graph) => graph.neighbors(v1).contains(&v2),
+            Component::Complex(_, black, _) => v1 != v2 || !black.contains(&v2),
+            _ => false,
         }
     }
 }

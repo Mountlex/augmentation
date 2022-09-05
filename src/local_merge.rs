@@ -325,7 +325,7 @@ fn add_matching_to_graph(graph: &Graph, matching: &Vec<(Node, Node)>) -> Graph {
 
 fn compute_possible_matching(left: &Component, right: &Component) -> Vec<Vec<(Node, Node)>> {
     // Enumerate all possible matchings (adversarial)
-    let right_iter: Vec<Vec<u32>> = right.matching_permutations();
+    let right_iter: Vec<Vec<u32>> = right.matching_permutations(3);
     left.matching_sets()
         .into_iter()
         .flat_map(|left_matched| {
@@ -340,7 +340,7 @@ fn compute_possible_matching(left: &Component, right: &Component) -> Vec<Vec<(No
         .collect()
 }
 
-fn prove_via_direct_merge<C: CreditInvariant>(
+pub fn prove_via_direct_merge<C: CreditInvariant>(
     graph: &Graph,
     graph_components: Vec<&Component>,
     credit_inv: C,
