@@ -395,7 +395,7 @@ fn prove_nice_path<C: CreditInvariant>(
         targets.push(MatchingHit::Path(i));
     }
 
-    for matching_nodes in last_graph.nodes().permutations(3) {
+    for m_endpoints in last_graph.nodes().permutations(3) {
         'match_loop: for hits in targets.iter().combinations_with_replacement(2) {
             let m0 = MatchingHit::Path(path_len - 2); // hit second to last component
             let m1 = *hits[0];
@@ -403,58 +403,31 @@ fn prove_nice_path<C: CreditInvariant>(
 
             let mut matching_node = ProofNode::new_any(format!(
                 "Matching [({} -- {}), ({} -- {}), ({} -- {})]",
-                matching_nodes[0], m0, matching_nodes[1], m1, matching_nodes[2], m2
+                m_endpoints[0], m0, m_endpoints[1], m1, m_endpoints[2], m2
             ));
 
             // Find longer nice path
-            if matches!(m1, MatchingHit::Outside) {
-                if last_comp_ref.is_c6()
-                    || last_comp_ref.is_large()
-                    || last_comp_ref.is_nice_pair(matching_nodes[0], matching_nodes[1])
-                {
-                    matching_node.add_child(ProofNode::new_leaf(
-                        format!(
-                            "Longer nice path found via edge ({} -- {})!",
-                            matching_nodes[1], m1
-                        ),
-                        true,
-                    ));
-                    path_node.add_child(matching_node);
-                    continue 'match_loop;
-                }
-            } else if matches!(m2, MatchingHit::Outside) {
-                if last_comp_ref.is_c6()
-                    || last_comp_ref.is_large()
-                    || last_comp_ref.is_nice_pair(matching_nodes[0], matching_nodes[2])
-                {
-                    matching_node.add_child(ProofNode::new_leaf(
-                        format!(
-                            "Longer nice path found via edge ({} -- {})!",
-                            matching_nodes[1], m1
-                        ),
-                        true,
-                    ));
-                    path_node.add_child(matching_node);
-                    continue 'match_loop;
-                }
-            } else {
-                matching_node.add_child(ProofNode::new_leaf(
-                    format!("No longer nice path found via matching edges"),
-                    false,
-                ));
+            if is_longer_nice_path_possible(last_comp_ref, m_endpoints[0], m_endpoints[1], m1, &mut matching_node) {
+                path_node.add_child(matching_node);
+                continue 'match_loop;
             }
+            if is_longer_nice_path_possible(last_comp_ref, m_endpoints[0], m_endpoints[2], m2, &mut matching_node) {
+                path_node.add_child(matching_node);
+                continue 'match_loop;
+            }
+
+            // TODO change last matching edge if there are two edges between second to last and last comp, then try longer nice path again!
 
             // TODO contractability of c5
 
             // Now if we land here, one of the matching edges should hit the path
 
-            let mut ends = vec![m0, m1, m2];
-            ends.sort();
-
+            let mut hits = vec![m0, m1, m2];
+            hits.sort();
             // check if we can do a local merge using matching edges
-            for (num_edges, hit_comp) in ends.iter().dedup_with_count() {
+            for (num_edges, hit_comp) in hits.iter().dedup_with_count() {
                 if let MatchingHit::Path(hit_comp_idx) = hit_comp {
-                    let right_matched: Vec<Node> = (matching_nodes.iter().zip(vec![m0, m1, m2]))
+                    let right_matched: Vec<Node> = (m_endpoints.iter().zip(vec![m0, m1, m2]))
                         .filter(|(_, m)| m == hit_comp)
                         .map(|(v, _)| *v)
                         .collect();
@@ -522,19 +495,19 @@ fn prove_nice_path<C: CreditInvariant>(
             let (cycle_edge_out, cycle_edge_comp_in): (Node, usize) =
                 if let MatchingHit::Path(r) = m1 {
                     if r <= path_len - 3 {
-                        (matching_nodes[1], r)
+                        (m_endpoints[1], r)
                     } else {
-                        (matching_nodes[2], m2.path_index().unwrap())
+                        (m_endpoints[2], m2.path_index().unwrap())
                     }
                 } else {
-                    (matching_nodes[2], m2.path_index().unwrap())
+                    (m_endpoints[2], m2.path_index().unwrap())
                 };
 
             // Replace final node of path
             let mut path = path.clone();
             *path.nodes.last_mut().unwrap() = SuperNode::Zoomed(ZoomedNode {
                 comp: path.nodes.last().unwrap().get_comp().clone(),
-                in_node: Some(matching_nodes[0]),
+                in_node: Some(m_endpoints[0]),
                 out_node: None,
             });
 
@@ -570,6 +543,34 @@ fn prove_nice_path<C: CreditInvariant>(
     }
 
     true
+}
+
+fn is_longer_nice_path_possible(last_comp_ref: &Component, last_in: Node, other_in: Node, other_hit: MatchingHit, matching_node: &mut ProofNode) -> bool {
+    if matches!(other_hit, MatchingHit::Outside) {
+        if last_comp_ref.is_c6()
+            || last_comp_ref.is_large()
+            || last_comp_ref.is_nice_pair(last_in, other_in)
+        {
+            matching_node.add_child(ProofNode::new_leaf(
+                format!(
+                    "Longer nice path found via edge ({} -- {})!",
+                    other_in, other_hit
+                ),
+                true,
+            ));
+            return true
+        } else {
+            matching_node.add_child(ProofNode::new_leaf(
+                format!(
+                    "No longer nice path possible via edge ({} -- {})!",
+                    other_in, other_hit
+                ),
+                false,
+            ));
+            return false
+        }
+    }
+    return false;
 }
 
 // fn prove_nice_path2<C: CreditInvariant>(path: NicePath, credit_inv: C) -> bool {

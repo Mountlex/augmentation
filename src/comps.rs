@@ -460,3 +460,25 @@ mod test_merge {
         );
     }
 }
+
+
+#[cfg(test)]
+mod test_nice_pair {
+    use super::*;
+
+    #[test]
+    fn test_c4() {
+        let c4 = four_cycle();
+
+        assert!(c4.is_nice_pair(0, 1));
+        assert!(c4.is_nice_pair(1, 0));
+        assert!(c4.is_nice_pair(1, 2));
+        assert!(c4.is_nice_pair(2, 1));
+        assert!(c4.is_nice_pair(2, 3));
+        assert!(c4.is_nice_pair(3, 2));
+        assert!(c4.is_nice_pair(3, 0));
+        assert!(c4.is_nice_pair(0, 3));
+        assert!(!c4.is_nice_pair(0, 2));
+        assert!(!c4.is_nice_pair(1, 3));
+    }
+}
