@@ -2,6 +2,8 @@ use std::{fs::OpenOptions, path::PathBuf};
 
 use clap::Parser;
 
+use itertools::Itertools;
+use nice_path::prove_nice_path_progress;
 use num_rational::Rational64;
 
 use crate::{comps::*, local_merge::TreeCaseProof};
@@ -15,7 +17,13 @@ mod proof_tree;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
-struct Cli {
+enum Cli {
+    Local(Local),
+    Path(Path),
+}
+
+#[derive(Parser)]
+struct Local {
     c_numer: i64,
     c_demon: i64,
 
@@ -25,20 +33,38 @@ struct Cli {
     #[clap(short, long)]
     parallel: bool,
 
-    #[clap(short, long, default_value = "proofs")]
+    #[clap(short, long, default_value = "proofs_local")]
     output_dir: PathBuf,
 
     #[clap(short, long, default_value = "false")]
     verbose: bool,
 }
 
+#[derive(Parser)]
+struct Path {
+    c_numer: i64,
+    c_demon: i64,
+
+    #[clap(short, long, default_value = "proofs_path")]
+    output_dir: PathBuf,
+}
+
 pub type Credit = Rational64;
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    setup_logging(cli.verbose)?;
+    setup_logging(false)?;
 
-    let inv = DefaultCredits::new(Rational64::new(cli.c_numer, cli.c_demon));
+    match cli {
+        Cli::Local(local) => prove_local(local),
+        Cli::Path(path) => prove_path(path),
+    }
+
+    Ok(())
+}
+
+fn prove_local(local: Local) {
+    let inv = DefaultCredits::new(Rational64::new(local.c_numer, local.c_demon));
     let leaf_comps = vec![
         ComponentType::Cycle(4),
         ComponentType::Cycle(5),
@@ -56,11 +82,25 @@ fn main() -> anyhow::Result<()> {
     ];
 
     println!("========== Proof for c = {} ==========", inv.c);
-    let proof1 = TreeCaseProof::new(leaf_comps, comps.clone(), inv.clone(), cli.depth);
-    proof1.prove(cli.parallel, cli.output_dir);
-    //nice_path::prove_nice_path_progress(comps, inv);
+    let proof1 = TreeCaseProof::new(leaf_comps, comps.clone(), inv.clone(), local.depth);
+    proof1.prove(local.parallel, local.output_dir);
+}
 
-    Ok(())
+fn prove_path(path: Path) {
+    let inv = DefaultCredits::new(Rational64::new(path.c_numer, path.c_demon));
+
+    let comps = vec![
+        ComponentType::Cycle(3),
+        ComponentType::Cycle(4),
+        ComponentType::Cycle(5),
+        ComponentType::Cycle(6),
+        ComponentType::Large,
+        ComponentType::Complex,
+    ];
+
+    let comps = comps.into_iter().flat_map(|c| c.components()).collect_vec();
+
+    prove_nice_path_progress(comps, inv, path.output_dir)
 }
 
 fn setup_logging(verbose: bool) -> Result<(), fern::InitError> {

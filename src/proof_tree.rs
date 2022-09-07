@@ -26,12 +26,12 @@ pub enum ProofNode {
     },
     All {
         msg: String,
-        success: bool,
+        success: Option<bool>,
         childs: Vec<ProofNode>,
     },
     Any {
         msg: String,
-        success: bool,
+        success: Option<bool>,
         childs: Vec<ProofNode>,
     },
 }
@@ -44,7 +44,7 @@ impl ProofNode {
     pub fn new_all(msg: String) -> Self {
         ProofNode::All {
             msg,
-            success: false,
+            success: None,
             childs: vec![],
         }
     }
@@ -52,7 +52,7 @@ impl ProofNode {
     pub fn new_any(msg: String) -> Self {
         ProofNode::Any {
             msg,
-            success: false,
+            success: None,
             childs: vec![],
         }
     }
@@ -81,16 +81,26 @@ impl ProofNode {
                 success,
                 childs,
             } => {
-                *success = childs.iter_mut().all(|c| c.eval());
-                *success
-            }
+                *success = Some(true);
+                for c in childs {
+                    if !c.eval() {
+                    *success = Some(false);
+                    }
+                }
+                success.unwrap().clone()
+            },
             ProofNode::Any {
                 msg: _,
                 success,
                 childs,
             } => {
-                *success = childs.iter_mut().any(|c| c.eval());
-                *success
+                *success = Some(childs.is_empty());
+                for c in childs {
+                    if c.eval() {
+                    *success = Some(true);
+                    }
+                }
+                success.unwrap().clone()
             }
         }
     }
@@ -121,8 +131,14 @@ impl Tree<ProofNode> for ProofNode {
 impl Display for ProofNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ProofNode::Leaf { msg, success }
-            | ProofNode::All {
+            ProofNode::Leaf { msg, success } => {
+                if *success {
+                    write!(f, "{} ✔️", msg)
+                } else {
+                    write!(f, "{} ❌", msg)
+                }
+            },
+            ProofNode::All {
                 msg,
                 success,
                 childs: _,
@@ -132,7 +148,7 @@ impl Display for ProofNode {
                 success,
                 childs: _,
             } => {
-                if *success {
+                if success.unwrap() {
                     write!(f, "{} ✔️", msg)
                 } else {
                     write!(f, "{} ❌", msg)
