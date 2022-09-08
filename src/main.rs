@@ -90,7 +90,7 @@ fn prove_path(path: Path) {
     let inv = DefaultCredits::new(Rational64::new(path.c_numer, path.c_demon));
 
     let comps = vec![
-        ComponentType::Cycle(3),
+        //ComponentType::Cycle(3),
         ComponentType::Cycle(4),
         ComponentType::Cycle(5),
         ComponentType::Cycle(6),

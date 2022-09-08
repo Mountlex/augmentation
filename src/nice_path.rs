@@ -343,25 +343,40 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum MatchingHit {
+struct PathMatchingEdge(Node, PathMatchingHits);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum PathMatchingHits {
     Path(usize),
     Outside,
 }
 
-impl MatchingHit {
-    fn path_index(&self) -> Option<usize> {
-        match self {
-            MatchingHit::Path(i) => Some(*i),
-            MatchingHit::Outside => None,
+impl PathMatchingEdge {
+    fn source(&self) -> Node {
+        self.0.clone()
+    }
+
+    fn hit(&self) -> PathMatchingHits {
+        self.1.clone()
+    }
+
+    fn hits_path(&self) -> Option<usize> {
+        match self.1 {
+            PathMatchingHits::Path(i) => Some(i),
+            PathMatchingHits::Outside => None,
         }
+    }
+
+    fn hits_outside(&self) -> bool {
+        matches!(self.1, PathMatchingHits::Outside)
     }
 }
 
-impl Display for MatchingHit {
+impl Display for PathMatchingEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MatchingHit::Path(j) => write!(f, "{}. component", j),
-            MatchingHit::Outside => write!(f, "Outside path"),
+        match self.1 {
+            PathMatchingHits::Path(j) => write!(f, "{} -- path[{}]", self.0, j),
+            PathMatchingHits::Outside => write!(f, "{} -- outside", self.0),
         }
     }
 }
@@ -390,98 +405,128 @@ fn prove_nice_path<C: CreditInvariant>(
     let last_comp_ref = path.nodes.last().unwrap().get_comp();
     let last_graph = last_comp_ref.graph();
 
-    let mut targets = vec![MatchingHit::Outside];
+    let mut targets = vec![PathMatchingHits::Outside];
     for i in 0..path_len - 1 {
-        targets.push(MatchingHit::Path(i));
+        targets.push(PathMatchingHits::Path(i));
     }
 
     for m_endpoints in last_graph.nodes().permutations(3) {
         'match_loop: for hits in targets.iter().combinations_with_replacement(2) {
-            let m0 = MatchingHit::Path(path_len - 2); // hit second to last component
-            let m1 = *hits[0];
-            let m2 = *hits[1];
+            let m_path = PathMatchingEdge(m_endpoints[0], PathMatchingHits::Path(path_len - 2));
+            let m1 = PathMatchingEdge(m_endpoints[1], *hits[0]);
+            let m2 = PathMatchingEdge(m_endpoints[2], *hits[1]);
+            let mut matching = vec![m_path, m1, m2];
+            matching.sort_by_key(|m| m.hit());
 
-            let mut matching_node = ProofNode::new_any(format!(
-                "Matching [({} -- {}), ({} -- {}), ({} -- {})]",
-                m_endpoints[0], m0, m_endpoints[1], m1, m_endpoints[2], m2
-            ));
+            let mut matching_node =
+                ProofNode::new_any(format!("Matching [({}), ({}), ({})]", m_path, m1, m2));
 
             // Find longer nice path
-            if is_longer_nice_path_possible(last_comp_ref, m_endpoints[0], m_endpoints[1], m1, &mut matching_node) {
+            if is_longer_nice_path_possible(last_comp_ref, &m_path, &m1, &mut matching_node) {
                 path_node.add_child(matching_node);
                 continue 'match_loop;
             }
-            if is_longer_nice_path_possible(last_comp_ref, m_endpoints[0], m_endpoints[2], m2, &mut matching_node) {
+            if is_longer_nice_path_possible(last_comp_ref, &m_path, &m2, &mut matching_node) {
                 path_node.add_child(matching_node);
                 continue 'match_loop;
             }
-
-            // TODO change last matching edge if there are two edges between second to last and last comp, then try longer nice path again!
 
             // TODO contractability of c5
 
             // Now if we land here, one of the matching edges should hit the path
-
-            let mut hits = vec![m0, m1, m2];
-            hits.sort();
             // check if we can do a local merge using matching edges
-            for (num_edges, hit_comp) in hits.iter().dedup_with_count() {
-                if let MatchingHit::Path(hit_comp_idx) = hit_comp {
-                    let right_matched: Vec<Node> = (m_endpoints.iter().zip(vec![m0, m1, m2]))
-                        .filter(|(_, m)| m == hit_comp)
-                        .map(|(v, _)| *v)
+            for (num_edges, hit_comp) in matching
+                .iter()
+                .filter(|m_edge| m_edge.hits_path().is_some())
+                .map(|m_edge| m_edge.hit())
+                .dedup_with_count()
+            {
+                if let PathMatchingHits::Path(hit_comp_idx) = hit_comp {
+                    let right_matched: Vec<Node> = matching.iter()
+                        .filter(|m_edge| m_edge.hit() == hit_comp)
+                        .map(|m_edge| m_edge.source())
                         .collect();
                     assert_eq!(right_matched.len(), num_edges);
 
-                    let left_comp = path.nodes[*hit_comp_idx].get_comp();
+                    let left_comp = path.nodes[hit_comp_idx].get_comp();
 
                     // check for all concrete matchings if local merge is possible between both components
+
+                    let mut merge_node = ProofNode::new_all(format!(
+                        "Local merge between path[{}] and last component using {} matching edges!",
+                        hit_comp_idx,
+                        num_edges
+                    ));
                     let result = left_comp
                         .matching_permutations(right_matched.len())
                         .into_iter()
                         .all(|left_matched| {
-                            let matching = left_matched
+
+                            // 1) Check if merge works
+                            let local_matching = left_matched
                                 .into_iter()
                                 .zip(right_matched.iter())
                                 .map(|(l, r)| (l, *r))
                                 .collect_vec();
                             let graph_with_matching =
-                                get_local_merge_graph(left_comp, last_comp_ref, &matching);
+                                get_local_merge_graph(left_comp, last_comp_ref, &local_matching);
 
-                            prove_via_direct_merge(
+                            if prove_via_direct_merge(
                                 &graph_with_matching,
                                 vec![left_comp, last_comp_ref],
                                 credit_inv.clone(),
                                 &mut ProofNode::new_any(String::new()),
-                            )
+                            ) {
+                                return true;
+                            }
+
+                            // 2) Otherwise, try for the present configuration a nice path extension
+                            // Try to rearrange nice path if there is still outside endpoint
+                            if num_edges == 2 && (m1.hits_outside() || m2.hits_outside()) {
+                                let m_outside =
+                                    vec![m1, m2].into_iter().find(|&m| m.hits_outside()).unwrap();
+                                if left_comp.graph().nodes().all(|left_in| {
+                                    !local_matching.iter().any(|(v, _)| left_comp.is_nice_pair(left_in, *v)) ||
+                                    local_matching.iter().any(|(v, u)| {
+                                        left_comp.is_nice_pair(left_in, *v)
+                                            && last_comp_ref.is_nice_pair(*u, m_outside.source())
+                                    })
+                                }) {
+                                    merge_node.add_child(ProofNode::new_leaf(
+                                        format!(
+                                        "Local matching {:?} configuration implied longer nice path via matching swap!",
+                                        local_matching
+                                    ),
+                                        true,
+                                    ));
+                                    return true;
+                                }
+                            }
+
+                            merge_node.add_child(ProofNode::new_leaf(
+                                format!(
+                                    "No local merge or longer path for local matching {:?} possible!",
+                                    local_matching
+                                ),
+                                false,
+                            ));
+
+                            false
                         });
 
                     if result {
-                        matching_node.add_child(ProofNode::new_leaf(
-                            format!(
-                            "Local merge between {}. and last component using {} matching edges!",
-                            hit_comp_idx,
-                            num_edges
-                        ),
-                            true,
-                        ));
+                        matching_node.add_child(merge_node);
                         path_node.add_child(matching_node);
                         continue 'match_loop;
                     } else {
-                        matching_node.add_child(ProofNode::new_leaf(
-                            format!(
-                                "No local merge between {}. and last component possible!",
-                                hit_comp_idx
-                            ),
-                            false,
-                        ));
+                        matching_node.add_child(merge_node);
                     }
                 }
             }
 
             // If we land here, we want that at least one matching edge hits C_j for j <= l - 2.
-            if !(matches!(m1, MatchingHit::Path(j) if j <= path_len - 3)
-                || matches!(m2, MatchingHit::Path(j) if j <= path_len - 3))
+            if !(matches!(m1.hit(), PathMatchingHits::Path(j) if j <= path_len - 3)
+                || matches!(m2.hit(), PathMatchingHits::Path(j) if j <= path_len - 3))
             {
                 matching_node.add_child(ProofNode::new_leaf(
                     format!("There are no matching edges forming cycles! Aborting"),
@@ -493,14 +538,14 @@ fn prove_nice_path<C: CreditInvariant>(
 
             // Select one of the matching edges TODO
             let (cycle_edge_out, cycle_edge_comp_in): (Node, usize) =
-                if let MatchingHit::Path(r) = m1 {
+                if let PathMatchingHits::Path(r) = m1.hit() {
                     if r <= path_len - 3 {
-                        (m_endpoints[1], r)
+                        (m1.source(), r)
                     } else {
-                        (m_endpoints[2], m2.path_index().unwrap())
+                        (m2.source(), m2.hits_path().unwrap())
                     }
                 } else {
-                    (m_endpoints[2], m2.path_index().unwrap())
+                    (m2.source(), m2.hits_path().unwrap())
                 };
 
             // Replace final node of path
@@ -538,36 +583,38 @@ fn prove_nice_path<C: CreditInvariant>(
 
             matching_node.add_child(ProofNode::new_leaf(format!("Tactics exhausted!"), false));
             path_node.add_child(matching_node);
-            return false
+            return false;
         }
     }
 
     true
 }
 
-fn is_longer_nice_path_possible(last_comp_ref: &Component, last_in: Node, other_in: Node, other_hit: MatchingHit, matching_node: &mut ProofNode) -> bool {
-    if matches!(other_hit, MatchingHit::Outside) {
+fn is_longer_nice_path_possible(
+    last_comp_ref: &Component,
+    last_pseudo_edge: &PathMatchingEdge,
+    other_matching_edge: &PathMatchingEdge,
+    matching_node: &mut ProofNode,
+) -> bool {
+    if other_matching_edge.hits_outside() {
         if last_comp_ref.is_c6()
             || last_comp_ref.is_large()
-            || last_comp_ref.is_nice_pair(last_in, other_in)
+            || last_comp_ref.is_nice_pair(last_pseudo_edge.source(), other_matching_edge.source())
         {
             matching_node.add_child(ProofNode::new_leaf(
-                format!(
-                    "Longer nice path found via edge ({} -- {})!",
-                    other_in, other_hit
-                ),
+                format!("Longer nice path found via edge ({})!", other_matching_edge),
                 true,
             ));
-            return true
+            return true;
         } else {
             matching_node.add_child(ProofNode::new_leaf(
                 format!(
-                    "No longer nice path possible via edge ({} -- {})!",
-                    other_in, other_hit
+                    "No longer nice path possible via edge ({})!",
+                    other_matching_edge
                 ),
                 false,
             ));
-            return false
+            return false;
         }
     }
     return false;
