@@ -255,6 +255,14 @@ impl Component {
         }
     }
 
+    pub fn nodes(&self) -> Vec<Node> {
+        self.graph().nodes().collect_vec()
+    }
+
+    pub fn edges(&self) -> Vec<(Node, Node)> {
+        self.graph().all_edges().map(|(u,v,_)| (u,v)).collect_vec()
+    }
+
     pub fn to_graph(self) -> Graph {
         match self {
             Component::Cycle(g) => g,
@@ -263,12 +271,12 @@ impl Component {
         }
     }
 
-    pub fn is_nice_pair(&self, v1: Node, v2: Node) -> bool {
+    pub fn is_adjacent(&self, v1: Node, v2: Node) -> bool {
         assert!(self.graph().contains_node(v1));
         assert!(self.graph().contains_node(v2));
         match self {
             Component::Cycle(graph) => graph.neighbors(v1).contains(&v2),
-            Component::Complex(_, black, _) => v1 != v2 || !black.contains(&v2),
+            Component::Complex(complex, black, _) => complex.graph.neighbors(v1).contains(&v2),
             _ => false,
         }
     }
@@ -462,23 +470,3 @@ mod test_merge {
 }
 
 
-#[cfg(test)]
-mod test_nice_pair {
-    use super::*;
-
-    #[test]
-    fn test_c4() {
-        let c4 = four_cycle();
-
-        assert!(c4.is_nice_pair(0, 1));
-        assert!(c4.is_nice_pair(1, 0));
-        assert!(c4.is_nice_pair(1, 2));
-        assert!(c4.is_nice_pair(2, 1));
-        assert!(c4.is_nice_pair(2, 3));
-        assert!(c4.is_nice_pair(3, 2));
-        assert!(c4.is_nice_pair(3, 0));
-        assert!(c4.is_nice_pair(0, 3));
-        assert!(!c4.is_nice_pair(0, 2));
-        assert!(!c4.is_nice_pair(1, 3));
-    }
-}

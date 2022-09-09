@@ -3,11 +3,14 @@ use std::fmt::Write;
 use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
 use itertools::{iproduct, Itertools};
+use petgraph::algo::connected_components;
+use petgraph::visit::EdgeFiltered;
 use petgraph::{
     algo::matching,
     visit::{depth_first_search, Control, DfsEvent, IntoNeighbors},
 };
 
+use crate::bridges::{is_complex, ComplexCheckResult};
 use crate::proof_tree::Tree;
 use crate::{
     comps::{
@@ -396,18 +399,443 @@ fn get_local_merge_graph(
     graph
 }
 
+#[derive(Debug, Clone)]
 struct NicePairConfig {
-    nice_pairs: Vec<(Node, Node)>
+    nice_pairs: Vec<(Node, Node)>,
 }
 
 impl NicePairConfig {
+    fn empty() -> Self {
+        NicePairConfig { nice_pairs: vec![] }
+    }
+
     fn is_nice_pair(&self, u: Node, v: Node) -> bool {
-        self.nice_pairs.iter().find(|(a,b)| (*a == u && *b == v) || (*a == v && *b == u)).is_some()
+        self.nice_pairs
+            .iter()
+            .find(|(a, b)| (*a == u && *b == v) || (*a == v && *b == u))
+            .is_some()
     }
 }
 
-fn nice_pair_configs(v: Node, others: Vec<Node>) -> Vec<NicePairConfig> {
-    others.into_iter().map(|u| (v,u)).powerset().map(|config| NicePairConfig {nice_pairs: config}).collect_vec()
+struct ProofNicePathMatching<'a, C> {
+    path: &'a NicePath,
+    credit_inv: C,
+    m_path: PathMatchingEdge,
+    m1: PathMatchingEdge,
+    m2: PathMatchingEdge,
+}
+
+impl<C> ProofNicePathMatching<'_, C>
+where
+    C: CreditInvariant,
+{
+    fn prove(self, proof_node: &mut ProofNode) -> bool {
+        let path_len = self.path.nodes.len();
+        let last_comp_ref = self.path.nodes.last().unwrap().get_comp();
+        let mut matching = vec![self.m_path, self.m1, self.m2];
+        matching.sort_by_key(|m| m.hit());
+
+        for np_config_last in comp_npcs(
+            last_comp_ref,
+            &vec![self.m_path.source(), self.m1.source(), self.m2.source()],
+        ) {
+            let mut proof_npc = ProofNode::new_all(format!(
+                "Proof for nice pairs {:?} of last component",
+                np_config_last
+            ));
+
+            // Find longer nice path
+            if is_longer_nice_path_possible(
+                last_comp_ref,
+                &np_config_last,
+                &self.m_path,
+                &self.m1,
+                &mut proof_npc,
+            ) {
+                proof_node.add_child(proof_npc);
+                return true;
+            }
+            if is_longer_nice_path_possible(
+                last_comp_ref,
+                &np_config_last,
+                &self.m_path,
+                &self.m2,
+                &mut proof_npc,
+            ) {
+                proof_node.add_child(proof_npc);
+                return true;
+            }
+
+            // TODO contractability of c5
+
+            // Expand matching hits
+            // Now if we land here, one of the matching edges should hit the path
+            // check if we can do a local merge using matching edges
+            for (num_edges, hit_comp) in matching
+                .iter()
+                .filter(|m_edge| m_edge.hits_path().is_some())
+                .map(|m_edge| m_edge.hit())
+                .dedup_with_count()
+            {
+                if let PathMatchingHits::Path(hit_comp_idx) = hit_comp {
+                    let right_matched: Vec<Node> = matching
+                        .iter()
+                        .filter(|m_edge| m_edge.hit() == hit_comp)
+                        .map(|m_edge| m_edge.source())
+                        .collect();
+                    assert_eq!(right_matched.len(), num_edges);
+                    let left_comp = self.path.nodes[hit_comp_idx].get_comp();
+
+                    if num_edges == 1 {
+                        let right_match = *right_matched.first().unwrap();
+                        // only try complex merges
+
+                        let complex_merge = left_comp.graph().nodes().all(|left_match| {
+                            let graph_with_matching = get_local_merge_graph(
+                                left_comp,
+                                last_comp_ref,
+                                &vec![(left_match, right_match)],
+                            );
+
+                            prove_via_direct_merge(
+                                &graph_with_matching,
+                                vec![left_comp, last_comp_ref],
+                                self.credit_inv.clone(),
+                                &mut ProofNode::new_any(String::new()),
+                            )
+                        });
+
+                        if complex_merge {
+                            return true;
+                        }
+                    } else {
+                        // two or three matching edges to hit_comp
+                        left_comp
+                            .matching_permutations(right_matched.len())
+                            .into_iter()
+                            .all(|left_matched| {
+                                comp_npcs(&left_comp, &left_matched).into_iter().all(
+                                    |np_config_left| {
+                                        if local_merge_possible(
+                                            left_comp,
+                                            last_comp_ref,
+                                            &left_matched,
+                                            &right_matched,
+                                            &np_config_left,
+                                            &np_config_last,
+                                            self.credit_inv.clone(),
+                                        ) {
+                                            return true;
+                                        }
+
+                                        //  TODO Longer path if local merge not possible
+                                        if num_edges == 2
+                                            && (self.m1.hits_outside() || self.m2.hits_outside())
+                                            && (self.m1.hits_path() == Some(path_len - 2)
+                                                || self.m2.hits_path() == Some(path_len - 2))
+                                        {
+                                            let m_outside = vec![self.m1, self.m2]
+                                                .into_iter()
+                                                .find(|&m| m.hits_outside())
+                                                .unwrap();
+                                            let (m_path, m_other) =
+                                                if right_matched[0] == self.m_path.source() {
+                                                    (
+                                                        Edge(left_matched[0], right_matched[0]),
+                                                        Edge(left_matched[1], right_matched[1]),
+                                                    )
+                                                } else {
+                                                    (
+                                                        Edge(left_matched[1], right_matched[1]),
+                                                        Edge(left_matched[0], right_matched[0]),
+                                                    )
+                                                };
+
+                                            if longer_nice_path_via_matching_swap(left_comp, &np_config_left, last_comp_ref, m_path, m_other, m_outside) {
+                                                return true;
+                                            }
+                                        }
+
+                                        return false;
+                                    },
+                                )
+                            });
+                    }
+                }
+            }
+
+            // If we land here, we want that at least one matching edge hits C_j for j <= l - 2.
+            if !(matches!(self.m1.hit(), PathMatchingHits::Path(j) if j <= path_len - 3)
+                || matches!(self.m2.hit(), PathMatchingHits::Path(j) if j <= path_len - 3))
+            {
+                proof_npc.add_child(ProofNode::new_leaf(
+                    format!("There are no matching edges forming cycles! Aborting"),
+                    false,
+                ));
+                proof_node.add_child(proof_npc);
+                return false;
+            }
+
+            // Try worst-case merge
+            // TODO also good cases and then exclude the rest
+
+            let mut failed_cycles: Vec<PseudoCycle> = vec![];
+
+            let merge_res = vec![self.m1, self.m2]
+                .into_iter()
+                .filter(
+                    |m_edge| matches!(m_edge.hit(), PathMatchingHits::Path(r) if r <= path_len - 3),
+                )
+                .any(|m_edge| {
+                    for hit_and_out_np in vec![true, false] {
+                        check_nice_path_with_cycle(
+                            &self.path,
+                            self.m_path,
+                            m_edge,
+                            hit_and_out_np,
+                            self.credit_inv.clone(),
+                            &mut proof_npc,
+                        );
+                    }
+
+                    true
+                });
+
+            if merge_res {
+                proof_node.add_child(proof_npc);
+            } else {
+                proof_npc.add_child(ProofNode::new_leaf(format!("Tactics exhausted!"), false));
+                proof_node.add_child(proof_npc);
+                return false;
+            }
+        }
+
+        false
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default)]
+struct Edge(Node, Node);
+
+impl PartialEq for Edge {
+    fn eq(&self, other: &Self) -> bool {
+        (self.0 == other.0 && self.1 == other.1) || (self.0 == other.1 && self.1 == other.0)
+    }
+}
+
+impl Eq for Edge {}
+
+fn longer_nice_path_via_matching_swap(
+    prelast: &Component,
+    prelast_npc: &NicePairConfig,
+    last: &Component,
+    m_path: Edge,
+    m_other: Edge,
+    m_outside: PathMatchingEdge,
+) -> bool {
+    // If matching edge swap cannot be a nice path
+    if (last.is_c3() || last.is_c4() || last.is_c5() || last.is_complex())
+        && !prelast_npc.is_nice_pair(m_other.1, m_outside.source())
+    {
+        return false;
+    }
+
+    // Now if C_l-1 does not care about nice pairs, we are done!
+    if prelast.is_c6() || prelast.is_large() {
+        return true;
+    }
+
+    // For others, we have to check that swaping the path edges keeps a nice pair
+    if prelast.graph().nodes().all(|left_in| {
+        // for any left_in, we consider all possible hamiltonian paths for the current nice pair
+        hamiltonian_paths(left_in, m_path.0, &prelast.nodes())
+            .into_iter()
+            .all(|ham_path| {
+                let edges = ham_path
+                    .windows(2)
+                    .map(|e| (e[0], e[1]))
+                    .chain(prelast.edges().into_iter())
+                    .collect_vec();
+
+                // If for every such path, a nice pair using _any_ hamiltonian path for left_in and the new path edge endpoint is possible, it must be a nice pair
+                hamiltonian_paths(left_in, m_other.0, &prelast.nodes())
+                    .into_iter()
+                    .any(|path| {
+                        path.windows(2)
+                            .map(|e| (e[0], e[1]))
+                            .all(|(u, v)| edges.contains(&(u, v)) || edges.contains(&(v, u)))
+                    })
+            })
+    }) {
+        return true;
+    }
+
+    return false;
+}
+
+fn hamiltonian_paths(v1: Node, v2: Node, nodes: &Vec<Node>) -> Vec<Vec<Node>> {
+    assert!(nodes.contains(&v1));
+    assert!(nodes.contains(&v2));
+
+    nodes
+        .iter()
+        .cloned()
+        .filter(|v| v != &v1 && v != &v2)
+        .permutations(nodes.len() - 2)
+        .map(|middle| vec![vec![v1], middle, vec![v2]].concat())
+        .collect_vec()
+}
+
+fn comp_npcs(comp: &Component, nodes: &Vec<Node>) -> Vec<NicePairConfig> {
+    match comp {
+        Component::Cycle(c) if c.edge_count() <= 5 => {
+            let all_pairs = nodes
+                .iter()
+                .cloned()
+                .tuple_combinations::<(_, _)>()
+                .collect_vec();
+            let adj_pairs: Vec<(u32, u32)> = all_pairs
+                .iter()
+                .filter(|(u, v)| comp.is_adjacent(*u, *v))
+                .cloned()
+                .collect();
+            all_pairs
+                .into_iter()
+                .powerset()
+                .filter(|config| {
+                    // if config misses a nice pair although it is a pair of adjacent vertices, remove it
+                    adj_pairs
+                        .iter()
+                        .all(|(u, v)| config.contains(&(*u, *v)) || config.contains(&(*v, *u)))
+                })
+                .map(|config| NicePairConfig { nice_pairs: config })
+                .collect_vec()
+        }
+        Component::Cycle(c) => vec![NicePairConfig {
+            nice_pairs: c.all_edges().map(|(u, v, t)| (u, v)).collect_vec(),
+        }],
+        Component::Large(_) => vec![NicePairConfig::empty()],
+        Component::Complex(_, black, _) => vec![NicePairConfig {
+            nice_pairs: nodes
+                .iter()
+                .cloned()
+                .tuple_combinations::<(_, _)>()
+                .filter(|(v1, v2)| v1 != v2 || !black.contains(&v2))
+                .collect_vec(),
+        }],
+    }
+}
+
+fn local_merge_possible<C: CreditInvariant>(
+    left_comp: &Component,
+    right_comp: &Component,
+    left_matched: &Vec<u32>,
+    right_matched: &Vec<u32>,
+    np_config_left: &NicePairConfig,
+    np_config_right: &NicePairConfig,
+    credit_inv: C,
+) -> bool {
+    let matching = left_matched
+        .into_iter()
+        .zip(right_matched.iter())
+        .map(|(l, r)| (*l, *r))
+        .collect_vec();
+    let graph_with_matching = get_local_merge_graph(left_comp, right_comp, &matching);
+
+    let total_comp_credit = credit_inv.credits(left_comp) + credit_inv.credits(right_comp);
+
+    if left_comp.is_complex() || right_comp.is_complex() {
+        for sell in edges_of_type(&graph_with_matching, EdgeType::Sellable)
+            .into_iter()
+            .powerset()
+        {
+            let sell_credits = Credit::from_integer(sell.len() as i64);
+            let mut total_plus_sell = total_comp_credit + sell_credits;
+
+            for buy in matching.into_iter().powerset().filter(|p| !p.is_empty()) {
+                let buy_credits = Credit::from_integer(buy.len() as i64);
+
+                let check_graph = EdgeFiltered::from_fn(&graph_with_matching, |(v1, v2, t)| {
+                    if t == &EdgeType::Sellable && sell.contains(&(v1, v2))
+                        || sell.contains(&(v2, v1))
+                    {
+                        false
+                    } else if t == &EdgeType::Buyable
+                        && !buy.contains(&(v1, v2))
+                        && !buy.contains(&(v2, v1))
+                    {
+                        false
+                    } else {
+                        true
+                    }
+                });
+
+                if buy.len() == 2 && !(left_comp.is_complex() && right_comp.is_complex()) {
+                    let l1 = buy[0].0;
+                    let r1 = buy[0].1;
+                    let l2 = buy[1].0;
+                    let r2 = buy[1].1;
+
+                    if !left_comp.is_adjacent(l1, l2) && np_config_left.is_nice_pair(l1, l2) {
+                        total_plus_sell += Credit::from_integer(1)
+                    }
+                    if !right_comp.is_adjacent(r1, r2) && np_config_right.is_nice_pair(r1, r2) {
+                        total_plus_sell += Credit::from_integer(1)
+                    }
+                }
+
+                match is_complex(&check_graph) {
+                    ComplexCheckResult::Complex(bridges, black_vertices) => {
+                        let blocks_graph = EdgeFiltered::from_fn(&check_graph, |(v, u, _)| {
+                            !bridges.contains(&(v, u)) && !bridges.contains(&(u, v))
+                        });
+                        let num_blocks = connected_components(&blocks_graph) - black_vertices.len();
+                        let black_deg: usize = black_vertices
+                            .iter()
+                            .map(|v| bridges.iter().filter(|(a, b)| a == v || b == v).count())
+                            .sum();
+                        let new_credits = Credit::from_integer(num_blocks as i64)
+                            * credit_inv.complex_block()
+                            + credit_inv.complex_black(black_deg as i64)
+                            + credit_inv.complex_comp();
+
+                        if total_plus_sell - buy_credits >= new_credits {
+                            return true;
+                        }
+                    }
+                    ComplexCheckResult::NoBridges => {
+                        if total_plus_sell - buy_credits >= credit_inv.large() {
+                            return true;
+                        }
+                    }
+                    ComplexCheckResult::BlackLeaf => continue,
+                    ComplexCheckResult::NotConnected | ComplexCheckResult::Empty => continue,
+                }
+            }
+        }
+    } else {
+        for buy in matching.into_iter().powerset().filter(|p| p.len() == 2) {
+            let l1 = buy[0].0;
+            let r1 = buy[0].1;
+            let l2 = buy[1].0;
+            let r2 = buy[1].1;
+
+            let mut credits = total_comp_credit - Credit::from_integer(2);
+
+            if np_config_left.is_nice_pair(l1, l2) {
+                credits += Credit::from_integer(1)
+            }
+            if np_config_right.is_nice_pair(r1, r2) {
+                credits += Credit::from_integer(1)
+            }
+
+            if credits >= credit_inv.large() {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 fn prove_nice_path<C: CreditInvariant>(
@@ -432,150 +860,21 @@ fn prove_nice_path<C: CreditInvariant>(
             let mut matching = vec![m_path, m1, m2];
             matching.sort_by_key(|m| m.hit());
 
+            let proof = ProofNicePathMatching {
+                path: &path,
+                m1,
+                m2,
+                m_path,
+                credit_inv: credit_inv.clone(),
+            };
 
             let mut matching_proof =
                 ProofNode::new_any(format!("Matching [({}), ({}), ({})]", m_path, m1, m2));
 
-            for np_config in nice_pair_configs(m_path.source(), vec![m1.source(), m2.source()]) {
+            let proof_result = proof.prove(&mut matching_proof);
+            path_node.add_child(matching_proof);
 
-                // Find longer nice path
-                if is_longer_nice_path_possible(last_comp_ref, &np_config, &m_path, &m1, &mut matching_proof) {
-                    path_node.add_child(matching_proof);
-                    continue 'match_loop;
-                }
-                if is_longer_nice_path_possible(last_comp_ref, &np_config, &m_path, &m2, &mut matching_proof) {
-                    path_node.add_child(matching_proof);
-                    continue 'match_loop;
-                }
-
-            }
-
-            // TODO contractability of c5
-
-
-            // Now if we land here, one of the matching edges should hit the path
-            // check if we can do a local merge using matching edges
-            for (num_edges, hit_comp) in matching
-                .iter()
-                .filter(|m_edge| m_edge.hits_path().is_some())
-                .map(|m_edge| m_edge.hit())
-                .dedup_with_count()
-            {
-                if let PathMatchingHits::Path(hit_comp_idx) = hit_comp {
-                    let right_matched: Vec<Node> = matching
-                        .iter()
-                        .filter(|m_edge| m_edge.hit() == hit_comp)
-                        .map(|m_edge| m_edge.source())
-                        .collect();
-                    assert_eq!(right_matched.len(), num_edges);
-
-                    let left_comp = path.nodes[hit_comp_idx].get_comp();
-
-                    // check for all concrete matchings if local merge is possible between both components
-
-                    let mut merge_node = ProofNode::new_all(format!(
-                        "Local merge between path[{}] and last component using {} matching edges!",
-                        hit_comp_idx, num_edges
-                    ));
-                    let result = left_comp
-                        .matching_permutations(right_matched.len())
-                        .into_iter()
-                        .all(|left_matched| {
-
-                            // 1) Check if merge works
-                            let local_matching = left_matched
-                                .into_iter()
-                                .zip(right_matched.iter())
-                                .map(|(l, r)| (l, *r))
-                                .collect_vec();
-                            let graph_with_matching =
-                                get_local_merge_graph(left_comp, last_comp_ref, &local_matching);
-
-                            if prove_via_direct_merge(
-                                &graph_with_matching,
-                                vec![left_comp, last_comp_ref],
-                                credit_inv.clone(),
-                                &mut ProofNode::new_any(String::new()),
-                            ) {
-                                return true;
-                            }
-
-                            // 2) Otherwise, try for the present configuration a nice path extension
-                            // Try to rearrange nice path if there is still outside endpoint
-                            if num_edges == 2 && (m1.hits_outside() || m2.hits_outside()) {
-                                let m_outside =
-                                    vec![m1, m2].into_iter().find(|&m| m.hits_outside()).unwrap();
-                                if left_comp.graph().nodes().all(|left_in| {
-                                    !local_matching.iter().any(|(v, _)| left_comp.is_nice_pair(left_in, *v)) ||
-                                    local_matching.iter().any(|(v, u)| {
-                                        left_comp.is_nice_pair(left_in, *v)
-                                            && last_comp_ref.is_nice_pair(*u, m_outside.source())
-                                    })
-                                }) {
-                                    merge_node.add_child(ProofNode::new_leaf(
-                                        format!(
-                                        "Local matching {:?} configuration implied longer nice path via matching swap!",
-                                        local_matching
-                                    ),
-                                        true,
-                                    ));
-                                    return true;
-                                }
-                            }
-
-                            merge_node.add_child(ProofNode::new_leaf(
-                                format!(
-                                    "No local merge or longer path for local matching {:?} possible!",
-                                    local_matching
-                                ),
-                                false,
-                            ));
-
-                            false
-                        });
-
-                    if result {
-                        matching_proof.add_child(merge_node);
-                        path_node.add_child(matching_proof);
-                        continue 'match_loop;
-                    } else {
-                        matching_proof.add_child(merge_node);
-                    }
-                }
-            }
-
-            // If we land here, we want that at least one matching edge hits C_j for j <= l - 2.
-            if !(matches!(m1.hit(), PathMatchingHits::Path(j) if j <= path_len - 3)
-                || matches!(m2.hit(), PathMatchingHits::Path(j) if j <= path_len - 3))
-            {
-                matching_proof.add_child(ProofNode::new_leaf(
-                    format!("There are no matching edges forming cycles! Aborting"),
-                    false,
-                ));
-                path_node.add_child(matching_proof);
-                return false;
-            }
-
-            let merge_res = vec![m1, m2]
-                .into_iter()
-                .filter(
-                    |m_edge| matches!(m_edge.hit(), PathMatchingHits::Path(r) if r <= path_len - 3),
-                )
-                .any(|m_edge| {
-                    check_nice_path_with_cycle(
-                        &path,
-                        m_path,
-                        m_edge,
-                        credit_inv.clone(),
-                        &mut matching_proof,
-                    )
-                });
-
-            if merge_res {
-                path_node.add_child(matching_proof);
-            } else {
-                matching_proof.add_child(ProofNode::new_leaf(format!("Tactics exhausted!"), false));
-                path_node.add_child(matching_proof);
+            if !proof_result {
                 return false;
             }
         }
@@ -584,10 +883,9 @@ fn prove_nice_path<C: CreditInvariant>(
     true
 }
 
-
 fn is_component_contractible(comp: &Component, matching: &Vec<PathMatchingEdge>) -> bool {
     if comp.is_complex() || comp.is_large() {
-        return false
+        return false;
     }
     // matc
 
@@ -600,13 +898,14 @@ fn is_component_contractible(comp: &Component, matching: &Vec<PathMatchingEdge>)
     //         necessary_edges += 2;
     //     }
     // }
-    return false
+    return false;
 }
 
 fn check_nice_path_with_cycle<C: CreditInvariant>(
     path: &NicePath,
     m_path_edge: PathMatchingEdge,
     m_cycle_edge: PathMatchingEdge,
+    hit_and_out_np: bool,
     credit_inv: C,
     matching_node: &mut ProofNode,
 ) -> bool {
@@ -628,7 +927,7 @@ fn check_nice_path_with_cycle<C: CreditInvariant>(
         zoomed.out_node = Some(m_cycle_edge.source())
     }
     if let Some(SuperNode::Abstract(abs)) = pseudo_nodes.first_mut() {
-        abs.nice_pair = false
+        abs.nice_pair = hit_and_out_np
     }
     let cycle = PseudoCycle {
         nodes: pseudo_nodes,
@@ -646,7 +945,6 @@ fn check_nice_path_with_cycle<C: CreditInvariant>(
         ));
         return false;
     }
-
 }
 
 fn is_longer_nice_path_possible(
