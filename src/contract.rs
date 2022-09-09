@@ -94,4 +94,6 @@ mod test_contractibility {
         assert!(res.is_some());
         assert!(res.unwrap().len() == 5);
     }
+
+
 }
