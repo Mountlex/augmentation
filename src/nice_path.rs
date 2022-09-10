@@ -2,6 +2,7 @@ use core::panic;
 use std::fmt::Write;
 use std::marker::PhantomData;
 use std::ops::Range;
+use std::path;
 use std::slice::Iter;
 use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
@@ -17,10 +18,13 @@ use crate::bridges::{is_complex, ComplexCheckResult};
 use crate::comps::DefaultCredits;
 use crate::enumerators::{
     ComponentHitEnumerator, ComponentHitOutput, MatchingHitEnumerator, MatchingHitEnumeratorOutput,
-    MatchingNodesEnumerator, NPCEnumOutput, NPCEnumerator, PathEnumerator, PathEnumeratorInput,
+    MatchingNodesEnumerator, MatchingNodesEnumeratorOutput, NPCEnumOutput, NPCEnumerator,
+    PathEnumerator, PathEnumeratorInput,
 };
 use crate::proof_tree::Tree;
-use crate::tactics::{LocalComplexMerge, LocalMerge, LongerPathTactic};
+use crate::tactics::{
+    LocalComplexMerge, LocalMerge, LongerNicePathViaMatchingSwap, LongerPathTactic, CycleMerge,
+};
 use crate::{
     comps::{
         merge_components_to_base, merge_graphs, Component, CreditInvariant, EdgeType, Graph, Node,
@@ -285,10 +289,28 @@ impl Display for PseudoNode {
     }
 }
 
+#[derive(Clone)]
+pub struct ThreeMatching(
+    pub PathMatchingEdge,
+    pub PathMatchingEdge,
+    pub PathMatchingEdge,
+);
+
+impl ThreeMatching {
+    pub fn sources(&self) -> Vec<Node> {
+        vec![self.0.source(), self.1.source(), self.2.source()]
+    }
+
+    pub fn to_vec(&self) -> Vec<PathMatchingEdge> {
+        vec![self.0, self.1, self.2]
+    }
+}
+
 pub fn prove_nice_path_progress<C: CreditInvariant>(
     comps: Vec<Component>,
     credit_inv: C,
     output_dir: PathBuf,
+    output_depth: usize
 ) {
     std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
 
@@ -349,7 +371,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
         )
         .expect("Unable to write file");
         path_end_node
-            .print_tree(&mut buf, 0)
+            .print_tree(&mut buf, 0, output_depth)
             .expect("Unable to format tree");
         std::fs::write(filename, buf).expect("Unable to write file");
     }
@@ -359,6 +381,7 @@ pub fn prove_nice_path_progress_new<C: CreditInvariant>(
     comps: Vec<Component>,
     credit_inv: C,
     output_dir: PathBuf,
+    output_depth: usize,
 ) {
     std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
 
@@ -367,13 +390,18 @@ pub fn prove_nice_path_progress_new<C: CreditInvariant>(
     let path_length = 4;
 
     for last_comp in &comps {
+        let context = ProofContext {
+            credit_inv: DefaultCredits::new(c),
+            path_len: path_length,
+        };
+
         let mut proof = all(
             PathEnumerator,
             all(
                 MatchingHitEnumerator,
                 all(
                     NPCEnumerator::new(),
-                    or::<NPCEnumOutput<MatchingHitEnumeratorOutput>, _, _>(
+                    or3::<NPCEnumOutput<MatchingHitEnumeratorOutput>, _, _, _>(
                         LongerPathTactic,
                         any(
                             ComponentHitEnumerator,
@@ -381,19 +409,24 @@ pub fn prove_nice_path_progress_new<C: CreditInvariant>(
                                 LocalComplexMerge,
                                 all(
                                     MatchingNodesEnumerator,
-                                    all(NPCEnumerator::new(), LocalMerge),
+                                    all(
+                                        NPCEnumerator::new(),
+                                        or::<NPCEnumOutput<MatchingNodesEnumeratorOutput>, _, _>(
+                                            LocalMerge,
+                                            LongerNicePathViaMatchingSwap,
+                                        ),
+                                    ),
                                 ),
                             ),
                         ),
+                        CycleMerge
                     ),
                 ),
             ),
         )
         .action(
             PathEnumeratorInput::new(last_comp.clone(), comps.clone()),
-            &ProofContext {
-                credit_inv: DefaultCredits::new(c),
-            },
+            &context,
         );
 
         let proved = proof.eval();
@@ -414,7 +447,7 @@ pub fn prove_nice_path_progress_new<C: CreditInvariant>(
         )
         .expect("Unable to write file");
         proof
-            .print_tree(&mut buf, 0)
+            .print_tree(&mut buf, 0, output_depth)
             .expect("Unable to format tree");
         std::fs::write(filename, buf).expect("Unable to write file");
     }
@@ -729,7 +762,7 @@ fn prove_nice_path_matching<C: CreditInvariant>(
     false
 }
 
-enum MergeCases {
+pub enum MergeCases {
     NoNicePair(PathMatchingEdge),
     NicePair(PathMatchingEdge),
 }
@@ -798,7 +831,7 @@ pub fn longer_nice_path_via_matching_swap(
     return false;
 }
 
-fn hamiltonian_paths(v1: Node, v2: Node, nodes: &Vec<Node>) -> Vec<Vec<Node>> {
+pub fn hamiltonian_paths(v1: Node, v2: Node, nodes: &Vec<Node>) -> Vec<Vec<Node>> {
     assert!(nodes.contains(&v1));
     assert!(nodes.contains(&v2));
 
@@ -1013,7 +1046,7 @@ fn prove_nice_path<C: CreditInvariant>(
     true
 }
 
-fn check_nice_path_with_cycle<C: CreditInvariant>(
+pub fn check_nice_path_with_cycle<C: CreditInvariant>(
     path: &NicePath,
     m_cycle_edge: PathMatchingEdge,
     hit_and_out_np: bool,
@@ -1143,6 +1176,7 @@ fn is_longer_nice_path_possible(
 
 pub struct ProofContext {
     pub credit_inv: DefaultCredits,
+    pub path_len: usize,
 }
 
 pub trait Enumerator {
@@ -1179,6 +1213,14 @@ pub fn or<I, A1, A2>(tactic1: A1, tactic2: A2) -> Or<I, A1, A2> {
     }
 }
 
+pub fn or3<I, A1, A2, A3>(tactic1: A1, tactic2: A2, tactic3: A3) -> Or<I, A1, Or<I, A2, A3>> {
+    Or {
+        tactic1,
+        tactic2: or(tactic2, tactic3),
+        _phantom_data: PhantomData,
+    }
+}
+
 impl<I, A1, A2> Tactic for Or<I, A1, A2>
 where
     A1: Tactic,
@@ -1193,9 +1235,10 @@ where
         let mut res1 = self.tactic1.action(data.clone().into(), context);
         let mut proof = ProofNode::new_any("Or".into());
 
-        if res1.eval() {
-            proof.add_child(res1);
-        } else {
+        let result = res1.eval();
+        proof.add_child(res1);
+
+        if !result {
             proof.add_child(self.tactic2.action(data.into(), context))
         }
 

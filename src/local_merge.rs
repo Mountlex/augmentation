@@ -84,7 +84,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
             )
             .expect("Unable to write file");
             root.eval();
-            root.print_tree(&mut buf, 0).expect("Unable to format tree");
+            root.print_tree(&mut buf, 0, 20).expect("Unable to format tree");
             std::fs::write(filename, buf).expect("Unable to write file");
         });
     }

@@ -7,12 +7,14 @@ where
     fn childs(&self) -> Option<&[ProofNode]>;
     fn msg(&self) -> String;
 
-    fn print_tree<W: Write>(&self, writer: &mut W, depth: usize) -> anyhow::Result<()> {
+    fn print_tree<W: Write>(&self, writer: &mut W, depth: usize, max_depth_true: usize) -> anyhow::Result<()> {
         (0..depth).try_for_each(|_| write!(writer, "    "))?;
         writeln!(writer, "{}", self.msg())?;
         if let Some(childs) = self.childs() {
             for c in childs {
-                c.print_tree(writer, depth + 1)?;
+                if !(c.success() && depth == max_depth_true) {
+                    c.print_tree(writer, depth + 1, max_depth_true)?;
+                }
             }
         }
         Ok(())
@@ -67,6 +69,15 @@ impl ProofNode {
             msg,
             success: None,
             child: vec![child],
+        }
+    }
+
+    pub fn success(&self) -> bool {
+        match self {
+            ProofNode::Leaf { msg, success } => *success,
+            ProofNode::Info { msg, success, child } => success.unwrap().clone(),
+            ProofNode::All { msg, success, childs } => success.unwrap().clone(),
+            ProofNode::Any { msg, success, childs } => success.unwrap().clone(),
         }
     }
 

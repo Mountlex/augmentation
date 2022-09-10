@@ -7,7 +7,7 @@ use crate::{
     comps::{merge_components_to_base, Component, Graph, Node},
     nice_path::{
         comp_npcs, AbstractNode, Enumerator, NicePairConfig, NicePath, PathMatchingEdge,
-        PathMatchingHits, SuperNode, ZoomedNode,
+        PathMatchingHits, SuperNode, ZoomedNode, ThreeMatching,
     },
 };
 
@@ -94,9 +94,7 @@ pub struct MatchingHitEnumerator;
 #[derive(Clone)]
 pub struct MatchingHitEnumeratorOutput {
     pub nice_path: NicePath,
-    pub m_path: PathMatchingEdge,
-    pub m1: PathMatchingEdge,
-    pub m2: PathMatchingEdge,
+    pub three_matching: ThreeMatching,
 }
 
 impl Enumerator for MatchingHitEnumerator {
@@ -134,12 +132,11 @@ impl Enumerator for MatchingHitEnumerator {
                             PathMatchingEdge(m_endpoints[0], PathMatchingHits::Path(path_len - 2));
                         let m1 = PathMatchingEdge(m_endpoints[1], hits[0]);
                         let m2 = PathMatchingEdge(m_endpoints[2], hits[1]);
+                        let m = ThreeMatching(m_path, m1, m2);
 
                         MatchingHitEnumeratorOutput {
                             nice_path: path_clone.clone(),
-                            m_path,
-                            m1,
-                            m2,
+                            three_matching: m
                         }
                     })
             });
@@ -148,18 +145,14 @@ impl Enumerator for MatchingHitEnumerator {
     }
 
     fn item_msg(&self, item: &Self::Out) -> String {
-        format!("Matching [({}), ({}), ({})]", item.m_path, item.m1, item.m2)
+        format!("Matching [({}), ({}), ({})]", item.three_matching.0, item.three_matching.1, item.three_matching.2)
     }
 }
 
 impl From<MatchingHitEnumeratorOutput> for NPCEnumInput<MatchingHitEnumeratorOutput> {
     fn from(output: MatchingHitEnumeratorOutput) -> Self {
         NPCEnumInput {
-            nodes: vec![
-                output.m1.source(),
-                output.m_path.source(),
-                output.m2.source(),
-            ],
+            nodes: output.three_matching.sources(),
             comp: output.nice_path.nodes.last().unwrap().get_comp().to_owned(),
             input: output,
         }
@@ -224,9 +217,7 @@ impl From<NPCEnumOutput<MatchingHitEnumeratorOutput>> for ComponentHitInput {
     fn from(o: NPCEnumOutput<MatchingHitEnumeratorOutput>) -> Self {
         ComponentHitInput {
             nice_path: o.input.nice_path,
-            m_path: o.input.m_path,
-            m1: o.input.m1,
-            m2: o.input.m2,
+            three_matching: o.input.three_matching,
             npc_last: o.npc,
         }
     }
@@ -235,9 +226,7 @@ impl From<NPCEnumOutput<MatchingHitEnumeratorOutput>> for ComponentHitInput {
 #[derive(Clone)]
 pub struct ComponentHitInput {
     pub nice_path: NicePath,
-    pub m_path: PathMatchingEdge,
-    pub m1: PathMatchingEdge,
-    pub m2: PathMatchingEdge,
+    pub three_matching: ThreeMatching,
     pub npc_last: NicePairConfig,
 }
 
@@ -253,7 +242,7 @@ impl Enumerator for ComponentHitEnumerator {
     }
 
     fn iter(&self, data_in: Self::In) -> Box<dyn Iterator<Item = Self::Out>> {
-        let mut matching = vec![data_in.m_path, data_in.m1, data_in.m2];
+        let mut matching = data_in.three_matching.to_vec();
         matching.sort_by_key(|m| m.hit());
 
         let iter = matching
@@ -274,6 +263,7 @@ impl Enumerator for ComponentHitEnumerator {
                     Some(ComponentHitOutput {
                         path: data_in.nice_path.clone(),
                         npc_last: data_in.npc_last.clone(),
+                        three_matching: data_in.three_matching.clone(),
                         hit_comp_idx,
                         right_matched,
                     })
@@ -284,12 +274,17 @@ impl Enumerator for ComponentHitEnumerator {
 
         Box::new(iter)
     }
+
+    fn item_msg(&self, item: &Self::Out) -> String {
+        format!("Path[{}] hit by {} matching edges", item.hit_comp_idx, item.right_matched.len())
+    }
 }
 
 #[derive(Clone)]
 pub struct ComponentHitOutput {
     pub path: NicePath,
     pub npc_last: NicePairConfig,
+    pub three_matching: ThreeMatching,
     pub hit_comp_idx: usize,
     pub right_matched: Vec<Node>,
 }
@@ -297,6 +292,7 @@ pub struct ComponentHitOutput {
 impl From<ComponentHitOutput> for MatchingNodesEnumeratorInput {
     fn from(o: ComponentHitOutput) -> Self {
         MatchingNodesEnumeratorInput {
+            three_matching: o.three_matching,
             right_matched: o.right_matched,
             last_comp: o.path.nodes.last().unwrap().get_comp().clone(),
             left_comp: o.path.nodes[o.hit_comp_idx].get_comp().clone(),
@@ -308,6 +304,7 @@ impl From<ComponentHitOutput> for MatchingNodesEnumeratorInput {
 #[derive(Clone)]
 pub struct MatchingNodesEnumeratorInput {
     pub right_matched: Vec<Node>,
+    pub three_matching: ThreeMatching,
     pub last_comp: Component,
     pub left_comp: Component,
     pub npc_last: NicePairConfig,
@@ -330,6 +327,7 @@ impl Enumerator for MatchingNodesEnumerator {
             .matching_permutations(data_in.right_matched.len())
             .into_iter()
             .map(move |left_matched| MatchingNodesEnumeratorOutput {
+                three_matching: data_in.three_matching.clone(),
                 left_matched,
                 right_matched: data_in.right_matched.clone(),
                 last_comp: data_in.last_comp.clone(),
@@ -339,10 +337,15 @@ impl Enumerator for MatchingNodesEnumerator {
 
         Box::new(iter)
     }
+
+    fn item_msg(&self, item: &Self::Out) -> String {
+        format!("Matching endpoints {:?}", item.left_matched)
+    }
 }
 
 #[derive(Clone)]
 pub struct MatchingNodesEnumeratorOutput {
+    pub three_matching: ThreeMatching,
     pub left_matched: Vec<Node>,
     pub right_matched: Vec<Node>,
     pub last_comp: Component,
