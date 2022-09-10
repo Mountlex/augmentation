@@ -24,6 +24,11 @@ pub enum ProofNode {
         msg: String,
         success: bool,
     },
+    Info {
+        msg: String,
+        success: Option<bool>,
+        child: Vec<ProofNode>
+    },
     All {
         msg: String,
         success: Option<bool>,
@@ -57,9 +62,16 @@ impl ProofNode {
         }
     }
 
+    pub fn new_info(msg: String, child: ProofNode) -> Self {
+        ProofNode::Info {
+            msg,
+            success: None,
+            child: vec![child],
+        }
+    }
+
     pub fn add_child(&mut self, node: ProofNode) {
         match self {
-            ProofNode::Leaf { msg: _, success: _ } => panic!(),
             ProofNode::All {
                 msg: _,
                 success: _,
@@ -70,17 +82,28 @@ impl ProofNode {
                 success: _,
                 childs,
             } => childs.push(node),
+            _ => panic!(),
         }
     }
 
     pub fn eval(&mut self) -> bool {
         match self {
             ProofNode::Leaf { msg: _, success } => *success,
+            ProofNode::Info { msg: _, success, child } => {
+                if let Some(s) = success {
+                    return *s;
+                }
+                *success = Some(child.first_mut().unwrap().eval());
+                success.unwrap().clone()
+            },
             ProofNode::All {
                 msg: _,
                 success,
                 childs,
             } => {
+                if let Some(s) = success {
+                    return *s;
+                }
                 *success = Some(true);
                 for c in childs {
                     if !c.eval() {
@@ -94,6 +117,9 @@ impl ProofNode {
                 success,
                 childs,
             } => {
+                if let Some(s) = success {
+                    return *s;
+                }
                 *success = Some(childs.is_empty());
                 for c in childs {
                     if c.eval() {
@@ -114,6 +140,7 @@ impl Tree<ProofNode> for ProofNode {
     fn childs(&self) -> Option<&[ProofNode]> {
         match self {
             ProofNode::Leaf { msg: _, success: _ } => None,
+            ProofNode::Info { msg: _, success: _, child } => Some(child),
             ProofNode::All {
                 msg: _,
                 success: _,
@@ -138,6 +165,12 @@ impl Display for ProofNode {
                     write!(f, "{} ❌", msg)
                 }
             },
+            ProofNode::Info {
+                msg,
+                success,
+                child: _,
+            }
+            |
             ProofNode::All {
                 msg,
                 success,

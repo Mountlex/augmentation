@@ -3,11 +3,13 @@ use std::{fs::OpenOptions, path::PathBuf};
 use clap::Parser;
 
 use itertools::Itertools;
-use nice_path::prove_nice_path_progress;
+use nice_path::{prove_nice_path_progress, prove_nice_path_progress_new};
 use num_rational::Rational64;
 
 use crate::{comps::*, local_merge::TreeCaseProof};
 
+mod enumerators;
+mod tactics;
 mod bridges;
 mod comps;
 mod contract;
@@ -100,7 +102,7 @@ fn prove_path(path: Path) {
 
     let comps = comps.into_iter().flat_map(|c| c.components()).collect_vec();
 
-    prove_nice_path_progress(comps, inv, path.output_dir)
+    prove_nice_path_progress_new(comps, inv, path.output_dir)
 }
 
 fn setup_logging(verbose: bool) -> Result<(), fern::InitError> {

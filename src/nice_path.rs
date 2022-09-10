@@ -1,5 +1,8 @@
 use core::panic;
 use std::fmt::Write;
+use std::marker::PhantomData;
+use std::ops::Range;
+use std::slice::Iter;
 use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
 use itertools::{iproduct, Itertools};
@@ -11,7 +14,13 @@ use petgraph::{
 };
 
 use crate::bridges::{is_complex, ComplexCheckResult};
+use crate::comps::DefaultCredits;
+use crate::enumerators::{
+    ComponentHitEnumerator, ComponentHitOutput, MatchingHitEnumerator, MatchingHitEnumeratorOutput,
+    MatchingNodesEnumerator, NPCEnumOutput, NPCEnumerator, PathEnumerator, PathEnumeratorInput,
+};
 use crate::proof_tree::Tree;
+use crate::tactics::{LocalComplexMerge, LocalMerge, LongerPathTactic};
 use crate::{
     comps::{
         merge_components_to_base, merge_graphs, Component, CreditInvariant, EdgeType, Graph, Node,
@@ -23,10 +32,10 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-struct AbstractNode {
-    comp: Component,
-    nice_pair: bool,
-    used: bool,
+pub struct AbstractNode {
+    pub comp: Component,
+    pub nice_pair: bool,
+    pub used: bool,
 }
 
 impl AbstractNode {
@@ -69,11 +78,11 @@ impl Display for AbstractNode {
 }
 
 #[derive(Debug, Clone)]
-struct ZoomedNode {
-    comp: Component,
-    npc: NicePairConfig,
-    in_node: Option<Node>,
-    out_node: Option<Node>,
+pub struct ZoomedNode {
+    pub comp: Component,
+    pub npc: NicePairConfig,
+    pub in_node: Option<Node>,
+    pub out_node: Option<Node>,
 }
 
 impl ZoomedNode {
@@ -168,13 +177,13 @@ fn complex_cycle_value_base<C: CreditInvariant>(
 }
 
 #[derive(Debug, Clone)]
-enum SuperNode {
+pub enum SuperNode {
     Zoomed(ZoomedNode),
     Abstract(AbstractNode),
 }
 
 impl SuperNode {
-    fn get_comp(&self) -> &Component {
+    pub fn get_comp(&self) -> &Component {
         match self {
             SuperNode::Zoomed(node) => node.get_comp(),
             SuperNode::Abstract(node) => node.get_comp(),
@@ -192,9 +201,9 @@ impl Display for SuperNode {
 }
 
 #[derive(Clone, Debug)]
-struct NicePath {
-    nodes: Vec<SuperNode>,
-    graph: Graph,
+pub struct NicePath {
+    pub nodes: Vec<SuperNode>,
+    pub graph: Graph,
 }
 
 impl Display for NicePath {
@@ -213,7 +222,7 @@ impl Display for NicePath {
 }
 
 #[derive(Clone, Debug)]
-struct PseudoCycle {
+pub struct PseudoCycle {
     nodes: Vec<SuperNode>,
 }
 
@@ -262,7 +271,7 @@ impl Display for PseudoCycle {
 }
 
 #[derive(Clone, Debug)]
-enum PseudoNode {
+pub enum PseudoNode {
     Abstract,
     Node(Node),
 }
@@ -346,32 +355,97 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-struct PathMatchingEdge(Node, PathMatchingHits);
+pub fn prove_nice_path_progress_new<C: CreditInvariant>(
+    comps: Vec<Component>,
+    credit_inv: C,
+    output_dir: PathBuf,
+) {
+    std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
+
+    let c = credit_inv.complex_black(2);
+
+    let path_length = 4;
+
+    for last_comp in &comps {
+        let mut proof = all(
+            PathEnumerator,
+            all(
+                MatchingHitEnumerator,
+                all(
+                    NPCEnumerator::new(),
+                    or::<NPCEnumOutput<MatchingHitEnumeratorOutput>, _, _>(
+                        LongerPathTactic,
+                        any(
+                            ComponentHitEnumerator,
+                            or::<ComponentHitOutput, _, _>(
+                                LocalComplexMerge,
+                                all(
+                                    MatchingNodesEnumerator,
+                                    all(NPCEnumerator::new(), LocalMerge),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        .action(
+            PathEnumeratorInput::new(last_comp.clone(), comps.clone()),
+            &ProofContext {
+                credit_inv: DefaultCredits::new(c),
+            },
+        );
+
+        let proved = proof.eval();
+
+        let filename = if proved {
+            log::info!("✔️ Proved nice path progress ending in {}", last_comp);
+            output_dir.join(format!("proof_{}.txt", last_comp.short_name()))
+        } else {
+            log::warn!("❌ Disproved nice path progress ending in {}", last_comp);
+            output_dir.join(format!("wrong_proof_{}.txt", last_comp.short_name()))
+        };
+
+        let mut buf = String::new();
+        writeln!(
+            &mut buf,
+            "============= Proof with {} ===============",
+            credit_inv
+        )
+        .expect("Unable to write file");
+        proof
+            .print_tree(&mut buf, 0)
+            .expect("Unable to format tree");
+        std::fs::write(filename, buf).expect("Unable to write file");
+    }
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum PathMatchingHits {
+pub struct PathMatchingEdge(pub Node, pub PathMatchingHits);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum PathMatchingHits {
     Path(usize),
     Outside,
 }
 
 impl PathMatchingEdge {
-    fn source(&self) -> Node {
+    pub fn source(&self) -> Node {
         self.0.clone()
     }
 
-    fn hit(&self) -> PathMatchingHits {
+    pub fn hit(&self) -> PathMatchingHits {
         self.1.clone()
     }
 
-    fn hits_path(&self) -> Option<usize> {
+    pub fn hits_path(&self) -> Option<usize> {
         match self.1 {
             PathMatchingHits::Path(i) => Some(i),
             PathMatchingHits::Outside => None,
         }
     }
 
-    fn hits_outside(&self) -> bool {
+    pub fn hits_outside(&self) -> bool {
         matches!(self.1, PathMatchingHits::Outside)
     }
 }
@@ -385,7 +459,7 @@ impl Display for PathMatchingEdge {
     }
 }
 
-fn get_local_merge_graph(
+pub fn get_local_merge_graph(
     comp1: &Component,
     comp2: &Component,
     matching: &Vec<(Node, Node)>,
@@ -401,8 +475,23 @@ fn get_local_merge_graph(
 }
 
 #[derive(Debug, Clone)]
-struct NicePairConfig {
+pub struct NicePairConfig {
     nice_pairs: Vec<(Node, Node)>,
+}
+
+impl Display for NicePairConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[ ")?;
+        write!(
+            f,
+            "{}",
+            self.nice_pairs
+                .iter()
+                .map(|(a, b)| format!("({}, {})", a, b))
+                .join(", ")
+        )?;
+        write!(f, " ]")
+    }
 }
 
 impl NicePairConfig {
@@ -410,7 +499,7 @@ impl NicePairConfig {
         NicePairConfig { nice_pairs: vec![] }
     }
 
-    fn is_nice_pair(&self, u: Node, v: Node) -> bool {
+    pub fn is_nice_pair(&self, u: Node, v: Node) -> bool {
         self.nice_pairs
             .iter()
             .find(|(a, b)| (*a == u && *b == v) || (*a == v && *b == u))
@@ -512,15 +601,11 @@ fn prove_nice_path_matching<C: CreditInvariant>(
                     });
 
                     if complex_merge {
-                        proof_npc.add_child(ProofNode::new_leaf(
-                            format!("Complex Merge!"),
-                            true,
-                        ));
+                        proof_npc.add_child(ProofNode::new_leaf(format!("Complex Merge!"), true));
                         proof.add_child(proof_npc);
                         return true;
                     }
                 } else {
-
                     // two or three matching edges to hit_comp
                     let local_merge_res = left_comp
                         .matching_permutations(right_matched.len())
@@ -529,7 +614,6 @@ fn prove_nice_path_matching<C: CreditInvariant>(
                             comp_npcs(&left_comp, &left_matched)
                                 .into_iter()
                                 .all(|np_config_left| {
-
                                     if local_merge_possible(
                                         left_comp,
                                         last_comp_ref,
@@ -548,8 +632,6 @@ fn prove_nice_path_matching<C: CreditInvariant>(
                                         && (m1.hits_path() == Some(path_len - 2)
                                             || m2.hits_path() == Some(path_len - 2))
                                     {
-                                        
-
                                         let m_outside = vec![m1, m2]
                                             .into_iter()
                                             .find(|&m| m.hits_outside())
@@ -653,7 +735,7 @@ enum MergeCases {
 }
 
 #[derive(Copy, Clone, Debug, Default)]
-struct Edge(Node, Node);
+pub struct Edge(pub Node, pub Node);
 
 impl PartialEq for Edge {
     fn eq(&self, other: &Self) -> bool {
@@ -663,7 +745,7 @@ impl PartialEq for Edge {
 
 impl Eq for Edge {}
 
-fn longer_nice_path_via_matching_swap(
+pub fn longer_nice_path_via_matching_swap(
     prelast: &Component,
     last_npc: &NicePairConfig,
     last: &Component,
@@ -684,28 +766,32 @@ fn longer_nice_path_via_matching_swap(
     }
 
     // For others, we have to check that swaping the path edges keeps a nice pair
-    if prelast.graph().nodes().filter(|left_in| *left_in != m_path.0).all(|left_in| {
-        // for any left_in, we consider all possible hamiltonian paths for the current nice pair
-        hamiltonian_paths(left_in, m_path.0, &prelast.nodes())
-            .into_iter()
-            .all(|ham_path| {
-                let edges = ham_path
-                    .windows(2)
-                    .map(|e| (e[0], e[1]))
-                    .chain(prelast.edges().into_iter())
-                    .collect_vec();
+    if prelast
+        .graph()
+        .nodes()
+        .filter(|left_in| *left_in != m_path.0)
+        .all(|left_in| {
+            // for any left_in, we consider all possible hamiltonian paths for the current nice pair
+            hamiltonian_paths(left_in, m_path.0, &prelast.nodes())
+                .into_iter()
+                .all(|ham_path| {
+                    let edges = ham_path
+                        .windows(2)
+                        .map(|e| (e[0], e[1]))
+                        .chain(prelast.edges().into_iter())
+                        .collect_vec();
 
-
-                // If for every such path, a nice pair using _any_ hamiltonian path for left_in and the new path edge endpoint is possible, it must be a nice pair
-                hamiltonian_paths(left_in, m_other.0, &prelast.nodes())
-                    .into_iter()
-                    .any(|path| {
-                        path.windows(2)
-                            .map(|e| (e[0], e[1]))
-                            .all(|(u, v)| edges.contains(&(u, v)) || edges.contains(&(v, u)))
-                    })
-            })
-    }) {
+                    // If for every such path, a nice pair using _any_ hamiltonian path for left_in and the new path edge endpoint is possible, it must be a nice pair
+                    hamiltonian_paths(left_in, m_other.0, &prelast.nodes())
+                        .into_iter()
+                        .any(|path| {
+                            path.windows(2)
+                                .map(|e| (e[0], e[1]))
+                                .all(|(u, v)| edges.contains(&(u, v)) || edges.contains(&(v, u)))
+                        })
+                })
+        })
+    {
         return true;
     }
 
@@ -725,7 +811,7 @@ fn hamiltonian_paths(v1: Node, v2: Node, nodes: &Vec<Node>) -> Vec<Vec<Node>> {
         .collect_vec()
 }
 
-fn comp_npcs(comp: &Component, nodes: &Vec<Node>) -> Vec<NicePairConfig> {
+pub fn comp_npcs(comp: &Component, nodes: &Vec<Node>) -> Vec<NicePairConfig> {
     match comp {
         Component::Cycle(c) if c.edge_count() <= 5 => {
             let all_pairs = nodes
@@ -1055,20 +1141,130 @@ fn is_longer_nice_path_possible(
 //     )
 // )
 
-// enum Algo {
-//     All(Enumerator, Box<Algo>),
-//     Any
-// }
+pub struct ProofContext {
+    pub credit_inv: DefaultCredits,
+}
 
-// enum Enumerator {
-//     EndNodes,
-//     Paths,
-//     MatchingHits,
-//     NicePairs,
-//     MergeMatchings
-// }
+pub trait Enumerator {
+    type In;
+    type Out;
+    //type Iter: Iterator<Item = Self::Out>;
 
-// enum Tactics {
-//     LongerPath,
-//     LocalMerge,
-// }
+    fn msg(&self, data_in: &Self::In) -> String;
+
+    fn iter(&self, data_in: Self::In) -> Box<dyn Iterator<Item = Self::Out>>;
+
+    fn item_msg(&self, item: &Self::Out) -> String {
+        String::new()
+    }
+}
+
+pub trait Tactic {
+    type In;
+
+    fn action(&self, data: Self::In, context: &ProofContext) -> ProofNode;
+}
+
+pub struct Or<I, A1, A2> {
+    tactic1: A1,
+    tactic2: A2,
+    _phantom_data: PhantomData<I>,
+}
+
+pub fn or<I, A1, A2>(tactic1: A1, tactic2: A2) -> Or<I, A1, A2> {
+    Or {
+        tactic1,
+        tactic2,
+        _phantom_data: PhantomData,
+    }
+}
+
+impl<I, A1, A2> Tactic for Or<I, A1, A2>
+where
+    A1: Tactic,
+    A2: Tactic,
+    A1::In: From<I>,
+    A2::In: From<I>,
+    I: Clone,
+{
+    type In = I;
+
+    fn action(&self, data: Self::In, context: &ProofContext) -> ProofNode {
+        let mut res1 = self.tactic1.action(data.clone().into(), context);
+        let mut proof = ProofNode::new_any("Or".into());
+
+        if res1.eval() {
+            proof.add_child(res1);
+        } else {
+            proof.add_child(self.tactic2.action(data.into(), context))
+        }
+
+        proof
+    }
+}
+
+pub struct All<E, A> {
+    enumerator: E,
+    tactic: A,
+}
+
+pub fn all<E, A>(enumerator: E, tactic: A) -> All<E, A> {
+    All { enumerator, tactic }
+}
+
+impl<E, A> Tactic for All<E, A>
+where
+    E: Enumerator,
+    A: Tactic,
+    A::In: From<E::Out>,
+{
+    type In = E::In;
+
+    fn action(&self, data_in: Self::In, context: &ProofContext) -> ProofNode {
+        let mut proof = ProofNode::new_all(self.enumerator.msg(&data_in));
+
+        self.enumerator.iter(data_in).all(|d| {
+            let item_msg = self.enumerator.item_msg(&d);
+            let mut res = self.tactic.action(d.into(), context);
+            res = ProofNode::new_info(item_msg, res);
+            let cont = res.eval();
+            proof.add_child(res);
+            cont
+        });
+
+        proof
+    }
+}
+
+pub struct Any<E, A> {
+    enumerator: E,
+    tactic: A,
+}
+
+pub fn any<E, A>(enumerator: E, tactic: A) -> Any<E, A> {
+    Any { enumerator, tactic }
+}
+
+impl<E, A> Tactic for Any<E, A>
+where
+    E: Enumerator,
+    A: Tactic,
+    A::In: From<E::Out>,
+{
+    type In = E::In;
+
+    fn action(&self, data_in: Self::In, context: &ProofContext) -> ProofNode {
+        let mut proof = ProofNode::new_any(self.enumerator.msg(&data_in));
+
+        self.enumerator.iter(data_in).any(|d| {
+            let item_msg = self.enumerator.item_msg(&d);
+            let mut res = self.tactic.action(d.into(), context);
+            res = ProofNode::new_info(item_msg, res);
+            let cont = res.eval();
+            proof.add_child(res);
+            cont
+        });
+
+        proof
+    }
+}
