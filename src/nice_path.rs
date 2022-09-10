@@ -21,7 +21,6 @@ use crate::enumerators::{
     MatchingNodesEnumerator, MatchingNodesEnumeratorOutput, NPCEnumOutput, NPCEnumerator,
     PathEnumerator, PathEnumeratorInput,
 };
-use crate::proof_tree::Tree;
 use crate::tactics::{
     LocalComplexMerge, LocalMerge, LongerNicePathViaMatchingSwap, LongerPathTactic, CycleMerge,
 };

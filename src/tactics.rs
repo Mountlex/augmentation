@@ -292,7 +292,7 @@ impl Tactic for LongerNicePathViaMatchingSwap {
     type In = LongerNicePathViaMatchingSwapInput;
 
     fn action(&self, data: Self::In, context: &ProofContext) -> ProofNode {
-        if data.prelast_matched.len() == 2
+        if data.last_matched.len() == 2
             && (data.m_last.1.hits_outside() || data.m_last.2.hits_outside())
             && (data.m_last.1.hits_path() == Some(context.path_len - 2)
                 || data.m_last.2.hits_path() == Some(context.path_len - 2))
@@ -356,10 +356,10 @@ impl Tactic for LongerNicePathViaMatchingSwap {
                 return ProofNode::new_leaf("Longer path via swapping matching edges".into(), true)
 
             }
-            return ProofNode::new_leaf("No longer path via swapping matching edges!".into(), false)
+            return ProofNode::new_leaf("No longer path via swapping matching edges: no swapping".into(), false)
 
         } else {
-            return ProofNode::new_leaf("No longer path via swapping matching edges".into(), false)
+            return ProofNode::new_leaf("No longer path via swapping matching edges: no preconditions".into(), false)
         }
     }
 }
@@ -375,7 +375,6 @@ impl From<NPCEnumOutput<MatchingHitEnumeratorOutput>> for CycleMergeInput {
         }
     }
 }
-
 
 pub struct CycleMergeInput {
     path: NicePath,
@@ -437,6 +436,8 @@ impl Tactic for CycleMerge {
                 // it remains to check merge for nice pair and non-nice pair
             }
         }
+
+        proof.add_child(ProofNode::new_leaf("Tactics exhausted".into(), false));
 
         proof
 

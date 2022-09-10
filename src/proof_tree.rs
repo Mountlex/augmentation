@@ -7,18 +7,7 @@ where
     fn childs(&self) -> Option<&[ProofNode]>;
     fn msg(&self) -> String;
 
-    fn print_tree<W: Write>(&self, writer: &mut W, depth: usize, max_depth_true: usize) -> anyhow::Result<()> {
-        (0..depth).try_for_each(|_| write!(writer, "    "))?;
-        writeln!(writer, "{}", self.msg())?;
-        if let Some(childs) = self.childs() {
-            for c in childs {
-                if !(c.success() && depth == max_depth_true) {
-                    c.print_tree(writer, depth + 1, max_depth_true)?;
-                }
-            }
-        }
-        Ok(())
-    }
+    
 }
 
 pub enum ProofNode {
@@ -131,7 +120,7 @@ impl ProofNode {
                 if let Some(s) = success {
                     return *s;
                 }
-                *success = Some(childs.is_empty());
+                *success = Some(false);
                 for c in childs {
                     if c.eval() {
                     *success = Some(true);
@@ -141,9 +130,7 @@ impl ProofNode {
             }
         }
     }
-}
 
-impl Tree<ProofNode> for ProofNode {
     fn msg(&self) -> String {
         format!("{}", self)
     }
@@ -164,7 +151,33 @@ impl Tree<ProofNode> for ProofNode {
             } => Some(childs),
         }
     }
+
+    pub fn print_tree<W: Write>(&self, writer: &mut W, depth: usize, max_depth_true: usize) -> anyhow::Result<()> {
+        let mut new_depth = depth;
+        match self {
+            ProofNode::Leaf { msg:_, success:_ } | 
+            ProofNode::Info { msg:_, success:_, child:_ } => {
+                new_depth += 1;
+                (0..depth).try_for_each(|_| write!(writer, "    "))?;
+                writeln!(writer, "{}", self.msg())?;
+            },
+            _ => {
+                new_depth += 1;
+                (0..depth).try_for_each(|_| write!(writer, "    "))?;
+                writeln!(writer, "{}", self.msg())?;
+            }
+        }
+        if let Some(childs) = self.childs() {
+            for c in childs {
+                if !(c.success() && depth == max_depth_true) {
+                    c.print_tree(writer, new_depth, max_depth_true)?;
+                }
+            }
+        }
+        Ok(())
+    }
 }
+
 
 impl Display for ProofNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
