@@ -116,6 +116,12 @@ pub struct NicePath {
     pub graph: Graph,
 }
 
+impl NicePath {
+    pub fn last_comp(&self) -> &Component {
+        self.nodes.last().unwrap().get_comp()
+    }
+}
+
 impl Display for NicePath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;

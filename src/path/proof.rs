@@ -12,6 +12,7 @@ use super::enumerators::matching_nodes::{MatchingNodesEnumerator, MatchingNodesE
 use super::enumerators::nice_pairs::{NPCEnumOutput, NPCEnumerator};
 use super::enumerators::nice_paths::{PathEnumerator, PathEnumeratorInput};
 use super::tactics::complex_merge::LocalComplexMerge;
+use super::tactics::contract::ContractabilityTactic;
 use super::tactics::cycle_merge::CycleMerge;
 use super::tactics::local_merge::LocalMerge;
 use super::tactics::longer_path::LongerPathTactic;
@@ -57,11 +58,11 @@ pub fn or<I, A1, A2>(tactic1: A1, tactic2: A2) -> Or<I, A1, A2> {
 }
 
 pub fn or3<I, A1, A2, A3>(tactic1: A1, tactic2: A2, tactic3: A3) -> Or<I, A1, Or<I, A2, A3>> {
-    Or {
-        tactic1,
-        tactic2: or(tactic2, tactic3),
-        _phantom_data: PhantomData,
-    }
+    or(tactic1, or(tactic2, tactic3))
+}
+
+pub fn or4<I, A1, A2, A3, A4>(tactic1: A1, tactic2: A2, tactic3: A3, tactic4: A4) -> Or<I, A1, Or<I, A2, Or<I, A3, A4>>> {
+    or3(tactic1, tactic2, or(tactic3, tactic4))
 }
 
 impl<I, A1, A2> Tactic for Or<I, A1, A2>
@@ -177,8 +178,9 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
                 MatchingHitEnumerator,
                 all(
                     NPCEnumerator::new(),
-                    or3::<NPCEnumOutput<MatchingHitEnumeratorOutput>, _, _, _>(
+                    or4::<NPCEnumOutput<MatchingHitEnumeratorOutput>, _, _, _, _>(
                         LongerPathTactic,
+                        ContractabilityTactic,
                         any(
                             ComponentHitEnumerator,
                             or::<ComponentHitOutput, _, _>(
