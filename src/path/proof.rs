@@ -76,16 +76,14 @@ where
 
     fn action(&self, data: Self::In, context: &ProofContext) -> ProofNode {
         let mut res1 = self.tactic1.action(data.clone().into(), context);
-        let mut proof = ProofNode::new_any("Or".into());
-
+        
         let result = res1.eval();
-        proof.add_child(res1);
-
-        if !result {
-            proof.add_child(self.tactic2.action(data.into(), context))
+        if result {
+            return res1
+        } else {
+            let res2 = self.tactic2.action(data.into(), context);
+            return  ProofNode::new_or(res1, res2);
         }
-
-        proof
     }
 }
 
@@ -225,7 +223,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
         )
         .expect("Unable to write file");
         proof
-            .print_tree(&mut buf, 0, output_depth)
+            .print_tree(&mut buf, output_depth)
             .expect("Unable to format tree");
         std::fs::write(filename, buf).expect("Unable to write file");
     }

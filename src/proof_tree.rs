@@ -1,147 +1,135 @@
 use std::fmt::{self, Display, Write};
 
-pub trait Tree<N>
-where
-    N: Tree<N>,
-{
-    fn childs(&self) -> Option<&[ProofNode]>;
-    fn msg(&self) -> String;
+
+#[derive(Clone)]
+struct InnerNode {
+    msg: String,
+    success: Option<bool>,
+    childs: Vec<ProofNode>,
+}
+#[derive(Clone)]
+struct OrNode {
+    success: Option<bool>,
+    child1: Box<ProofNode>,
+    child2: Box<ProofNode>,
+}
+#[derive(Clone)]
+struct InfoNode {
+    msg: String,
+    success: Option<bool>,
+    child: Box<ProofNode>,
+}
+#[derive(Clone)]
+struct LeafNode {
+    msg: String,
+    success: bool,
 }
 
+#[derive(Clone)]
 pub enum ProofNode {
-    Leaf {
-        msg: String,
-        success: bool,
-    },
-    Info {
-        msg: String,
-        success: Option<bool>,
-        child: Vec<ProofNode>,
-    },
-    All {
-        msg: String,
-        success: Option<bool>,
-        childs: Vec<ProofNode>,
-    },
-    Any {
-        msg: String,
-        success: Option<bool>,
-        childs: Vec<ProofNode>,
-    },
+    Leaf(LeafNode),
+    Info(InfoNode),
+    All(InnerNode),
+    Or(OrNode),
+    Any(InnerNode),
 }
 
 impl ProofNode {
     pub fn new_leaf(msg: String, success: bool) -> Self {
-        ProofNode::Leaf { msg, success }
+        ProofNode::Leaf(LeafNode { msg, success })
     }
 
     pub fn new_all(msg: String) -> Self {
-        ProofNode::All {
+        ProofNode::All(InnerNode {
             msg,
             success: None,
             childs: vec![],
-        }
+        })
     }
 
     pub fn new_any(msg: String) -> Self {
-        ProofNode::Any {
+        ProofNode::Any(InnerNode {
             msg,
             success: None,
             childs: vec![],
-        }
+        })
     }
 
     pub fn new_info(msg: String, child: ProofNode) -> Self {
-        ProofNode::Info {
+        ProofNode::Info(InfoNode {
             msg,
             success: None,
-            child: vec![child],
-        }
+            child: child.into(),
+        })
+    }
+
+    pub fn new_or(child1: ProofNode, child2: ProofNode) -> Self {
+        ProofNode::Or(OrNode {
+            success: None,
+            child1: child1.into(), child2: child2.into(),
+        })
     }
 
     pub fn success(&self) -> bool {
         match self {
-            ProofNode::Leaf { msg, success } => *success,
-            ProofNode::Info {
-                msg,
-                success,
-                child,
-            } => success.unwrap().clone(),
-            ProofNode::All {
-                msg,
-                success,
-                childs,
-            } => success.unwrap().clone(),
-            ProofNode::Any {
-                msg,
-                success,
-                childs,
-            } => success.unwrap().clone(),
+            ProofNode::Leaf(node) => node.success,
+            ProofNode::All(node) |
+            ProofNode::Any(node) => node.success.unwrap().clone(),
+            ProofNode::Info(node) => node.success.unwrap().clone(),
+            ProofNode::Or(node) => node.success.unwrap().clone(),
         }
     }
 
-    pub fn add_child(&mut self, node: ProofNode) {
+    pub fn add_child(&mut self, child: ProofNode) {
         match self {
-            ProofNode::All {
-                msg: _,
-                success: _,
-                childs,
-            } => childs.push(node),
-            ProofNode::Any {
-                msg: _,
-                success: _,
-                childs,
-            } => childs.push(node),
+            ProofNode::All(node) | ProofNode::Any(node) => node.childs.push(child),
             _ => panic!(),
         }
     }
 
     pub fn eval(&mut self) -> bool {
         match self {
-            ProofNode::Leaf { msg: _, success } => *success,
-            ProofNode::Info {
-                msg: _,
-                success,
-                child,
-            } => {
-                if let Some(s) = success {
-                    return *s;
+            ProofNode::Leaf(node) => node.success,
+            ProofNode::Info(node)=> {
+                if let Some(s) = node.success {
+                    return s;
                 }
-                *success = Some(child.first_mut().unwrap().eval());
-                success.unwrap().clone()
+                node.success = Some(node.child.eval());
+                node.success.unwrap().clone()
             }
-            ProofNode::All {
-                msg: _,
-                success,
-                childs,
-            } => {
-                if let Some(s) = success {
-                    return *s;
+            ProofNode::All(node) => {
+                if let Some(s) = node.success {
+                    return s;
                 }
-                *success = Some(true);
-                for c in childs {
+                node.success = Some(true);
+                for c in &mut node.childs {
                     if !c.eval() {
-                        *success = Some(false);
+                        node.success = Some(false);
                     }
                 }
-                success.unwrap().clone()
+                node.success.unwrap().clone()
             }
-            ProofNode::Any {
-                msg: _,
-                success,
-                childs,
-            } => {
-                if let Some(s) = success {
-                    return *s;
+            ProofNode::Any(node) => {
+                if let Some(s) = node.success {
+                    return s;
                 }
-                *success = Some(false);
-                for c in childs {
+                node.success = Some(false);
+                for c in &mut node.childs {
                     if c.eval() {
-                        *success = Some(true);
+                        node.success = Some(true);
                     }
                 }
-                success.unwrap().clone()
+                node.success.unwrap().clone()
             }
+            ProofNode::Or(node) => {
+                if let Some(s) = node.success {
+                    return s;
+                }
+                let r1 = node.child1.eval();
+                let r2 = node.child2.eval();
+                node.success = Some(r1 || r2);
+                r1 || r2
+            },
         }
     }
 
@@ -149,28 +137,15 @@ impl ProofNode {
         format!("{}", self)
     }
 
-    fn childs(&self) -> Option<&[ProofNode]> {
-        match self {
-            ProofNode::Leaf { msg: _, success: _ } => None,
-            ProofNode::Info {
-                msg: _,
-                success: _,
-                child,
-            } => Some(child),
-            ProofNode::All {
-                msg: _,
-                success: _,
-                childs,
-            }
-            | ProofNode::Any {
-                msg: _,
-                success: _,
-                childs,
-            } => Some(childs),
-        }
+    pub fn print_tree<W: Write>(
+        &self,
+        writer: &mut W,
+        max_depth_true: usize,
+    ) -> anyhow::Result<()> {
+        self.print_tree_rec(writer, 0, max_depth_true)
     }
 
-    pub fn print_tree<W: Write>(
+    fn print_tree_rec<W: Write>(
         &self,
         writer: &mut W,
         depth: usize,
@@ -178,29 +153,44 @@ impl ProofNode {
     ) -> anyhow::Result<()> {
         let mut new_depth = depth;
         match self {
-            ProofNode::Leaf { msg: _, success: _ }
-            | ProofNode::Info {
-                msg: _,
-                success: _,
-                child: _,
-            } => {
+            ProofNode::Leaf(_)
+            | ProofNode::Info(_) | ProofNode::All(_) | ProofNode::Any(_) => {
                 new_depth += 1;
                 (0..depth).try_for_each(|_| write!(writer, "    "))?;
                 writeln!(writer, "{}", self.msg())?;
             }
-            _ => {
-                new_depth += 1;
-                (0..depth).try_for_each(|_| write!(writer, "    "))?;
-                writeln!(writer, "{}", self.msg())?;
-            }
+            _ => { // dont print or's 
+             }
         }
-        if let Some(childs) = self.childs() {
-            for c in childs {
-                if !(c.success() && depth == max_depth_true) {
-                    c.print_tree(writer, new_depth, max_depth_true)?;
-                }
+        
+           match &self {
+                ProofNode::Leaf(_) => {},
+                ProofNode::Info(node) => {
+                    let c = &node.child;
+                    if !(c.success() && depth == max_depth_true) {
+                        c.print_tree_rec(writer, new_depth, max_depth_true)?;
+                    }
+                },
+                ProofNode::Or(node) => {
+                    let c1 = &node.child1;
+                    if !(c1.success() && depth == max_depth_true) {
+                        c1.print_tree_rec(writer, new_depth, max_depth_true)?;
+                    }
+                    let c2 = &node.child2;
+                    if !(c2.success() && depth == max_depth_true) {
+                        c2.print_tree_rec(writer, new_depth, max_depth_true)?;
+                    }
+                },
+                ProofNode::All(node) | ProofNode::Any(node) => {
+                    for c in &node.childs {
+                        if !(c.success() && depth == max_depth_true) {
+                            c.print_tree_rec(writer, new_depth, max_depth_true)?;
+                        }
+                    }
+                },
             }
-        }
+        
+        
         Ok(())
     }
 }
@@ -208,34 +198,29 @@ impl ProofNode {
 impl Display for ProofNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ProofNode::Leaf { msg, success } => {
-                if *success {
-                    write!(f, "{} ✔️", msg)
+            ProofNode::Leaf(node) => {
+                if node.success {
+                    write!(f, "{} ✔️", node.msg)
                 } else {
-                    write!(f, "{} ❌", msg)
+                    write!(f, "{} ❌", node.msg)
                 }
             }
-            ProofNode::Info {
-                msg,
-                success,
-                child: _,
-            }
-            | ProofNode::All {
-                msg,
-                success,
-                childs: _,
-            }
-            | ProofNode::Any {
-                msg,
-                success,
-                childs: _,
-            } => {
-                if success.unwrap() {
-                    write!(f, "{} ✔️", msg)
+            ProofNode::Info(node) => {
+                if node.success.unwrap() {
+                    write!(f, "{} ✔️", node.msg)
                 } else {
-                    write!(f, "{} ❌", msg)
+                    write!(f, "{} ❌", node.msg)
+                }
+            },
+            ProofNode::All(node)
+            | ProofNode::Any(node) => {
+                if node.success.unwrap() {
+                    write!(f, "{} ✔️", node.msg)
+                } else {
+                    write!(f, "{} ❌", node.msg)
                 }
             }
+            ProofNode::Or(_) => todo!(),
         }
     }
 }
