@@ -3,19 +3,18 @@ use std::{fs::OpenOptions, path::PathBuf};
 use clap::Parser;
 
 use itertools::Itertools;
-use nice_path::{prove_nice_path_progress, prove_nice_path_progress_new};
 use num_rational::Rational64;
+use path::prove_nice_path_progress;
 
 use crate::{comps::*, local_merge::TreeCaseProof};
 
-mod enumerators;
-mod tactics;
 mod bridges;
 mod comps;
 mod contract;
 mod local_merge;
-mod nice_path;
+mod path;
 mod proof_tree;
+mod types;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -95,17 +94,17 @@ fn prove_path(path: Path) {
     let inv = DefaultCredits::new(Rational64::new(path.c_numer, path.c_demon));
 
     let comps = vec![
-        //ComponentType::Cycle(3),
+        ComponentType::Cycle(3),
         ComponentType::Cycle(4),
-        //ComponentType::Cycle(5),
-        //ComponentType::Cycle(6),
-        //ComponentType::Large,
-        //ComponentType::Complex,
+        ComponentType::Cycle(5),
+        ComponentType::Cycle(6),
+        ComponentType::Large,
+        ComponentType::Complex,
     ];
 
     let comps = comps.into_iter().flat_map(|c| c.components()).collect_vec();
 
-    prove_nice_path_progress_new(comps, inv, path.output_dir, path.output_depth)
+    prove_nice_path_progress(comps, inv, path.output_dir, path.output_depth)
 }
 
 fn setup_logging(verbose: bool) -> Result<(), fern::InitError> {

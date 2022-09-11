@@ -6,8 +6,6 @@ where
 {
     fn childs(&self) -> Option<&[ProofNode]>;
     fn msg(&self) -> String;
-
-    
 }
 
 pub enum ProofNode {
@@ -18,7 +16,7 @@ pub enum ProofNode {
     Info {
         msg: String,
         success: Option<bool>,
-        child: Vec<ProofNode>
+        child: Vec<ProofNode>,
     },
     All {
         msg: String,
@@ -64,9 +62,21 @@ impl ProofNode {
     pub fn success(&self) -> bool {
         match self {
             ProofNode::Leaf { msg, success } => *success,
-            ProofNode::Info { msg, success, child } => success.unwrap().clone(),
-            ProofNode::All { msg, success, childs } => success.unwrap().clone(),
-            ProofNode::Any { msg, success, childs } => success.unwrap().clone(),
+            ProofNode::Info {
+                msg,
+                success,
+                child,
+            } => success.unwrap().clone(),
+            ProofNode::All {
+                msg,
+                success,
+                childs,
+            } => success.unwrap().clone(),
+            ProofNode::Any {
+                msg,
+                success,
+                childs,
+            } => success.unwrap().clone(),
         }
     }
 
@@ -89,13 +99,17 @@ impl ProofNode {
     pub fn eval(&mut self) -> bool {
         match self {
             ProofNode::Leaf { msg: _, success } => *success,
-            ProofNode::Info { msg: _, success, child } => {
+            ProofNode::Info {
+                msg: _,
+                success,
+                child,
+            } => {
                 if let Some(s) = success {
                     return *s;
                 }
                 *success = Some(child.first_mut().unwrap().eval());
                 success.unwrap().clone()
-            },
+            }
             ProofNode::All {
                 msg: _,
                 success,
@@ -107,11 +121,11 @@ impl ProofNode {
                 *success = Some(true);
                 for c in childs {
                     if !c.eval() {
-                    *success = Some(false);
+                        *success = Some(false);
                     }
                 }
                 success.unwrap().clone()
-            },
+            }
             ProofNode::Any {
                 msg: _,
                 success,
@@ -123,7 +137,7 @@ impl ProofNode {
                 *success = Some(false);
                 for c in childs {
                     if c.eval() {
-                    *success = Some(true);
+                        *success = Some(true);
                     }
                 }
                 success.unwrap().clone()
@@ -138,7 +152,11 @@ impl ProofNode {
     fn childs(&self) -> Option<&[ProofNode]> {
         match self {
             ProofNode::Leaf { msg: _, success: _ } => None,
-            ProofNode::Info { msg: _, success: _, child } => Some(child),
+            ProofNode::Info {
+                msg: _,
+                success: _,
+                child,
+            } => Some(child),
             ProofNode::All {
                 msg: _,
                 success: _,
@@ -152,15 +170,24 @@ impl ProofNode {
         }
     }
 
-    pub fn print_tree<W: Write>(&self, writer: &mut W, depth: usize, max_depth_true: usize) -> anyhow::Result<()> {
+    pub fn print_tree<W: Write>(
+        &self,
+        writer: &mut W,
+        depth: usize,
+        max_depth_true: usize,
+    ) -> anyhow::Result<()> {
         let mut new_depth = depth;
         match self {
-            ProofNode::Leaf { msg:_, success:_ } | 
-            ProofNode::Info { msg:_, success:_, child:_ } => {
+            ProofNode::Leaf { msg: _, success: _ }
+            | ProofNode::Info {
+                msg: _,
+                success: _,
+                child: _,
+            } => {
                 new_depth += 1;
                 (0..depth).try_for_each(|_| write!(writer, "    "))?;
                 writeln!(writer, "{}", self.msg())?;
-            },
+            }
             _ => {
                 new_depth += 1;
                 (0..depth).try_for_each(|_| write!(writer, "    "))?;
@@ -178,7 +205,6 @@ impl ProofNode {
     }
 }
 
-
 impl Display for ProofNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -188,14 +214,13 @@ impl Display for ProofNode {
                 } else {
                     write!(f, "{} ❌", msg)
                 }
-            },
+            }
             ProofNode::Info {
                 msg,
                 success,
                 child: _,
             }
-            |
-            ProofNode::All {
+            | ProofNode::All {
                 msg,
                 success,
                 childs: _,

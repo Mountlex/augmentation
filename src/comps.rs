@@ -179,7 +179,6 @@ pub struct Complex {
 }
 
 impl Component {
-
     pub fn is_c6(&self) -> bool {
         matches!(self, Component::Cycle(graph) if graph.edge_count() == 6)
     }
@@ -229,11 +228,7 @@ impl Component {
         match self {
             Component::Cycle(g) => g.nodes().permutations(size).collect(),
             Component::Large(g) => vec![g.nodes().take(size).collect()],
-            Component::Complex(_, nodes, _) => nodes
-                .iter()
-                .cloned()
-                .permutations(size)
-                .collect(),
+            Component::Complex(_, nodes, _) => nodes.iter().cloned().permutations(size).collect(),
         }
     }
 
@@ -260,7 +255,10 @@ impl Component {
     }
 
     pub fn edges(&self) -> Vec<(Node, Node)> {
-        self.graph().all_edges().map(|(u,v,_)| (u,v)).collect_vec()
+        self.graph()
+            .all_edges()
+            .map(|(u, v, _)| (u, v))
+            .collect_vec()
     }
 
     pub fn to_graph(self) -> Graph {
@@ -468,5 +466,3 @@ mod test_merge {
         );
     }
 }
-
-
