@@ -21,7 +21,7 @@ impl Enumerator<PathMatchingInstance, PathMatchingInstance> for NPCEnumerator {
     fn iter(
         &self,
         data_in: PathMatchingInstance,
-        _context: &ProofContext,
+        _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = PathMatchingInstance>> {
         let super_node = &data_in.path.nodes.last().unwrap();
 
@@ -65,7 +65,7 @@ impl Enumerator<SelectedMatchingInstance, SelectedMatchingInstance> for NPCEnume
     fn iter(
         &self,
         data_in: SelectedMatchingInstance,
-        _context: &ProofContext,
+        _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedMatchingInstance>> {
         let super_node = &data_in.path_matching.path.nodes[data_in.hit_comp_idx];
 

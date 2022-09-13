@@ -27,7 +27,7 @@ impl Enumerator<PathEnumeratorInput, PathInstance> for PathEnumerator {
     fn iter(
         &self,
         data_in: PathEnumeratorInput,
-        _context: &ProofContext,
+        _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = PathInstance>> {
         let comps = &data_in.comps;
         let iter = itertools::iproduct!(comps.clone(), comps.clone(), comps.clone()).map(

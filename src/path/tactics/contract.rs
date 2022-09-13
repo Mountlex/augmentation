@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{proof::Tactic, utils::hamiltonian_paths, PathMatchingInstance},
+    path::{proof::{Tactic, ProofContext}, utils::hamiltonian_paths, PathMatchingInstance},
     proof_tree::ProofNode,
 };
 
@@ -13,7 +13,7 @@ impl Tactic<PathMatchingInstance> for ContractabilityTactic {
     fn action(
         &self,
         data: PathMatchingInstance,
-        _context: &crate::path::proof::ProofContext,
+        _context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
         let last = data.path.nodes.last().unwrap().to_zoomed();
         let last_comp = last.get_comp();
@@ -79,5 +79,9 @@ impl Tactic<PathMatchingInstance> for ContractabilityTactic {
                 false,
             );
         }
+    }
+
+    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
+        true
     }
 }

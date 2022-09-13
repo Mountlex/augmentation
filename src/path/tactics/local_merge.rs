@@ -17,7 +17,7 @@ use crate::{
 pub struct LocalMerge;
 
 impl Tactic<SelectedMatchingInstance> for LocalMerge {
-    fn action(&self, data: SelectedMatchingInstance, context: &ProofContext) -> ProofNode {
+    fn action(&self, data: SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
         let left = data.path_matching.path.nodes[data.hit_comp_idx].to_zoomed();
         let right = data.path_matching.path.nodes.last().unwrap().to_zoomed();
 
@@ -146,5 +146,9 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
         }
 
         return ProofNode::new_leaf("Local merge impossible".into(), false);
+    }
+
+    fn precondition(&self, data: &SelectedMatchingInstance, context: &ProofContext) -> bool {
+        true
     }
 }

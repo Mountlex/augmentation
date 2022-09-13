@@ -8,7 +8,7 @@ use crate::{
 
 use super::enumerators::comp_hits::ComponentHitEnumerator;
 use super::enumerators::matching_hits::MatchingHitEnumerator;
-use super::enumerators::matching_nodes::{MatchingNodesEnumerator};
+use super::enumerators::matching_nodes::MatchingNodesEnumerator;
 use super::enumerators::nice_pairs::NPCEnumerator;
 use super::enumerators::nice_paths::{PathEnumerator, PathEnumeratorInput};
 use super::tactics::complex_merge::LocalComplexMerge;
@@ -28,13 +28,15 @@ pub trait Enumerator<I, O> {
 
     fn msg(&self, data_in: &I) -> String;
 
-    fn iter(&self, data_in: I, context: &ProofContext) -> Box<dyn Iterator<Item = O>>;
+    fn iter(&self, data_in: I, context: &mut ProofContext) -> Box<dyn Iterator<Item = O>>;
 
     fn item_msg(&self, item: &O) -> String;
 }
 
 pub trait Tactic<I> {
-    fn action(&self, data: I, context: &ProofContext) -> ProofNode;
+    fn precondition(&self, data: &I, context: &ProofContext) -> bool;
+
+    fn action(&self, data: I, context: &mut ProofContext) -> ProofNode;
 }
 
 pub struct Or<I, A1, A2> {
@@ -70,16 +72,23 @@ where
     A2: Tactic<I>,
     I: Clone,
 {
-    fn action(&self, data: I, context: &ProofContext) -> ProofNode {
-        let mut res1 = self.tactic1.action(data.clone(), context);
-
-        let result = res1.eval();
-        if result {
-            return res1;
+    fn action(&self, data: I, context: &mut ProofContext) -> ProofNode {
+        if self.tactic1.precondition(&data, context) {
+            let mut res1 = self.tactic1.action(data.clone(), context);
+            let result = res1.eval();
+            if result || !self.tactic2.precondition(&data, context) {
+                return res1;
+            } else {
+                let res2 = self.tactic2.action(data, context);
+                return ProofNode::new_or(res1, res2);
+            }
         } else {
-            let res2 = self.tactic2.action(data, context);
-            return ProofNode::new_or(res1, res2);
+            self.tactic2.action(data, context)
         }
+    }
+
+    fn precondition(&self, data: &I, context: &ProofContext) -> bool {
+        self.tactic1.precondition(&data, context) || self.tactic2.precondition(&data, context)
     }
 }
 
@@ -102,19 +111,27 @@ where
     E: Enumerator<I, O>,
     A: Tactic<O>,
 {
-    fn action(&self, data_in: I, context: &ProofContext) -> ProofNode {
+    fn action(&self, data_in: I, context: &mut ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_all(self.enumerator.msg(&data_in));
 
         self.enumerator.iter(data_in, context).all(|d| {
-            let item_msg = self.enumerator.item_msg(&d);
-            let mut res = self.tactic.action(d, context);
-            res = ProofNode::new_info(item_msg, res);
-            let cont = res.eval();
-            proof.add_child(res);
-            cont
+            if !self.tactic.precondition(&d, context) {
+                false
+            } else {
+                let item_msg = self.enumerator.item_msg(&d);
+                let mut res = self.tactic.action(d, context);
+                res = ProofNode::new_info(item_msg, res);
+                let cont = res.eval();
+                proof.add_child(res);
+                cont
+            }
         });
 
         proof
+    }
+
+    fn precondition(&self, data: &I, context: &ProofContext) -> bool {
+        true
     }
 }
 
@@ -137,19 +154,27 @@ where
     E: Enumerator<I, O>,
     A: Tactic<O>,
 {
-    fn action(&self, data_in: I, context: &ProofContext) -> ProofNode {
+    fn action(&self, data_in: I, context: &mut ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_any(self.enumerator.msg(&data_in));
 
         self.enumerator.iter(data_in, context).any(|d| {
-            let item_msg = self.enumerator.item_msg(&d);
-            let mut res = self.tactic.action(d, context);
-            res = ProofNode::new_info(item_msg, res);
-            let cont = res.eval();
-            proof.add_child(res);
-            cont
+            if !self.tactic.precondition(&d, context) {
+                false
+            } else {
+                let item_msg = self.enumerator.item_msg(&d);
+                let mut res = self.tactic.action(d, context);
+                res = ProofNode::new_info(item_msg, res);
+                let cont = res.eval();
+                proof.add_child(res);
+                cont
+            }
         });
 
         proof
+    }
+
+    fn precondition(&self, data: &I, context: &ProofContext) -> bool {
+        true
     }
 }
 
@@ -166,7 +191,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
     let path_length = 4;
 
     for last_comp in &comps {
-        let context = ProofContext {
+        let mut context = ProofContext {
             credit_inv: DefaultCredits::new(c),
             path_len: path_length,
         };
@@ -200,7 +225,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
         )
         .action(
             PathEnumeratorInput::new(last_comp.clone(), comps.clone()),
-            &context,
+            &mut context,
         );
 
         let proved = proof.eval();

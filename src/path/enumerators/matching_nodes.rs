@@ -22,7 +22,7 @@ impl Enumerator<SelectedHitInstance, SelectedMatchingInstance> for MatchingNodes
     fn iter(
         &self,
         instance: SelectedHitInstance,
-        _context: &ProofContext,
+        _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedMatchingInstance>> {
         let left_comp = instance.path_matching.path.nodes[instance.hit_comp_idx].get_comp();
 

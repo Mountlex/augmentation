@@ -23,7 +23,7 @@ impl Enumerator<PathInstance, PathMatchingInstance> for MatchingHitEnumerator {
     fn iter(
         &self,
         path: PathInstance,
-        context: &ProofContext,
+        context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = PathMatchingInstance>> {
         assert!(self.comp_index > 0);
 

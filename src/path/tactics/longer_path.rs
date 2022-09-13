@@ -12,7 +12,7 @@ impl Tactic<PathMatchingInstance> for LongerPathTactic {
     fn action(
         &self,
         data: PathMatchingInstance,
-        context: &ProofContext,
+        context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
         let outside_hits = data.matching.outside_hits();
         if outside_hits.len() == 2 {
@@ -24,8 +24,12 @@ impl Tactic<PathMatchingInstance> for LongerPathTactic {
         } else if outside_hits.len() == 1 {
             LongerNicePathCheck::check_for(&outside_hits[0]).action(data, context)
         } else {
-            ProofNode::new_leaf(format!("None of the matching edges hits outside"), false)
+            panic!()
         }
+    }
+
+    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
+        !data.matching.outside_hits().is_empty()
     }
 }
 
@@ -47,7 +51,7 @@ impl<'a> Tactic<PathMatchingInstance> for LongerNicePathCheck<'a> {
     fn action(
         &self,
         data: PathMatchingInstance,
-        _context: &ProofContext,
+        _context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
         let last = data.path.nodes.last().unwrap().to_zoomed();
         let last_comp = last.get_comp();
@@ -74,5 +78,9 @@ impl<'a> Tactic<PathMatchingInstance> for LongerNicePathCheck<'a> {
                 false,
             )
         }
+    }
+
+    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
+        true
     }
 }

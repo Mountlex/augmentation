@@ -25,7 +25,7 @@ impl Enumerator<PathMatchingInstance, SelectedHitInstance> for ComponentHitEnume
     fn iter(
         &self,
         instance: PathMatchingInstance,
-        _context: &ProofContext,
+        _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedHitInstance>> {
         let mut matching = instance.matching.to_vec();
         matching.sort_by_key(|m| m.hit());

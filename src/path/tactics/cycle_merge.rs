@@ -16,7 +16,7 @@ use crate::{
 pub struct CycleMerge;
 
 impl Tactic<PathMatchingInstance> for CycleMerge {
-    fn action(&self, data: PathMatchingInstance, context: &ProofContext) -> ProofNode {
+    fn action(&self, data: PathMatchingInstance, context: &mut ProofContext) -> ProofNode {
         let cycle_edges = data
             .matching
             .other_edges
@@ -24,13 +24,7 @@ impl Tactic<PathMatchingInstance> for CycleMerge {
             .filter(|m_edge| matches!(m_edge.hit(), PathHit::Path(r) if r <= context.path_len - 3))
             .collect_vec();
 
-        // If we land here, we want that at least one matching edge hits C_j for j <= l - 2.
-        if cycle_edges.is_empty() {
-            return ProofNode::new_leaf(
-                format!("There are no matching edges forming cycles! Aborting"),
-                false,
-            );
-        }
+        
 
         let mut proof = ProofNode::new_any("Any cycle merge".into());
 
@@ -65,6 +59,16 @@ impl Tactic<PathMatchingInstance> for CycleMerge {
         proof.add_child(ProofNode::new_leaf("Tactics exhausted".into(), false));
 
         proof
+    }
+
+    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
+        // If we land here, we want that at least one matching edge hits C_j for j <= l - 2.
+        data
+            .matching
+            .other_edges
+            .iter()
+            .filter(|m_edge| matches!(m_edge.hit(), PathHit::Path(r) if r <= context.path_len - 3))
+            .count() > 0
     }
 }
 

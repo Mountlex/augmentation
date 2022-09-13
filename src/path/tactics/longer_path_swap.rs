@@ -12,15 +12,12 @@ use crate::{
 pub struct LongerNicePathViaMatchingSwap;
 
 impl Tactic<SelectedMatchingInstance> for LongerNicePathViaMatchingSwap {
-    fn action(&self, data: SelectedMatchingInstance, context: &ProofContext) -> ProofNode {
+    fn action(&self, data: SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
         let three_matching = data.path_matching.matching;
         let matched = data.matched;
 
         let outside_hits = three_matching.outside_hits();
-        if matched.len() == 2
-            && outside_hits.len() == 1
-            && data.hit_comp_idx == context.path_len - 2
-        {
+        
             let last = data.path_matching.path.nodes.last().unwrap().to_zoomed();
             let prelast = data.path_matching.path.nodes[context.path_len - 2].to_zoomed();
             let last_comp = last.get_comp();
@@ -90,11 +87,13 @@ impl Tactic<SelectedMatchingInstance> for LongerNicePathViaMatchingSwap {
                 "No longer path via swapping matching edges: no swapping".into(),
                 false,
             );
-        } else {
-            return ProofNode::new_leaf(
-                "No longer path via swapping matching edges: no preconditions".into(),
-                false,
-            );
-        }
+        
+    }
+
+    fn precondition(&self, data: &SelectedMatchingInstance, context: &ProofContext) -> bool {
+        let outside_hits = data.path_matching.matching.outside_hits();
+        data.matched.len() == 2
+            && outside_hits.len() == 1
+            && data.hit_comp_idx == context.path_len - 2
     }
 }
