@@ -6,10 +6,10 @@ use crate::{
     proof_tree::ProofNode,
 };
 
-use super::enumerators::comp_hits::{ComponentHitEnumerator, ComponentHitOutput};
-use super::enumerators::matching_hits::{MatchingHitEnumerator, MatchingHitEnumeratorOutput};
-use super::enumerators::matching_nodes::{MatchingNodesEnumerator, MatchingNodesEnumeratorOutput};
-use super::enumerators::nice_pairs::{NPCEnumOutput, NPCEnumerator};
+use super::enumerators::comp_hits::ComponentHitEnumerator;
+use super::enumerators::matching_hits::MatchingHitEnumerator;
+use super::enumerators::matching_nodes::{MatchingNodesEnumerator};
+use super::enumerators::nice_pairs::NPCEnumerator;
 use super::enumerators::nice_paths::{PathEnumerator, PathEnumeratorInput};
 use super::tactics::complex_merge::LocalComplexMerge;
 use super::tactics::contract::ContractabilityTactic;
@@ -23,24 +23,18 @@ pub struct ProofContext {
     pub path_len: usize,
 }
 
-pub trait Enumerator {
-    type In;
-    type Out;
+pub trait Enumerator<I, O> {
     //type Iter: Iterator<Item = Self::Out>;
 
-    fn msg(&self, data_in: &Self::In) -> String;
+    fn msg(&self, data_in: &I) -> String;
 
-    fn iter(&self, data_in: Self::In) -> Box<dyn Iterator<Item = Self::Out>>;
+    fn iter(&self, data_in: I, context: &ProofContext) -> Box<dyn Iterator<Item = O>>;
 
-    fn item_msg(&self, item: &Self::Out) -> String {
-        String::new()
-    }
+    fn item_msg(&self, item: &O) -> String;
 }
 
-pub trait Tactic {
-    type In;
-
-    fn action(&self, data: Self::In, context: &ProofContext) -> ProofNode;
+pub trait Tactic<I> {
+    fn action(&self, data: I, context: &ProofContext) -> ProofNode;
 }
 
 pub struct Or<I, A1, A2> {
@@ -61,56 +55,59 @@ pub fn or3<I, A1, A2, A3>(tactic1: A1, tactic2: A2, tactic3: A3) -> Or<I, A1, Or
     or(tactic1, or(tactic2, tactic3))
 }
 
-pub fn or4<I, A1, A2, A3, A4>(tactic1: A1, tactic2: A2, tactic3: A3, tactic4: A4) -> Or<I, A1, Or<I, A2, Or<I, A3, A4>>> {
+pub fn or4<I, A1, A2, A3, A4>(
+    tactic1: A1,
+    tactic2: A2,
+    tactic3: A3,
+    tactic4: A4,
+) -> Or<I, A1, Or<I, A2, Or<I, A3, A4>>> {
     or3(tactic1, tactic2, or(tactic3, tactic4))
 }
 
-impl<I, A1, A2> Tactic for Or<I, A1, A2>
+impl<I, A1, A2> Tactic<I> for Or<I, A1, A2>
 where
-    A1: Tactic,
-    A2: Tactic,
-    A1::In: From<I>,
-    A2::In: From<I>,
+    A1: Tactic<I>,
+    A2: Tactic<I>,
     I: Clone,
 {
-    type In = I;
+    fn action(&self, data: I, context: &ProofContext) -> ProofNode {
+        let mut res1 = self.tactic1.action(data.clone(), context);
 
-    fn action(&self, data: Self::In, context: &ProofContext) -> ProofNode {
-        let mut res1 = self.tactic1.action(data.clone().into(), context);
-        
         let result = res1.eval();
         if result {
-            return res1
+            return res1;
         } else {
-            let res2 = self.tactic2.action(data.into(), context);
-            return  ProofNode::new_or(res1, res2);
+            let res2 = self.tactic2.action(data, context);
+            return ProofNode::new_or(res1, res2);
         }
     }
 }
 
-pub struct All<E, A> {
+pub struct All<O, E, A> {
     enumerator: E,
     tactic: A,
+    _phantom_data: PhantomData<O>,
 }
 
-pub fn all<E, A>(enumerator: E, tactic: A) -> All<E, A> {
-    All { enumerator, tactic }
+pub fn all<O, E, A>(enumerator: E, tactic: A) -> All<O, E, A> {
+    All {
+        enumerator,
+        tactic,
+        _phantom_data: PhantomData,
+    }
 }
 
-impl<E, A> Tactic for All<E, A>
+impl<E, A, I, O> Tactic<I> for All<O, E, A>
 where
-    E: Enumerator,
-    A: Tactic,
-    A::In: From<E::Out>,
+    E: Enumerator<I, O>,
+    A: Tactic<O>,
 {
-    type In = E::In;
-
-    fn action(&self, data_in: Self::In, context: &ProofContext) -> ProofNode {
+    fn action(&self, data_in: I, context: &ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_all(self.enumerator.msg(&data_in));
 
-        self.enumerator.iter(data_in).all(|d| {
+        self.enumerator.iter(data_in, context).all(|d| {
             let item_msg = self.enumerator.item_msg(&d);
-            let mut res = self.tactic.action(d.into(), context);
+            let mut res = self.tactic.action(d, context);
             res = ProofNode::new_info(item_msg, res);
             let cont = res.eval();
             proof.add_child(res);
@@ -121,29 +118,31 @@ where
     }
 }
 
-pub struct Any<E, A> {
+pub struct Any<O, E, A> {
     enumerator: E,
     tactic: A,
+    _phantom_data: PhantomData<O>,
 }
 
-pub fn any<E, A>(enumerator: E, tactic: A) -> Any<E, A> {
-    Any { enumerator, tactic }
+pub fn any<O, E, A>(enumerator: E, tactic: A) -> Any<O, E, A> {
+    Any {
+        enumerator,
+        tactic,
+        _phantom_data: PhantomData,
+    }
 }
 
-impl<E, A> Tactic for Any<E, A>
+impl<E, A, I, O> Tactic<I> for Any<O, E, A>
 where
-    E: Enumerator,
-    A: Tactic,
-    A::In: From<E::Out>,
+    E: Enumerator<I, O>,
+    A: Tactic<O>,
 {
-    type In = E::In;
-
-    fn action(&self, data_in: Self::In, context: &ProofContext) -> ProofNode {
+    fn action(&self, data_in: I, context: &ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_any(self.enumerator.msg(&data_in));
 
-        self.enumerator.iter(data_in).any(|d| {
+        self.enumerator.iter(data_in, context).any(|d| {
             let item_msg = self.enumerator.item_msg(&d);
-            let mut res = self.tactic.action(d.into(), context);
+            let mut res = self.tactic.action(d, context);
             res = ProofNode::new_info(item_msg, res);
             let cont = res.eval();
             proof.add_child(res);
@@ -175,24 +174,21 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
         let mut proof = all(
             PathEnumerator,
             all(
-                MatchingHitEnumerator,
+                MatchingHitEnumerator::for_comp(path_length - 1),
                 all(
-                    NPCEnumerator::new(),
-                    or4::<NPCEnumOutput<MatchingHitEnumeratorOutput>, _, _, _, _>(
+                    NPCEnumerator,
+                    or4(
                         LongerPathTactic,
                         ContractabilityTactic,
                         any(
                             ComponentHitEnumerator,
-                            or::<ComponentHitOutput, _, _>(
+                            or(
                                 LocalComplexMerge,
                                 all(
                                     MatchingNodesEnumerator,
                                     all(
-                                        NPCEnumerator::new(),
-                                        or::<NPCEnumOutput<MatchingNodesEnumeratorOutput>, _, _>(
-                                            LocalMerge,
-                                            LongerNicePathViaMatchingSwap,
-                                        ),
+                                        NPCEnumerator,
+                                        or(LocalMerge, LongerNicePathViaMatchingSwap),
                                     ),
                                 ),
                             ),

@@ -1,98 +1,104 @@
-use std::marker::PhantomData;
-
 use itertools::Itertools;
 
 use crate::{
     comps::{Component, Node},
-    path::{proof::Enumerator, NicePairConfig},
+    path::{
+        proof::{Enumerator, ProofContext},
+        NicePairConfig, PathMatchingInstance, SelectedMatchingInstance, SuperNode, ZoomedNode,
+    },
 };
 
-use super::{
-    comp_hits::ComponentHitInput, matching_hits::MatchingHitEnumeratorOutput,
-    matching_nodes::MatchingNodesEnumeratorOutput,
-};
+pub struct NPCEnumerator;
 
-impl From<MatchingHitEnumeratorOutput> for NPCEnumInput<MatchingHitEnumeratorOutput> {
-    fn from(output: MatchingHitEnumeratorOutput) -> Self {
-        NPCEnumInput {
-            nodes: output.three_matching.sources(),
-            comp: output.nice_path.nodes.last().unwrap().get_comp().to_owned(),
-            input: output,
-        }
-    }
-}
-
-impl From<MatchingNodesEnumeratorOutput> for NPCEnumInput<MatchingNodesEnumeratorOutput> {
-    fn from(output: MatchingNodesEnumeratorOutput) -> Self {
-        NPCEnumInput {
-            input: output.clone(),
-            nodes: output.left_matched,
-            comp: output.left_comp,
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct NPCEnumInput<I> {
-    nodes: Vec<Node>,
-    comp: Component,
-    input: I,
-}
-
-pub struct NPCEnumerator<I> {
-    _data: PhantomData<I>,
-}
-
-impl<I> NPCEnumerator<I> {
-    pub fn new() -> Self {
-        NPCEnumerator { _data: PhantomData }
-    }
-}
-
-impl<I> Enumerator for NPCEnumerator<I>
-where
-    I: Clone + 'static,
-{
-    type In = NPCEnumInput<I>;
-
-    type Out = NPCEnumOutput<I>;
-
-    fn msg(&self, data_in: &Self::In) -> String {
+impl Enumerator<PathMatchingInstance, PathMatchingInstance> for NPCEnumerator {
+    fn msg(&self, data_in: &PathMatchingInstance) -> String {
         format!(
-            "Enumerate all nice pairs for nodes {:?} of component {}",
-            data_in.nodes, data_in.comp
+            "Enumerate all nice pairs for nodes {:?} of last component",
+            data_in.matching.sources()
         )
     }
 
-    fn iter(&self, data_in: Self::In) -> Box<dyn Iterator<Item = Self::Out>> {
-        let iterator = comp_npcs(&data_in.comp, &data_in.nodes)
+    fn iter(
+        &self,
+        data_in: PathMatchingInstance,
+        _context: &ProofContext,
+    ) -> Box<dyn Iterator<Item = PathMatchingInstance>> {
+        let super_node = &data_in.path.nodes.last().unwrap();
+
+        assert!(matches!(super_node, crate::path::SuperNode::Abstract(_)));
+
+        let comp = super_node.get_comp().clone();
+        let iterator = comp_npcs(&comp, &data_in.matching.sources())
             .into_iter()
-            .map(move |npc| NPCEnumOutput {
-                input: data_in.input.clone(),
-                npc,
+            .map(move |npc| {
+                let mut path_clone = data_in.path.clone();
+                let zoomed_node = ZoomedNode {
+                    comp: comp.clone(),
+                    npc,
+                    in_node: data_in.matching.path_edge_left.map(|e| e.source()),
+                    out_node: data_in.matching.path_edge_right.map(|e| e.source()),
+                };
+
+                *path_clone.nodes.last_mut().unwrap() = SuperNode::Zoomed(zoomed_node);
+                PathMatchingInstance {
+                    path: path_clone,
+                    matching: data_in.matching.clone(),
+                }
             });
 
         Box::new(iterator)
     }
 
-    fn item_msg(&self, item: &Self::Out) -> String {
-        format!("Nice pair configuration {}", item.npc)
+    fn item_msg(&self, item: &PathMatchingInstance) -> String {
+        format!("NPC {}", item.path.nodes.last().unwrap())
     }
 }
 
-#[derive(Clone)]
-pub struct NPCEnumOutput<I> {
-    pub input: I,
-    pub npc: NicePairConfig,
-}
+impl Enumerator<SelectedMatchingInstance, SelectedMatchingInstance> for NPCEnumerator {
+    fn msg(&self, data_in: &SelectedMatchingInstance) -> String {
+        format!(
+            "Enumerate all nice pairs for nodes {:?} of path[{}]",
+            data_in.matched, data_in.hit_comp_idx
+        )
+    }
 
-impl From<NPCEnumOutput<MatchingHitEnumeratorOutput>> for ComponentHitInput {
-    fn from(o: NPCEnumOutput<MatchingHitEnumeratorOutput>) -> Self {
-        ComponentHitInput {
-            nice_path: o.input.nice_path,
-            three_matching: o.input.three_matching,
-            npc_last: o.npc,
-        }
+    fn iter(
+        &self,
+        data_in: SelectedMatchingInstance,
+        _context: &ProofContext,
+    ) -> Box<dyn Iterator<Item = SelectedMatchingInstance>> {
+        let super_node = &data_in.path_matching.path.nodes[data_in.hit_comp_idx];
+
+        assert!(matches!(super_node, crate::path::SuperNode::Abstract(_)));
+
+        let comp = super_node.get_comp().clone();
+        let iterator = comp_npcs(&comp, &data_in.matched.iter().map(|e| e.0).collect_vec())
+            .into_iter()
+            .map(move |npc| {
+                let mut instance = data_in.path_matching.clone();
+                let zoomed_node = ZoomedNode {
+                    comp: comp.clone(),
+                    npc,
+                    in_node: None,
+                    out_node: None,
+                };
+
+                instance.path.nodes[data_in.hit_comp_idx] = SuperNode::Zoomed(zoomed_node);
+                SelectedMatchingInstance {
+                    path_matching: instance,
+                    matched: data_in.matched.clone(),
+                    hit_comp_idx: data_in.hit_comp_idx,
+                }
+            });
+
+        Box::new(iterator)
+    }
+
+    fn item_msg(&self, item: &SelectedMatchingInstance) -> String {
+        format!(
+            "NPC {}",
+            item.path_matching.path.nodes[item.hit_comp_idx].to_zoomed().npc
+        )
     }
 }
 
@@ -122,7 +128,7 @@ fn comp_npcs(comp: &Component, nodes: &Vec<Node>) -> Vec<NicePairConfig> {
                 .collect_vec()
         }
         Component::Cycle(c) => vec![NicePairConfig {
-            nice_pairs: c.all_edges().map(|(u, v, t)| (u, v)).collect_vec(),
+            nice_pairs: c.all_edges().map(|(u, v, _)| (u, v)).collect_vec(),
         }],
         Component::Large(_) => vec![NicePairConfig::empty()],
         Component::Complex(_, black, _) => vec![NicePairConfig {

@@ -3,58 +3,37 @@ use petgraph::{algo::connected_components, visit::EdgeFiltered};
 
 use crate::{
     bridges::{is_complex, ComplexCheckResult},
-    comps::{edges_of_type, Component, CreditInvariant, EdgeType},
+    comps::{edges_of_type, CreditInvariant, EdgeType},
     path::{
-        enumerators::{matching_nodes::MatchingNodesEnumeratorOutput, nice_pairs::NPCEnumOutput},
         proof::{ProofContext, Tactic},
         utils::get_local_merge_graph,
-        NicePairConfig,
+        SelectedMatchingInstance,
     },
     proof_tree::ProofNode,
+    types::Edge,
     Credit,
 };
 
-impl From<NPCEnumOutput<MatchingNodesEnumeratorOutput>> for LocalMergeInput {
-    fn from(o: NPCEnumOutput<MatchingNodesEnumeratorOutput>) -> Self {
-        LocalMergeInput {
-            left_comp: o.input.left_comp,
-            right_comp: o.input.last_comp,
-            left_matched: o.input.left_matched,
-            right_matched: o.input.right_matched,
-            np_config_left: o.npc,
-            np_config_right: o.input.npc_last,
-        }
-    }
-}
-
-pub struct LocalMergeInput {
-    left_comp: Component,
-    right_comp: Component,
-    left_matched: Vec<u32>,
-    right_matched: Vec<u32>,
-    np_config_left: NicePairConfig,
-    np_config_right: NicePairConfig,
-}
-
 pub struct LocalMerge;
 
-impl Tactic for LocalMerge {
-    type In = LocalMergeInput;
+impl Tactic<SelectedMatchingInstance> for LocalMerge {
+    fn action(&self, data: SelectedMatchingInstance, context: &ProofContext) -> ProofNode {
+        let left = data.path_matching.path.nodes[data.hit_comp_idx].to_zoomed();
+        let right = data.path_matching.path.nodes.last().unwrap().to_zoomed();
 
-    fn action(&self, data: Self::In, context: &ProofContext) -> ProofNode {
-        let matching = data
-            .left_matched
-            .iter()
-            .zip(data.right_matched.iter())
-            .map(|(l, r)| (*l, *r))
-            .collect_vec();
-        let graph_with_matching =
-            get_local_merge_graph(&data.left_comp, &data.right_comp, &matching);
+        let left_comp = data.path_matching.path.nodes[data.hit_comp_idx].get_comp();
+        let right_comp = data.path_matching.path.last_comp();
 
-        let total_comp_credit = context.credit_inv.credits(&data.left_comp)
-            + context.credit_inv.credits(&data.right_comp);
+        let graph_with_matching = get_local_merge_graph(
+            &left_comp,
+            &right_comp,
+            &data.matched.iter().map(|e| (e.0, e.1)).collect_vec(),
+        );
 
-        if data.left_comp.is_complex() || data.right_comp.is_complex() {
+        let total_comp_credit =
+            context.credit_inv.credits(&left_comp) + context.credit_inv.credits(&right_comp);
+
+        if left_comp.is_complex() || right_comp.is_complex() {
             for sell in edges_of_type(&graph_with_matching, EdgeType::Sellable)
                 .into_iter()
                 .powerset()
@@ -62,7 +41,8 @@ impl Tactic for LocalMerge {
                 let sell_credits = Credit::from_integer(sell.len() as i64);
                 let mut total_plus_sell = total_comp_credit + sell_credits;
 
-                for buy in matching
+                for buy in data
+                    .matched
                     .iter()
                     .cloned()
                     .powerset()
@@ -75,32 +55,23 @@ impl Tactic for LocalMerge {
                             || sell.contains(&(v2, v1))
                         {
                             false
-                        } else if t == &EdgeType::Buyable
-                            && !buy.contains(&(v1, v2))
-                            && !buy.contains(&(v2, v1))
-                        {
+                        } else if t == &EdgeType::Buyable && !buy.contains(&Edge(v1, v2)) {
                             false
                         } else {
                             true
                         }
                     });
 
-                    if buy.len() == 2
-                        && !(data.left_comp.is_complex() && data.right_comp.is_complex())
-                    {
+                    if buy.len() == 2 && !(left_comp.is_complex() && right_comp.is_complex()) {
                         let l1 = buy[0].0;
                         let r1 = buy[0].1;
                         let l2 = buy[1].0;
                         let r2 = buy[1].1;
 
-                        if !data.left_comp.is_adjacent(l1, l2)
-                            && data.np_config_left.is_nice_pair(l1, l2)
-                        {
+                        if !left_comp.is_adjacent(l1, l2) && left.npc.is_nice_pair(l1, l2) {
                             total_plus_sell += Credit::from_integer(1)
                         }
-                        if !data.right_comp.is_adjacent(r1, r2)
-                            && data.np_config_right.is_nice_pair(r1, r2)
-                        {
+                        if !right_comp.is_adjacent(r1, r2) && right.npc.is_nice_pair(r1, r2) {
                             total_plus_sell += Credit::from_integer(1)
                         }
                     }
@@ -126,8 +97,19 @@ impl Tactic for LocalMerge {
                             }
                         }
                         ComplexCheckResult::NoBridges => {
-                            if total_plus_sell - buy_credits >= context.credit_inv.large() {
-                                return ProofNode::new_leaf("Local merge to large".into(), true);
+                            if left_comp.is_c3() && right_comp.is_c3() {
+                                if total_plus_sell - buy_credits
+                                    >= context.credit_inv.two_ec_credit(6)
+                                {
+                                    return ProofNode::new_leaf("Local merge to c6".into(), true);
+                                }
+                            } else {
+                                if total_plus_sell - buy_credits >= context.credit_inv.large() {
+                                    return ProofNode::new_leaf(
+                                        "Local merge to large".into(),
+                                        true,
+                                    );
+                                }
                             }
                         }
                         ComplexCheckResult::BlackLeaf => continue,
@@ -136,7 +118,7 @@ impl Tactic for LocalMerge {
                 }
             }
         } else {
-            for buy in matching.into_iter().powerset().filter(|p| p.len() == 2) {
+            for buy in data.matched.into_iter().powerset().filter(|p| p.len() == 2) {
                 let l1 = buy[0].0;
                 let r1 = buy[0].1;
                 let l2 = buy[1].0;
@@ -144,15 +126,21 @@ impl Tactic for LocalMerge {
 
                 let mut credits = total_comp_credit - Credit::from_integer(2);
 
-                if data.np_config_left.is_nice_pair(l1, l2) {
+                if left.npc.is_nice_pair(l1, l2) {
                     credits += Credit::from_integer(1)
                 }
-                if data.np_config_right.is_nice_pair(r1, r2) {
+                if right.npc.is_nice_pair(r1, r2) {
                     credits += Credit::from_integer(1)
                 }
 
-                if credits >= context.credit_inv.large() {
-                    return ProofNode::new_leaf("Local merge to large".into(), true);
+                if left_comp.is_c3() && right_comp.is_c3() {
+                    if credits >= context.credit_inv.two_ec_credit(6) {
+                        return ProofNode::new_leaf("Local merge to c6".into(), true);
+                    }
+                } else {
+                    if credits >= context.credit_inv.large() {
+                        return ProofNode::new_leaf("Local merge to large".into(), true);
+                    }
                 }
             }
         }

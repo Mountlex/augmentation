@@ -1,30 +1,33 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::Node,
-    path::{proof::Enumerator, NicePairConfig, NicePath, PathMatchingHits, ThreeMatching},
+    path::{
+        proof::{Enumerator, ProofContext},
+        Matching3, MatchingEdge, NicePairConfig, PathHit, PathInstance, PathMatchingInstance,
+        SelectedHitInstance,
+    },
 };
 
 #[derive(Clone)]
 pub struct ComponentHitInput {
-    pub nice_path: NicePath,
-    pub three_matching: ThreeMatching,
+    pub nice_path: PathInstance,
+    pub three_matching: Matching3,
     pub npc_last: NicePairConfig,
 }
 
 pub struct ComponentHitEnumerator;
 
-impl Enumerator for ComponentHitEnumerator {
-    type In = ComponentHitInput;
-
-    type Out = ComponentHitOutput;
-
-    fn msg(&self, data_in: &Self::In) -> String {
+impl Enumerator<PathMatchingInstance, SelectedHitInstance> for ComponentHitEnumerator {
+    fn msg(&self, _data_in: &PathMatchingInstance) -> String {
         format!("Enumerate all components hit by matching edges")
     }
 
-    fn iter(&self, data_in: Self::In) -> Box<dyn Iterator<Item = Self::Out>> {
-        let mut matching = data_in.three_matching.to_vec();
+    fn iter(
+        &self,
+        instance: PathMatchingInstance,
+        _context: &ProofContext,
+    ) -> Box<dyn Iterator<Item = SelectedHitInstance>> {
+        let mut matching = instance.matching.to_vec();
         matching.sort_by_key(|m| m.hit());
 
         let iter = matching
@@ -34,20 +37,18 @@ impl Enumerator for ComponentHitEnumerator {
             .map(|m_edge| m_edge.hit())
             .dedup_with_count()
             .flat_map(move |(num_edges, hit_comp)| {
-                if let PathMatchingHits::Path(hit_comp_idx) = hit_comp {
-                    let right_matched: Vec<Node> = matching
+                if let PathHit::Path(hit_comp_idx) = hit_comp {
+                    let matched: Vec<MatchingEdge> = matching
                         .iter()
                         .filter(|m_edge| m_edge.hit() == hit_comp)
-                        .map(|m_edge| m_edge.source())
+                        .cloned()
                         .collect();
-                    assert_eq!(right_matched.len(), num_edges);
+                    assert_eq!(matched.len(), num_edges);
 
-                    Some(ComponentHitOutput {
-                        path: data_in.nice_path.clone(),
-                        npc_last: data_in.npc_last.clone(),
-                        three_matching: data_in.three_matching.clone(),
+                    Some(SelectedHitInstance {
+                        path_matching: instance.clone(),
                         hit_comp_idx,
-                        right_matched,
+                        matched,
                     })
                 } else {
                     None
@@ -57,20 +58,11 @@ impl Enumerator for ComponentHitEnumerator {
         Box::new(iter)
     }
 
-    fn item_msg(&self, item: &Self::Out) -> String {
+    fn item_msg(&self, item: &SelectedHitInstance) -> String {
         format!(
             "Path[{}] hit by {} matching edges",
             item.hit_comp_idx,
-            item.right_matched.len()
+            item.matched.len()
         )
     }
-}
-
-#[derive(Clone)]
-pub struct ComponentHitOutput {
-    pub path: NicePath,
-    pub npc_last: NicePairConfig,
-    pub three_matching: ThreeMatching,
-    pub hit_comp_idx: usize,
-    pub right_matched: Vec<Node>,
 }

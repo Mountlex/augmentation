@@ -9,46 +9,47 @@ use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 
 use crate::{
-    comps::{Component, CreditInvariant, Graph, Node},
+    comps::{Component, CreditInvariant,  Node},
     path::utils::complex_cycle_value_base,
+    types::Edge,
     Credit,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PathMatchingEdge(pub Node, pub PathMatchingHits);
+pub struct MatchingEdge(pub Node, pub PathHit);
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum PathMatchingHits {
+pub enum PathHit {
     Path(usize),
     Outside,
 }
 
-impl PathMatchingEdge {
+impl MatchingEdge {
     pub fn source(&self) -> Node {
         self.0.clone()
     }
 
-    pub fn hit(&self) -> PathMatchingHits {
+    pub fn hit(&self) -> PathHit {
         self.1.clone()
     }
 
     pub fn hits_path(&self) -> Option<usize> {
         match self.1 {
-            PathMatchingHits::Path(i) => Some(i),
-            PathMatchingHits::Outside => None,
+            PathHit::Path(i) => Some(i),
+            PathHit::Outside => None,
         }
     }
 
     pub fn hits_outside(&self) -> bool {
-        matches!(self.1, PathMatchingHits::Outside)
+        matches!(self.1, PathHit::Outside)
     }
 }
 
-impl Display for PathMatchingEdge {
+impl Display for MatchingEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.1 {
-            PathMatchingHits::Path(j) => write!(f, "{} -- path[{}]", self.0, j),
-            PathMatchingHits::Outside => write!(f, "{} -- outside", self.0),
+            PathHit::Path(j) => write!(f, "({}--path[{}])", self.0, j),
+            PathHit::Outside => write!(f, "({}--outside)", self.0),
         }
     }
 }
@@ -93,6 +94,13 @@ pub enum SuperNode {
 }
 
 impl SuperNode {
+    pub fn to_zoomed(&self) -> &ZoomedNode {
+        match self {
+            SuperNode::Zoomed(n) => n,
+            SuperNode::Abstract(_) => panic!("Super node is not zoomed!"),
+        }
+    }
+
     pub fn get_comp(&self) -> &Component {
         match self {
             SuperNode::Zoomed(node) => node.get_comp(),
@@ -110,111 +118,61 @@ impl Display for SuperNode {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct NicePath {
-    pub nodes: Vec<SuperNode>,
-    pub graph: Graph,
-}
 
-impl NicePath {
-    pub fn last_comp(&self) -> &Component {
-        self.nodes.last().unwrap().get_comp()
-    }
-}
 
-impl Display for NicePath {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[")?;
-        write!(
-            f,
-            "{}",
-            self.nodes
-                .iter()
-                .map(|node| format!("{}", node))
-                .join(" -- ")
-        )?;
-        write!(f, "]")
-    }
-}
+
 
 #[derive(Clone, Debug)]
-pub struct PseudoCycle {
-    nodes: Vec<SuperNode>,
+pub struct Matching3 {
+    pub source_comp_idx: usize,
+    pub path_edge_left: Option<MatchingEdge>,
+    pub path_edge_right: Option<MatchingEdge>,
+    pub other_edges: Vec<MatchingEdge>,
 }
 
-impl PseudoCycle {
-    fn value<C: CreditInvariant>(&self, credit_inv: C) -> Credit {
-        let first_complex = self
-            .nodes
+impl Matching3 {
+    pub fn outside_hits(&self) -> Vec<MatchingEdge> {
+        self.other_edges
             .iter()
-            .enumerate()
-            .find(|(_, n)| n.get_comp().is_complex())
-            .map(|(i, _)| i);
-
-        self.nodes
-            .iter()
-            .enumerate()
-            .map(|(j, node)| {
-                let lower_complex = first_complex.is_some() && first_complex.unwrap() < j;
-
-                match node {
-                    SuperNode::Abstract(abs) => abs.value(credit_inv.clone(), lower_complex),
-                    SuperNode::Zoomed(zoomed) => zoomed.value(
-                        credit_inv.clone(),
-                        lower_complex,
-                        zoomed.in_node.unwrap(),
-                        zoomed.out_node.unwrap(),
-                    ),
-                }
-            })
-            .sum()
+            .filter(|e| e.hits_outside())
+            .cloned()
+            .collect_vec()
     }
-}
 
-impl Display for PseudoCycle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[")?;
-        write!(
-            f,
-            "{}",
-            self.nodes
-                .iter()
-                .map(|node| format!("{}", node))
-                .join(" -- ")
-        )?;
-        write!(f, "]")
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum PseudoNode {
-    Abstract,
-    Node(Node),
-}
-
-impl Display for PseudoNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PseudoNode::Abstract => write!(f, "AbstractNode"),
-            PseudoNode::Node(n) => write!(f, "Real Node {}", n),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct ThreeMatching(
-    pub PathMatchingEdge,
-    pub PathMatchingEdge,
-    pub PathMatchingEdge,
-);
-
-impl ThreeMatching {
     pub fn sources(&self) -> Vec<Node> {
-        vec![self.0.source(), self.1.source(), self.2.source()]
+        let mut sources = self.other_edges.iter().map(|e| e.source()).collect_vec();
+        if let Some(e) = self.path_edge_left {
+            sources.push(e.source())
+        }
+        if let Some(e) = self.path_edge_right {
+            sources.push(e.source())
+        }
+        sources
     }
 
-    pub fn to_vec(&self) -> Vec<PathMatchingEdge> {
-        vec![self.0, self.1, self.2]
+    pub fn to_vec(&self) -> Vec<MatchingEdge> {
+        vec![self.path_edge_left, self.path_edge_right]
+            .into_iter()
+            .flatten()
+            .chain(self.other_edges.iter().cloned())
+            .collect()
+    }
+}
+
+impl Display for Matching3 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Matching for path[{}]: ", self.source_comp_idx)?;
+        if let Some(e) = self.path_edge_left {
+            write!(f, "left = {}, ", e)?;
+        }
+        if let Some(e) = self.path_edge_right {
+            write!(f, "right = {}, ", e)?;
+        }
+        write!(
+            f,
+            "others = [{}]",
+            self.other_edges.iter().map(|e| format!("{}", e)).join(", ")
+        )
     }
 }
 
@@ -324,10 +282,60 @@ impl ZoomedNode {
 
 impl Display for ZoomedNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[ {}: ", self.comp)?;
+        if let Some(n) = self.in_node {
+            write!(f, "in={}, ", n)?;
+        }
+        if let Some(n) = self.out_node {
+            write!(f, "out={}", n)?;
+        }
+        write!(f, "npc={} ]", self.npc)
+    }
+}
+
+
+#[derive(Clone, Debug)]
+pub struct PathInstance {
+    pub nodes: Vec<SuperNode>,
+}
+
+impl PathInstance {
+    pub fn last_comp(&self) -> &Component {
+        self.nodes.last().unwrap().get_comp()
+    }
+}
+
+impl Display for PathInstance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
         write!(
             f,
-            "Node {} with in={:?} and out={:?}",
-            self.comp, self.in_node, self.out_node
-        )
+            "{}",
+            self.nodes
+                .iter()
+                .map(|node| format!("{}", node))
+                .join(" -- ")
+        )?;
+        write!(f, "]")
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct PathMatchingInstance {
+    pub path: PathInstance,
+    pub matching: Matching3,
+}
+
+#[derive(Clone)]
+pub struct SelectedHitInstance {
+    pub path_matching: PathMatchingInstance,
+    pub hit_comp_idx: usize,
+    pub matched: Vec<MatchingEdge>,
+}
+
+#[derive(Clone)]
+pub struct SelectedMatchingInstance {
+    pub path_matching: PathMatchingInstance,
+    pub hit_comp_idx: usize,
+    pub matched: Vec<Edge>,
 }

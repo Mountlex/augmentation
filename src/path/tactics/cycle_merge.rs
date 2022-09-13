@@ -1,74 +1,54 @@
+use std::fmt::Display;
+
+use itertools::Itertools;
+
 use crate::{
-    comps::CreditInvariant,
+    comps::{CreditInvariant, Node},
     path::{
-        enumerators::{matching_hits::MatchingHitEnumeratorOutput, nice_pairs::NPCEnumOutput},
         proof::{ProofContext, Tactic},
-        NicePairConfig, NicePath, PathMatchingEdge, PathMatchingHits, PseudoCycle, SuperNode,
-        ThreeMatching, ZoomedNode,
+         MatchingEdge,  PathHit, PathInstance, PathMatchingInstance,
+         SuperNode, 
     },
     proof_tree::ProofNode,
     Credit,
 };
 
-impl From<NPCEnumOutput<MatchingHitEnumeratorOutput>> for CycleMergeInput {
-    fn from(o: NPCEnumOutput<MatchingHitEnumeratorOutput>) -> Self {
-        CycleMergeInput {
-            path: o.input.nice_path,
-            m_last: o.input.three_matching,
-            np_config_last: o.npc,
-        }
-    }
-}
-
-pub struct CycleMergeInput {
-    path: NicePath,
-    m_last: ThreeMatching,
-    np_config_last: NicePairConfig,
-}
-
 pub struct CycleMerge;
 
-impl Tactic for CycleMerge {
-    type In = CycleMergeInput;
+impl Tactic<PathMatchingInstance> for CycleMerge {
+    fn action(&self, data: PathMatchingInstance, context: &ProofContext) -> ProofNode {
+        let cycle_edges = data
+            .matching
+            .other_edges
+            .into_iter()
+            .filter(|m_edge| matches!(m_edge.hit(), PathHit::Path(r) if r <= context.path_len - 3))
+            .collect_vec();
 
-    fn action(&self, data: Self::In, context: &ProofContext) -> ProofNode {
         // If we land here, we want that at least one matching edge hits C_j for j <= l - 2.
-        if !(matches!(data.m_last.1.hit(), PathMatchingHits::Path(j) if j <= context.path_len - 3)
-            || matches!(data.m_last.2.hit(), PathMatchingHits::Path(j) if j <= context.path_len - 3))
-        {
+        if cycle_edges.is_empty() {
             return ProofNode::new_leaf(
                 format!("There are no matching edges forming cycles! Aborting"),
                 false,
             );
         }
 
-        let mut case_path = data.path.clone();
-        *case_path.nodes.last_mut().unwrap() = SuperNode::Zoomed(ZoomedNode {
-            comp: case_path.nodes.last().unwrap().get_comp().clone(),
-            in_node: Some(data.m_last.0.source()),
-            out_node: None,
-            npc: data.np_config_last.clone(),
-        });
-
         let mut proof = ProofNode::new_any("Any cycle merge".into());
 
         // Try worst-case merge
         // TODO also good cases and then exclude the rest
         let mut cases_remain: Vec<MergeCases> = vec![];
-        for m_edge in vec![data.m_last.1, data.m_last.2].into_iter().filter(
-            |m_edge| matches!(m_edge.hit(), PathMatchingHits::Path(r) if r <= context.path_len - 3),
-        ) {
+        for m_edge in cycle_edges {
             if check_nice_path_with_cycle(
-                &case_path,
-                m_edge,
+                &data.path,
+                &m_edge,
                 false,
                 context.credit_inv.clone(),
                 &mut proof,
             ) {
                 return proof;
             } else if check_nice_path_with_cycle(
-                &case_path,
-                m_edge,
+                &data.path,
+                &m_edge,
                 true,
                 context.credit_inv.clone(),
                 &mut proof,
@@ -89,13 +69,13 @@ impl Tactic for CycleMerge {
 }
 
 pub enum MergeCases {
-    NoNicePair(PathMatchingEdge),
-    NicePair(PathMatchingEdge),
+    NoNicePair(MatchingEdge),
+    NicePair(MatchingEdge),
 }
 
 fn check_nice_path_with_cycle<C: CreditInvariant>(
-    path: &NicePath,
-    m_cycle_edge: PathMatchingEdge,
+    path: &PathInstance,
+    m_cycle_edge: &MatchingEdge,
     hit_and_out_np: bool,
     credit_inv: C,
     matching_node: &mut ProofNode,
@@ -127,5 +107,69 @@ fn check_nice_path_with_cycle<C: CreditInvariant>(
             false,
         ));
         return false;
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PseudoCycle {
+    nodes: Vec<SuperNode>,
+}
+
+impl PseudoCycle {
+    fn value<C: CreditInvariant>(&self, credit_inv: C) -> Credit {
+        let first_complex = self
+            .nodes
+            .iter()
+            .enumerate()
+            .find(|(_, n)| n.get_comp().is_complex())
+            .map(|(i, _)| i);
+
+        self.nodes
+            .iter()
+            .enumerate()
+            .map(|(j, node)| {
+                let lower_complex = first_complex.is_some() && first_complex.unwrap() < j;
+
+                match node {
+                    SuperNode::Abstract(abs) => abs.value(credit_inv.clone(), lower_complex),
+                    SuperNode::Zoomed(zoomed) => zoomed.value(
+                        credit_inv.clone(),
+                        lower_complex,
+                        zoomed.in_node.unwrap(),
+                        zoomed.out_node.unwrap(),
+                    ),
+                }
+            })
+            .sum()
+    }
+}
+
+impl Display for PseudoCycle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
+        write!(
+            f,
+            "{}",
+            self.nodes
+                .iter()
+                .map(|node| format!("{}", node))
+                .join(" -- ")
+        )?;
+        write!(f, "]")
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum PseudoNode {
+    Abstract,
+    Node(Node),
+}
+
+impl Display for PseudoNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PseudoNode::Abstract => write!(f, "AbstractNode"),
+            PseudoNode::Node(n) => write!(f, "Real Node {}", n),
+        }
     }
 }

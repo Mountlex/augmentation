@@ -380,7 +380,12 @@ pub trait CreditInvariant: Clone + Display {
             Component::Cycle(graph) => self.simple(graph),
         }
     }
-    fn simple(&self, graph: &Graph) -> Credit;
+
+    fn two_ec_credit(&self, num_edges: usize) -> Credit;
+
+    fn simple(&self, graph: &Graph) -> Credit {
+        self.two_ec_credit(graph.edge_count())
+    }
     fn complex(&self, complex: &Complex) -> Credit {
         self.complex_comp()
             + Credit::from_integer(complex.num_blocks as i64) * self.complex_block()
@@ -404,8 +409,8 @@ impl DefaultCredits {
 }
 
 impl CreditInvariant for DefaultCredits {
-    fn simple(&self, graph: &Graph) -> Credit {
-        self.c * Credit::from_integer(graph.edge_count() as i64)
+    fn two_ec_credit(&self, num_edges: usize) -> Credit {
+        (self.c * Credit::from_integer(num_edges as i64)).min(self.large())
     }
 
     fn complex_comp(&self) -> Credit {

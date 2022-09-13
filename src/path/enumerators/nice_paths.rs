@@ -1,9 +1,10 @@
 use crate::{
     comps::{merge_components_to_base, Component, Graph},
-    path::{proof::Enumerator, AbstractNode, NicePath, SuperNode},
+    path::{
+        proof::{Enumerator, ProofContext},
+        AbstractNode, PathInstance, SuperNode,
+    },
 };
-
-use super::matching_hits::MatchingHitEnumeratorInput;
 
 pub struct PathEnumeratorInput {
     comps: Vec<Component>,
@@ -18,25 +19,21 @@ impl PathEnumeratorInput {
 
 pub struct PathEnumerator;
 
-pub struct PathEnumeratorOutput {
-    pub nice_path: NicePath,
-}
-
-impl Enumerator for PathEnumerator {
-    type In = PathEnumeratorInput;
-
-    type Out = PathEnumeratorOutput;
-
-    fn msg(&self, data_in: &Self::In) -> String {
+impl Enumerator<PathEnumeratorInput, PathInstance> for PathEnumerator {
+    fn msg(&self, data_in: &PathEnumeratorInput) -> String {
         format!("Enumerate all nice paths ending with {}", data_in.last_comp)
     }
 
-    fn iter(&self, data_in: Self::In) -> Box<dyn Iterator<Item = Self::Out>> {
+    fn iter(
+        &self,
+        data_in: PathEnumeratorInput,
+        _context: &ProofContext,
+    ) -> Box<dyn Iterator<Item = PathInstance>> {
         let comps = &data_in.comps;
         let iter = itertools::iproduct!(comps.clone(), comps.clone(), comps.clone()).map(
             move |(c1, c2, c3)| {
                 let path = vec![c1, c2, c3, data_in.last_comp.clone()];
-                let (path_graph, path) = merge_components_to_base(Graph::new(), path);
+                let (_path_graph, path) = merge_components_to_base(Graph::new(), path);
 
                 let nodes = path
                     .into_iter()
@@ -54,19 +51,16 @@ impl Enumerator for PathEnumerator {
                     })
                     .collect();
 
-                let nice_path = NicePath {
-                    nodes,
-                    graph: path_graph,
-                };
+                let nice_path = PathInstance { nodes };
 
-                PathEnumeratorOutput { nice_path }
+                nice_path
             },
         );
 
         Box::new(iter)
     }
 
-    fn item_msg(&self, item: &Self::Out) -> String {
-        format!("Nice path {}", item.nice_path)
+    fn item_msg(&self, item: &PathInstance) -> String {
+        format!("Nice path {}", item)
     }
 }

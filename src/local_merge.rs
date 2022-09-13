@@ -10,7 +10,7 @@ use crate::{
     bridges::{is_complex, ComplexCheckResult},
     comps::{Component, ComponentType, CreditInvariant, EdgeType, Graph, Node},
     edges_of_type, merge_components_to_base,
-    proof_tree::{ProofNode},
+    proof_tree::ProofNode,
     Credit,
 };
 
@@ -84,7 +84,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
             )
             .expect("Unable to write file");
             root.eval();
-            root.print_tree(&mut buf,  20)
+            root.print_tree(&mut buf, 20)
                 .expect("Unable to format tree");
             std::fs::write(filename, buf).expect("Unable to write file");
         });

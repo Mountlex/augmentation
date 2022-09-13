@@ -1,6 +1,5 @@
 use std::fmt::{self, Display, Write};
 
-
 #[derive(Clone)]
 struct InnerNode {
     msg: String,
@@ -66,15 +65,15 @@ impl ProofNode {
     pub fn new_or(child1: ProofNode, child2: ProofNode) -> Self {
         ProofNode::Or(OrNode {
             success: None,
-            child1: child1.into(), child2: child2.into(),
+            child1: child1.into(),
+            child2: child2.into(),
         })
     }
 
     pub fn success(&self) -> bool {
         match self {
             ProofNode::Leaf(node) => node.success,
-            ProofNode::All(node) |
-            ProofNode::Any(node) => node.success.unwrap().clone(),
+            ProofNode::All(node) | ProofNode::Any(node) => node.success.unwrap().clone(),
             ProofNode::Info(node) => node.success.unwrap().clone(),
             ProofNode::Or(node) => node.success.unwrap().clone(),
         }
@@ -90,7 +89,7 @@ impl ProofNode {
     pub fn eval(&mut self) -> bool {
         match self {
             ProofNode::Leaf(node) => node.success,
-            ProofNode::Info(node)=> {
+            ProofNode::Info(node) => {
                 if let Some(s) = node.success {
                     return s;
                 }
@@ -129,7 +128,7 @@ impl ProofNode {
                 let r2 = node.child2.eval();
                 node.success = Some(r1 || r2);
                 r1 || r2
-            },
+            }
         }
     }
 
@@ -153,44 +152,42 @@ impl ProofNode {
     ) -> anyhow::Result<()> {
         let mut new_depth = depth;
         match self {
-            ProofNode::Leaf(_)
-            | ProofNode::Info(_) | ProofNode::All(_) | ProofNode::Any(_) => {
+            ProofNode::Leaf(_) | ProofNode::Info(_) | ProofNode::All(_) | ProofNode::Any(_) => {
                 new_depth += 1;
                 (0..depth).try_for_each(|_| write!(writer, "    "))?;
                 writeln!(writer, "{}", self.msg())?;
             }
-            _ => { // dont print or's 
-             }
+            _ => { // dont print or's
+            }
         }
-        
-           match &self {
-                ProofNode::Leaf(_) => {},
-                ProofNode::Info(node) => {
-                    let c = &node.child;
+
+        match &self {
+            ProofNode::Leaf(_) => {}
+            ProofNode::Info(node) => {
+                let c = &node.child;
+                if !(c.success() && depth == max_depth_true) {
+                    c.print_tree_rec(writer, new_depth, max_depth_true)?;
+                }
+            }
+            ProofNode::Or(node) => {
+                let c1 = &node.child1;
+                if !(c1.success() && depth == max_depth_true) {
+                    c1.print_tree_rec(writer, new_depth, max_depth_true)?;
+                }
+                let c2 = &node.child2;
+                if !(c2.success() && depth == max_depth_true) {
+                    c2.print_tree_rec(writer, new_depth, max_depth_true)?;
+                }
+            }
+            ProofNode::All(node) | ProofNode::Any(node) => {
+                for c in &node.childs {
                     if !(c.success() && depth == max_depth_true) {
                         c.print_tree_rec(writer, new_depth, max_depth_true)?;
                     }
-                },
-                ProofNode::Or(node) => {
-                    let c1 = &node.child1;
-                    if !(c1.success() && depth == max_depth_true) {
-                        c1.print_tree_rec(writer, new_depth, max_depth_true)?;
-                    }
-                    let c2 = &node.child2;
-                    if !(c2.success() && depth == max_depth_true) {
-                        c2.print_tree_rec(writer, new_depth, max_depth_true)?;
-                    }
-                },
-                ProofNode::All(node) | ProofNode::Any(node) => {
-                    for c in &node.childs {
-                        if !(c.success() && depth == max_depth_true) {
-                            c.print_tree_rec(writer, new_depth, max_depth_true)?;
-                        }
-                    }
-                },
+                }
             }
-        
-        
+        }
+
         Ok(())
     }
 }
@@ -211,9 +208,8 @@ impl Display for ProofNode {
                 } else {
                     write!(f, "{} ❌", node.msg)
                 }
-            },
-            ProofNode::All(node)
-            | ProofNode::Any(node) => {
+            }
+            ProofNode::All(node) | ProofNode::Any(node) => {
                 if node.success.unwrap() {
                     write!(f, "{} ✔️", node.msg)
                 } else {

@@ -1,51 +1,28 @@
 use crate::{
-    comps::Component,
     path::{
-        enumerators::{matching_hits::MatchingHitEnumeratorOutput, nice_pairs::NPCEnumOutput},
         proof::{or, ProofContext, Tactic},
-        NicePairConfig, NicePath, PathMatchingEdge, ThreeMatching,
+         MatchingEdge, PathMatchingInstance,
     },
     proof_tree::ProofNode,
 };
 
-impl From<NPCEnumOutput<MatchingHitEnumeratorOutput>> for LongerPathInput {
-    fn from(o: NPCEnumOutput<MatchingHitEnumeratorOutput>) -> Self {
-        LongerPathInput {
-            nice_path: o.input.nice_path,
-            three_matching: o.input.three_matching,
-            npc: o.npc,
-        }
-    }
-}
-
-pub struct LongerPathInput {
-    nice_path: NicePath,
-    three_matching: ThreeMatching,
-    npc: NicePairConfig,
-}
-
 pub struct LongerPathTactic;
 
-impl Tactic for LongerPathTactic {
-    type In = LongerPathInput;
-
-    fn action(&self, data: Self::In, context: &ProofContext) -> crate::proof_tree::ProofNode {
-        let check_input = LongerNicePathCheckInput {
-            last_comp_ref: data.nice_path.nodes.last().unwrap().get_comp(),
-            np_config: &data.npc,
-            last_pseudo_edge: &data.three_matching.0,
-        };
-
-        if data.three_matching.1.hits_outside() && data.three_matching.2.hits_outside() {
+impl Tactic<PathMatchingInstance> for LongerPathTactic {
+    fn action(
+        &self,
+        data: PathMatchingInstance,
+        context: &ProofContext,
+    ) -> crate::proof_tree::ProofNode {
+        let outside_hits = data.matching.outside_hits();
+        if outside_hits.len() == 2 {
             or(
-                LongerNicePathCheck::check_for(&data.three_matching.1),
-                LongerNicePathCheck::check_for(&data.three_matching.2),
+                LongerNicePathCheck::check_for(&outside_hits[0]),
+                LongerNicePathCheck::check_for(&outside_hits[1]),
             )
-            .action(check_input, context)
-        } else if data.three_matching.1.hits_outside() {
-            LongerNicePathCheck::check_for(&data.three_matching.1).action(check_input, context)
-        } else if data.three_matching.2.hits_outside() {
-            LongerNicePathCheck::check_for(&data.three_matching.2).action(check_input, context)
+            .action(data, context)
+        } else if outside_hits.len() == 1 {
+            LongerNicePathCheck::check_for(&outside_hits[0]).action(data, context)
         } else {
             ProofNode::new_leaf(format!("None of the matching edges hits outside"), false)
         }
@@ -54,35 +31,32 @@ impl Tactic for LongerPathTactic {
 
 // Private tactics (subroutines)
 
-#[derive(Clone)]
-struct LongerNicePathCheckInput<'a> {
-    last_comp_ref: &'a Component,
-    np_config: &'a NicePairConfig,
-    last_pseudo_edge: &'a PathMatchingEdge,
-}
-
 struct LongerNicePathCheck<'a> {
-    other_matching_edge: &'a PathMatchingEdge,
+    other_matching_edge: &'a MatchingEdge,
 }
 
 impl<'a> LongerNicePathCheck<'a> {
-    fn check_for(other_matching_edge: &'a PathMatchingEdge) -> Self {
+    fn check_for(other_matching_edge: &'a MatchingEdge) -> Self {
         LongerNicePathCheck {
             other_matching_edge,
         }
     }
 }
 
-impl<'a> Tactic for LongerNicePathCheck<'a> {
-    type In = LongerNicePathCheckInput<'a>;
+impl<'a> Tactic<PathMatchingInstance> for LongerNicePathCheck<'a> {
+    fn action(
+        &self,
+        data: PathMatchingInstance,
+        _context: &ProofContext,
+    ) -> crate::proof_tree::ProofNode {
+        let last = data.path.nodes.last().unwrap().to_zoomed();
+        let last_comp = last.get_comp();
 
-    fn action(&self, data: Self::In, context: &ProofContext) -> crate::proof_tree::ProofNode {
-        if data.last_comp_ref.is_c6()
-            || data.last_comp_ref.is_large()
-            || data.np_config.is_nice_pair(
-                data.last_pseudo_edge.source(),
-                self.other_matching_edge.source(),
-            )
+        if last_comp.is_c6()
+            || last_comp.is_large()
+            || last
+                .npc
+                .is_nice_pair(last.in_node.unwrap(), self.other_matching_edge.source())
         {
             ProofNode::new_leaf(
                 format!(
