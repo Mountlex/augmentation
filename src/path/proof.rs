@@ -3,6 +3,7 @@ use std::{marker::PhantomData, path::PathBuf};
 
 use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
 
+use crate::path::tactics::pendant_rewire::PendantRewireTactic;
 use crate::{
     comps::{Component, CreditInvariant, DefaultCredits},
     proof_tree::ProofNode,
@@ -237,7 +238,7 @@ where
     A: Tactic<O>,
 {
     fn action(&mut self, data_in: &I, context: &mut ProofContext) -> ProofNode {
-        let mut proof = ProofNode::new_all(self.enum_tactic.msg(&data_in));
+        let mut proof = ProofNode::new_any(self.enum_tactic.msg(&data_in));
 
         let mut enumerator = self.enum_tactic.get_enumerator(data_in);
         enumerator.iter(context).any(|d| {
@@ -301,7 +302,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                     MatchingNodesEnumTactic,
                                     all(
                                         NPCEnumTactic,
-                                        or(LocalMerge::new(), LongerNicePathViaMatchingSwap::new()),
+                                        or3(LocalMerge::new(), LongerNicePathViaMatchingSwap::new(), PendantRewireTactic::new()),
                                     ),
                                 ),
                             ),

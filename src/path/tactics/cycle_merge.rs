@@ -77,8 +77,6 @@ impl Tactic<PathMatchingInstance> for CycleMerge {
             }
         }
 
-        proof.add_child(ProofNode::new_leaf("Tactics exhausted".into(), false));
-
         proof
     }
 
