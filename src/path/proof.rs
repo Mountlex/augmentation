@@ -324,12 +324,15 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
         proof_tactic.print_stats();
 
         let filename = if proved {
-            log::info!("✔️ Proved nice path progress ending in {}", last_comp);
+            println!("✔️ Proved nice path progress ending in {}", last_comp);
             output_dir.join(format!("proof_{}.txt", last_comp.short_name()))
         } else {
-            log::warn!("❌ Disproved nice path progress ending in {}", last_comp);
+            println!("❌ Disproved nice path progress ending in {}", last_comp);
             output_dir.join(format!("wrong_proof_{}.txt", last_comp.short_name()))
         };
+
+        println!();
+        println!();
 
         let mut buf = String::new();
         writeln!(
