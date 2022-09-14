@@ -2,8 +2,7 @@ use itertools::Itertools;
 
 use crate::path::{
     proof::{Enumerator, EnumeratorTactic, ProofContext},
-    Matching3, MatchingEdge, NicePairConfig, PathHit, PathInstance, PathMatchingInstance,
-    SelectedHitInstance,
+    MatchingEdge, PathHit, PathMatchingInstance, SelectedHitInstance,
 };
 
 pub struct ComponentHitEnumTactic;

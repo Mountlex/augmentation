@@ -63,7 +63,7 @@ impl Tactic<SelectedHitInstance> for LocalComplexMerge {
         }
     }
 
-    fn precondition(&self, data: &SelectedHitInstance, context: &ProofContext) -> bool {
+    fn precondition(&self, data: &SelectedHitInstance, _context: &ProofContext) -> bool {
         data.matched.len() == 1
     }
 }

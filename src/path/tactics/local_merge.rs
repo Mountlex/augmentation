@@ -173,7 +173,7 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
         return ProofNode::new_leaf("Local merge impossible".into(), false);
     }
 
-    fn precondition(&self, data: &SelectedMatchingInstance, context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &SelectedMatchingInstance, _context: &ProofContext) -> bool {
         true
     }
 }

@@ -1,7 +1,7 @@
 use std::fmt::Write;
 use std::{marker::PhantomData, path::PathBuf};
 
-use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::path::tactics::pendant_rewire::PendantRewireTactic;
 use crate::{
@@ -9,7 +9,6 @@ use crate::{
     proof_tree::ProofNode,
 };
 
-use super::PathMatchingInstance;
 use super::enumerators::comp_hits::ComponentHitEnumTactic;
 use super::enumerators::matching_hits::MatchingHitEnumTactic;
 use super::enumerators::matching_nodes::MatchingNodesEnumTactic;
@@ -21,6 +20,7 @@ use super::tactics::cycle_merge::CycleMerge;
 use super::tactics::local_merge::LocalMerge;
 use super::tactics::longer_path::LongerPathTactic;
 use super::tactics::longer_path_swap::LongerNicePathViaMatchingSwap;
+use super::PathMatchingInstance;
 
 pub struct ProofContext {
     pub credit_inv: DefaultCredits,
@@ -144,7 +144,6 @@ pub struct All<O, E, A> {
     _phantom_data: PhantomData<O>,
 }
 
-
 pub fn all<O, E, A>(enum_tactic: E, item_tactic: A) -> All<O, E, A> {
     All {
         enum_tactic,
@@ -154,8 +153,7 @@ pub fn all<O, E, A>(enum_tactic: E, item_tactic: A) -> All<O, E, A> {
     }
 }
 
-
-pub fn all_sc<O, E, A>(sc: bool, enum_tactic: E, item_tactic: A,) -> All<O, E, A> {
+pub fn all_sc<O, E, A>(sc: bool, enum_tactic: E, item_tactic: A) -> All<O, E, A> {
     All {
         enum_tactic,
         item_tactic,
@@ -182,8 +180,7 @@ where
         let mut proof = ProofNode::new_all(self.enum_tactic.msg(&data_in));
 
         let mut enumerator = self.enum_tactic.get_enumerator(data_in);
-        
-        
+
         for d in enumerator.iter(context) {
             let res = if !self.item_tactic.precondition(&d, context) {
                 false
@@ -204,7 +201,7 @@ where
         proof
     }
 
-    fn precondition(&self, data: &I, context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &I, _contextt: &ProofContext) -> bool {
         true
     }
 }
@@ -257,13 +254,14 @@ where
         proof
     }
 
-    fn precondition(&self, data: &I, context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &I, _contextt: &ProofContext) -> bool {
         true
     }
 }
 
 pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
     comps: Vec<Component>,
+    last_comps: Vec<Component>,
     credit_inv: C,
     output_dir: PathBuf,
     output_depth: usize,
@@ -275,7 +273,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
 
     let path_length = 4;
 
-    comps.par_iter().for_each(|last_comp| {
+    last_comps.par_iter().for_each(|last_comp| {
         let mut context = ProofContext {
             credit_inv: DefaultCredits::new(c),
             path_len: path_length,
@@ -291,7 +289,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                     sc,
                     NPCEnumTactic,
                     or6(
-                                CountTactic::new(),
+                        CountTactic::new(),
                         LongerPathTactic::new(),
                         ContractabilityTactic::new(),
                         any(
@@ -302,13 +300,17 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                     MatchingNodesEnumTactic,
                                     all(
                                         NPCEnumTactic,
-                                        or3(LocalMerge::new(), LongerNicePathViaMatchingSwap::new(), PendantRewireTactic::new()),
+                                        or3(
+                                            LocalMerge::new(),
+                                            LongerNicePathViaMatchingSwap::new(),
+                                            PendantRewireTactic::new(),
+                                        ),
                                     ),
                                 ),
                             ),
                         ),
                         CycleMerge::new(),
-                        TacticsExhausted::new()
+                        TacticsExhausted::new(),
                     ),
                 ),
             ),
@@ -350,23 +352,21 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
 }
 
 struct TacticsExhausted {
-    num_calls: usize
+    num_calls: usize,
 }
 
 impl TacticsExhausted {
     fn new() -> Self {
-        Self {
-            num_calls: 0
-        }
+        Self { num_calls: 0 }
     }
 }
 
 impl Tactic<PathMatchingInstance> for TacticsExhausted {
-    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
-        true    
+    fn precondition(&self, _data: &PathMatchingInstance, _context: &ProofContext) -> bool {
+        true
     }
 
-    fn action(&mut self, data: &PathMatchingInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, _data: &PathMatchingInstance, _context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
         ProofNode::new_leaf("Tactics exhausted!".into(), false)
     }
@@ -379,23 +379,21 @@ impl Statistics for TacticsExhausted {
 }
 
 struct CountTactic {
-    num_calls: usize
+    num_calls: usize,
 }
 
 impl CountTactic {
     fn new() -> Self {
-        Self {
-            num_calls: 0
-        }
+        Self { num_calls: 0 }
     }
 }
 
 impl Tactic<PathMatchingInstance> for CountTactic {
-    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
-        true    
+    fn precondition(&self, _data: &PathMatchingInstance, _context: &ProofContext) -> bool {
+        true
     }
 
-    fn action(&mut self, data: &PathMatchingInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, _data: &PathMatchingInstance, _context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
         ProofNode::new_leaf("".into(), false)
     }

@@ -52,7 +52,7 @@ impl Tactic<PathMatchingInstance> for LongerPathTactic {
         proof
     }
 
-    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
+    fn precondition(&self, data: &PathMatchingInstance, _context: &ProofContext) -> bool {
         !data.matching.outside_hits().is_empty()
     }
 }
@@ -104,7 +104,7 @@ impl<'a> Tactic<PathMatchingInstance> for LongerNicePathCheck<'a> {
         }
     }
 
-    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &PathMatchingInstance, _context: &ProofContext) -> bool {
         true
     }
 }

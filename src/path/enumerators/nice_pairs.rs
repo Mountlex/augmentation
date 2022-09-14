@@ -19,7 +19,7 @@ impl<'a> Enumerator<PathMatchingInstance, PathMatchingInstance>
 {
     fn iter(
         &mut self,
-        context: &mut ProofContext,
+        _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = PathMatchingInstance> + '_> {
         let super_node = &self.instance.path.nodes.last().unwrap();
 
@@ -53,7 +53,7 @@ impl<'a> Enumerator<SelectedMatchingInstance, SelectedMatchingInstance>
 {
     fn iter(
         &mut self,
-        context: &mut ProofContext,
+        _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedMatchingInstance> + '_> {
         let super_node = &self.instance.path_matching.path.nodes[self.instance.hit_comp_idx];
 

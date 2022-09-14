@@ -3,7 +3,7 @@ use std::fmt::Display;
 use itertools::Itertools;
 
 use crate::{
-    comps::{CreditInvariant, Node},
+    comps::CreditInvariant,
     path::{
         proof::{ProofContext, Statistics, Tactic},
         MatchingEdge, PathHit, PathInstance, PathMatchingInstance, SuperNode,
@@ -56,8 +56,7 @@ impl Tactic<PathMatchingInstance> for CycleMerge {
                 context.credit_inv.clone(),
                 &mut proof,
             ) {
-                proof.eval();
-                if proof.success() {
+                if proof.eval() {
                     self.num_proofs += 1;
                 }
                 return proof;
@@ -98,34 +97,35 @@ pub enum MergeCases {
 
 fn check_nice_path_with_cycle<C: CreditInvariant>(
     path: &PathInstance,
-    m_cycle_edge: &MatchingEdge,
-    hit_and_out_np: bool,
+    cycle_edge: &MatchingEdge,
+    cycle_edge_hits_np: bool,
     credit_inv: C,
-    matching_node: &mut ProofNode,
+    proof: &mut ProofNode,
 ) -> bool {
     // check worst-case merge
     let mut pseudo_nodes = path
         .nodes
-        .split_at(m_cycle_edge.hits_path().unwrap())
+        .split_at(cycle_edge.hits_path().unwrap())
         .1
         .to_vec();
     if let Some(SuperNode::Zoomed(zoomed)) = pseudo_nodes.last_mut() {
-        zoomed.out_node = Some(m_cycle_edge.source())
+        zoomed.out_node = Some(cycle_edge.source())
     }
     if let Some(SuperNode::Abstract(abs)) = pseudo_nodes.first_mut() {
-        abs.nice_pair = hit_and_out_np
+        abs.nice_pair = cycle_edge_hits_np
     }
     let cycle = PseudoCycle {
         nodes: pseudo_nodes,
     };
+
     if cycle.value(credit_inv.clone()) >= Credit::from_integer(2) {
-        matching_node.add_child(ProofNode::new_leaf(
+        proof.add_child(ProofNode::new_leaf(
             format!("PseudoCycle {} merged!", cycle),
             true,
         ));
         return true;
     } else {
-        matching_node.add_child(ProofNode::new_leaf(
+        proof.add_child(ProofNode::new_leaf(
             format!("Failed worst-case merge for PseudoCycle {} ", cycle),
             false,
         ));
@@ -155,12 +155,7 @@ impl PseudoCycle {
 
                 match node {
                     SuperNode::Abstract(abs) => abs.value(credit_inv.clone(), lower_complex),
-                    SuperNode::Zoomed(zoomed) => zoomed.value(
-                        credit_inv.clone(),
-                        lower_complex,
-                        zoomed.in_node.unwrap(),
-                        zoomed.out_node.unwrap(),
-                    ),
+                    SuperNode::Zoomed(zoomed) => zoomed.value(credit_inv.clone(), lower_complex),
                 }
             })
             .sum()
@@ -179,20 +174,5 @@ impl Display for PseudoCycle {
                 .join(" -- ")
         )?;
         write!(f, "]")
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum PseudoNode {
-    Abstract,
-    Node(Node),
-}
-
-impl Display for PseudoNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PseudoNode::Abstract => write!(f, "AbstractNode"),
-            PseudoNode::Node(n) => write!(f, "Real Node {}", n),
-        }
     }
 }

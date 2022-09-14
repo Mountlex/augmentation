@@ -39,7 +39,7 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedMatchingInstance> for Matchin
 impl<'a> Enumerator<SelectedHitInstance, SelectedMatchingInstance> for MatchingNodesEnumerator<'a> {
     fn iter(
         &mut self,
-        context: &mut ProofContext,
+        _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedMatchingInstance> + '_> {
         let left_comp =
             self.instance.path_matching.path.nodes[self.instance.hit_comp_idx].get_comp();

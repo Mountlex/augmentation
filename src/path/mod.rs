@@ -231,16 +231,7 @@ impl ZoomedNode {
         &self.comp
     }
 
-    fn value<C: CreditInvariant>(
-        &self,
-        credit_inv: C,
-        lower_complex: bool,
-        cycle_in: Node,
-        cycle_out: Node,
-    ) -> Credit {
-        assert!(self.comp.graph().contains_node(cycle_in));
-        assert!(self.comp.graph().contains_node(cycle_out));
-
+    fn value<C: CreditInvariant>(&self, credit_inv: C, lower_complex: bool) -> Credit {
         let comp_credit_minus_edge = credit_inv.credits(&self.comp) - Credit::from_integer(1);
         let complex = if lower_complex {
             credit_inv.complex_comp()
@@ -248,14 +239,17 @@ impl ZoomedNode {
             Credit::from_integer(0)
         };
 
-        if self.npc.is_nice_pair(cycle_in, cycle_out) {
+        if self
+            .npc
+            .is_nice_pair(self.in_node.unwrap(), self.out_node.unwrap())
+        {
             if self.comp.is_complex() {
                 complex
                     + complex_cycle_value_base(
                         credit_inv.clone(),
                         self.comp.graph(),
-                        cycle_in,
-                        cycle_out,
+                        self.in_node.unwrap(),
+                        self.out_node.unwrap(),
                     )
             } else {
                 comp_credit_minus_edge + Credit::from_integer(1)
@@ -266,8 +260,8 @@ impl ZoomedNode {
                     + complex_cycle_value_base(
                         credit_inv.clone(),
                         self.comp.graph(),
-                        cycle_in,
-                        cycle_out,
+                        self.in_node.unwrap(),
+                        self.out_node.unwrap(),
                     )
             } else {
                 comp_credit_minus_edge

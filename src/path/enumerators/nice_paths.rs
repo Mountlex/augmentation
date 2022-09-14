@@ -24,7 +24,7 @@ pub struct PathEnumerator<'a> {
 }
 
 impl<'a> Enumerator<PathEnumeratorInput, PathInstance> for PathEnumerator<'a> {
-    fn iter(&mut self, context: &mut ProofContext) -> Box<dyn Iterator<Item = PathInstance> + '_> {
+    fn iter(&mut self, _context: &mut ProofContext) -> Box<dyn Iterator<Item = PathInstance> + '_> {
         let comps = &self.input.comps;
         let iter = itertools::iproduct!(comps.clone(), comps.clone(), comps.clone()).map(
             move |(c1, c2, c3)| {

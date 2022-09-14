@@ -98,16 +98,36 @@ fn prove_path(path: Path) {
 
     let comps = vec![
         ComponentType::Cycle(3),
-        ComponentType::Cycle(4),
-        ComponentType::Cycle(5),
-        ComponentType::Cycle(6),
+        //ComponentType::Cycle(4),
+        //ComponentType::Cycle(5),
+        //ComponentType::Cycle(6),
+        //ComponentType::Large,
+        //ComponentType::Complex,
+    ];
+
+    let last_comps = vec![
+        ComponentType::Cycle(3),
+        //ComponentType::Cycle(4),
+        //ComponentType::Cycle(5),
+        //ComponentType::Cycle(6),
         ComponentType::Large,
-        ComponentType::Complex,
+        //ComponentType::Complex,
     ];
 
     let comps = comps.into_iter().flat_map(|c| c.components()).collect_vec();
+    let last_comps = last_comps
+        .into_iter()
+        .flat_map(|c| c.components())
+        .collect_vec();
 
-    prove_nice_path_progress(comps, inv, path.output_dir, path.output_depth, path.sc)
+    prove_nice_path_progress(
+        last_comps,
+        comps,
+        inv,
+        path.output_dir,
+        path.output_depth,
+        path.sc,
+    )
 }
 
 fn setup_logging(verbose: bool) -> Result<(), fern::InitError> {

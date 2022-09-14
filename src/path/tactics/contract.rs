@@ -107,7 +107,7 @@ impl Tactic<PathMatchingInstance> for ContractabilityTactic {
         }
     }
 
-    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &PathMatchingInstance, _context: &ProofContext) -> bool {
         true
     }
 }
