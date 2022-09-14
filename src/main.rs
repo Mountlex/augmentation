@@ -51,6 +51,9 @@ struct Path {
 
     #[clap(short = 'd', long = "depth", default_value = "3")]
     output_depth: usize,
+
+    #[clap(short, long)]
+    sc: bool,
 }
 
 pub type Credit = Rational64;
@@ -104,7 +107,7 @@ fn prove_path(path: Path) {
 
     let comps = comps.into_iter().flat_map(|c| c.components()).collect_vec();
 
-    prove_nice_path_progress(comps, inv, path.output_dir, path.output_depth)
+    prove_nice_path_progress(comps, inv, path.output_dir, path.output_depth, path.sc)
 }
 
 fn setup_logging(verbose: bool) -> Result<(), fern::InitError> {

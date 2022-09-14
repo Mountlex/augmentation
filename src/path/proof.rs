@@ -154,11 +154,11 @@ pub fn all<O, E, A>(enum_tactic: E, item_tactic: A) -> All<O, E, A> {
 }
 
 
-pub fn all_no_sc<O, E, A>(enum_tactic: E, item_tactic: A) -> All<O, E, A> {
+pub fn all_sc<O, E, A>(sc: bool, enum_tactic: E, item_tactic: A,) -> All<O, E, A> {
     All {
         enum_tactic,
         item_tactic,
-        short_circuiting: false,
+        short_circuiting: sc,
         _phantom_data: PhantomData,
     }
 }
@@ -266,6 +266,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
     credit_inv: C,
     output_dir: PathBuf,
     output_depth: usize,
+    sc: bool,
 ) {
     std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
 
@@ -279,11 +280,14 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
             path_len: path_length,
         };
 
-        let mut proof_tactic = all_no_sc(
+        let mut proof_tactic = all_sc(
+            sc,
             PathEnumTactic,
-            all_no_sc(
+            all_sc(
+                sc,
                 MatchingHitEnumTactic::for_comp(path_length - 1),
-                all_no_sc(
+                all_sc(
+                    sc,
                     NPCEnumTactic,
                     or6(
                                 CountTactic::new(),
@@ -360,7 +364,7 @@ impl Tactic<PathMatchingInstance> for TacticsExhausted {
 
     fn action(&mut self, data: &PathMatchingInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
-        ProofNode::new_leaf("Tactics exhaused!".into(), false)
+        ProofNode::new_leaf("Tactics exhausted!".into(), false)
     }
 }
 
