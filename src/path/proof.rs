@@ -312,9 +312,10 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
             &mut context,
         );
 
-        proof_tactic.print_stats();
-
         let proved = proof.eval();
+
+        println!("Results for nice paths ending with {}", last_comp);
+        proof_tactic.print_stats();
 
         let filename = if proved {
             log::info!("✔️ Proved nice path progress ending in {}", last_comp);
