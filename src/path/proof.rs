@@ -1,6 +1,8 @@
 use std::fmt::Write;
 use std::{marker::PhantomData, path::PathBuf};
 
+use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
+
 use crate::{
     comps::{Component, CreditInvariant, DefaultCredits},
     proof_tree::ProofNode,
@@ -259,7 +261,7 @@ where
     }
 }
 
-pub fn prove_nice_path_progress<C: CreditInvariant>(
+pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
     comps: Vec<Component>,
     credit_inv: C,
     output_dir: PathBuf,
@@ -271,7 +273,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
 
     let path_length = 4;
 
-    for last_comp in &comps {
+    comps.par_iter().for_each(|last_comp| {
         let mut context = ProofContext {
             credit_inv: DefaultCredits::new(c),
             path_len: path_length,
@@ -336,7 +338,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
             .print_tree(&mut buf, output_depth)
             .expect("Unable to format tree");
         std::fs::write(filename, buf).expect("Unable to write file");
-    }
+    });
 }
 
 struct TacticsExhausted {
