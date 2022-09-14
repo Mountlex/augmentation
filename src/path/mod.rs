@@ -9,7 +9,7 @@ use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 
 use crate::{
-    comps::{Component, CreditInvariant,  Node},
+    comps::{Component, CreditInvariant, Node},
     path::utils::complex_cycle_value_base,
     types::Edge,
     Credit,
@@ -117,10 +117,6 @@ impl Display for SuperNode {
         }
     }
 }
-
-
-
-
 
 #[derive(Clone, Debug)]
 pub struct Matching3 {
@@ -292,7 +288,6 @@ impl Display for ZoomedNode {
         write!(f, "npc={} ]", self.npc)
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct PathInstance {

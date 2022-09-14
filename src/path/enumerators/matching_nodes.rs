@@ -20,7 +20,7 @@ impl Enumerator<SelectedHitInstance, SelectedMatchingInstance> for MatchingNodes
     }
 
     fn iter(
-        &self,
+        &mut self,
         instance: SelectedHitInstance,
         _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedMatchingInstance>> {
@@ -44,7 +44,10 @@ impl Enumerator<SelectedHitInstance, SelectedMatchingInstance> for MatchingNodes
     }
 
     fn item_msg(&self, item: &SelectedMatchingInstance) -> String {
-        format!("Selected Matching {:?} between path[{}] and last component", item.matched, item.hit_comp_idx)
+        format!(
+            "Selected Matching {:?} between path[{}] and last component",
+            item.matched, item.hit_comp_idx
+        )
     }
 }
 

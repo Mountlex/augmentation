@@ -28,7 +28,7 @@ pub trait Enumerator<I, O> {
 
     fn msg(&self, data_in: &I) -> String;
 
-    fn iter(&self, data_in: I, context: &mut ProofContext) -> Box<dyn Iterator<Item = O>>;
+    fn iter(&mut self, data_in: I, context: &mut ProofContext) -> Box<dyn Iterator<Item = O>>;
 
     fn item_msg(&self, item: &O) -> String;
 }
@@ -36,13 +36,28 @@ pub trait Enumerator<I, O> {
 pub trait Tactic<I> {
     fn precondition(&self, data: &I, context: &ProofContext) -> bool;
 
-    fn action(&self, data: I, context: &mut ProofContext) -> ProofNode;
+    fn action(&mut self, data: I, context: &mut ProofContext) -> ProofNode;
+}
+
+pub trait Statistics {
+    fn print_stats(&self);
 }
 
 pub struct Or<I, A1, A2> {
     tactic1: A1,
     tactic2: A2,
     _phantom_data: PhantomData<I>,
+}
+
+impl<I, A1, A2> Statistics for Or<I, A1, A2>
+where
+    A1: Statistics,
+    A2: Statistics,
+{
+    fn print_stats(&self) {
+        self.tactic1.print_stats();
+        self.tactic2.print_stats();
+    }
 }
 
 pub fn or<I, A1, A2>(tactic1: A1, tactic2: A2) -> Or<I, A1, A2> {
@@ -72,7 +87,7 @@ where
     A2: Tactic<I>,
     I: Clone,
 {
-    fn action(&self, data: I, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: I, context: &mut ProofContext) -> ProofNode {
         if self.tactic1.precondition(&data, context) {
             let mut res1 = self.tactic1.action(data.clone(), context);
             let result = res1.eval();
@@ -106,12 +121,21 @@ pub fn all<O, E, A>(enumerator: E, tactic: A) -> All<O, E, A> {
     }
 }
 
+impl<O, E, A> Statistics for All<O, E, A>
+where
+    A: Statistics,
+{
+    fn print_stats(&self) {
+        self.tactic.print_stats();
+    }
+}
+
 impl<E, A, I, O> Tactic<I> for All<O, E, A>
 where
     E: Enumerator<I, O>,
     A: Tactic<O>,
 {
-    fn action(&self, data_in: I, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data_in: I, context: &mut ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_all(self.enumerator.msg(&data_in));
 
         self.enumerator.iter(data_in, context).all(|d| {
@@ -149,12 +173,21 @@ pub fn any<O, E, A>(enumerator: E, tactic: A) -> Any<O, E, A> {
     }
 }
 
+impl<O, E, A> Statistics for Any<O, E, A>
+where
+    A: Statistics,
+{
+    fn print_stats(&self) {
+        self.tactic.print_stats();
+    }
+}
+
 impl<E, A, I, O> Tactic<I> for Any<O, E, A>
 where
     E: Enumerator<I, O>,
     A: Tactic<O>,
 {
-    fn action(&self, data_in: I, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data_in: I, context: &mut ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_any(self.enumerator.msg(&data_in));
 
         self.enumerator.iter(data_in, context).any(|d| {
@@ -196,37 +229,40 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
             path_len: path_length,
         };
 
-        let mut proof = all(
+        let mut proof_tactic = all(
             PathEnumerator,
             all(
                 MatchingHitEnumerator::for_comp(path_length - 1),
                 all(
                     NPCEnumerator,
                     or4(
-                        LongerPathTactic,
-                        ContractabilityTactic,
+                        LongerPathTactic::new(),
+                        ContractabilityTactic::new(),
                         any(
                             ComponentHitEnumerator,
                             or(
-                                LocalComplexMerge,
+                                LocalComplexMerge::new(),
                                 all(
                                     MatchingNodesEnumerator,
                                     all(
                                         NPCEnumerator,
-                                        or(LocalMerge, LongerNicePathViaMatchingSwap),
+                                        or(LocalMerge::new(), LongerNicePathViaMatchingSwap::new()),
                                     ),
                                 ),
                             ),
                         ),
-                        CycleMerge,
+                        CycleMerge::new(),
                     ),
                 ),
             ),
-        )
-        .action(
+        );
+        
+        let mut proof = proof_tactic.action(
             PathEnumeratorInput::new(last_comp.clone(), comps.clone()),
             &mut context,
         );
+
+        proof_tactic.print_stats();
 
         let proved = proof.eval();
 

@@ -25,7 +25,7 @@ impl Enumerator<PathEnumeratorInput, PathInstance> for PathEnumerator {
     }
 
     fn iter(
-        &self,
+        &mut self,
         data_in: PathEnumeratorInput,
         _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = PathInstance>> {

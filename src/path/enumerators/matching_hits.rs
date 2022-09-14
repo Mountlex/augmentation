@@ -21,7 +21,7 @@ impl Enumerator<PathInstance, PathMatchingInstance> for MatchingHitEnumerator {
     }
 
     fn iter(
-        &self,
+        &mut self,
         path: PathInstance,
         context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = PathMatchingInstance>> {

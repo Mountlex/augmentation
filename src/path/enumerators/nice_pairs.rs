@@ -19,7 +19,7 @@ impl Enumerator<PathMatchingInstance, PathMatchingInstance> for NPCEnumerator {
     }
 
     fn iter(
-        &self,
+        &mut self,
         data_in: PathMatchingInstance,
         _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = PathMatchingInstance>> {
@@ -63,7 +63,7 @@ impl Enumerator<SelectedMatchingInstance, SelectedMatchingInstance> for NPCEnume
     }
 
     fn iter(
-        &self,
+        &mut self,
         data_in: SelectedMatchingInstance,
         _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedMatchingInstance>> {
@@ -97,7 +97,9 @@ impl Enumerator<SelectedMatchingInstance, SelectedMatchingInstance> for NPCEnume
     fn item_msg(&self, item: &SelectedMatchingInstance) -> String {
         format!(
             "NPC {}",
-            item.path_matching.path.nodes[item.hit_comp_idx].to_zoomed().npc
+            item.path_matching.path.nodes[item.hit_comp_idx]
+                .to_zoomed()
+                .npc
         )
     }
 }

@@ -5,7 +5,7 @@ use crate::{
     bridges::{is_complex, ComplexCheckResult},
     comps::{edges_of_type, CreditInvariant, EdgeType},
     path::{
-        proof::{ProofContext, Tactic},
+        proof::{ProofContext, Statistics, Tactic},
         utils::get_local_merge_graph,
         SelectedMatchingInstance,
     },
@@ -14,10 +14,30 @@ use crate::{
     Credit,
 };
 
-pub struct LocalMerge;
+pub struct LocalMerge {
+    num_calls: usize,
+    num_proofs: usize,
+}
+
+impl LocalMerge {
+    pub fn new() -> Self {
+        Self {
+            num_calls: 0,
+            num_proofs: 0,
+        }
+    }
+}
+
+impl Statistics for LocalMerge {
+    fn print_stats(&self) {
+        println!("Local merge {} / {}", self.num_proofs, self.num_calls);
+    }
+}
 
 impl Tactic<SelectedMatchingInstance> for LocalMerge {
-    fn action(&self, data: SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
+        self.num_calls += 1;
+
         let left = data.path_matching.path.nodes[data.hit_comp_idx].to_zoomed();
         let right = data.path_matching.path.nodes.last().unwrap().to_zoomed();
 
@@ -93,6 +113,7 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
                                 + context.credit_inv.complex_comp();
 
                             if total_plus_sell - buy_credits >= new_credits {
+                                self.num_proofs += 1;
                                 return ProofNode::new_leaf("Local merge to complex".into(), true);
                             }
                         }
@@ -101,9 +122,11 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
                                 if total_plus_sell - buy_credits
                                     >= context.credit_inv.two_ec_credit(6)
                                 {
+                                    self.num_proofs += 1;
                                     return ProofNode::new_leaf("Local merge to c6".into(), true);
                                 }
                             } else {
+                                self.num_proofs += 1;
                                 if total_plus_sell - buy_credits >= context.credit_inv.large() {
                                     return ProofNode::new_leaf(
                                         "Local merge to large".into(),
@@ -135,10 +158,12 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
 
                 if left_comp.is_c3() && right_comp.is_c3() {
                     if credits >= context.credit_inv.two_ec_credit(6) {
+                        self.num_proofs += 1;
                         return ProofNode::new_leaf("Local merge to c6".into(), true);
                     }
                 } else {
                     if credits >= context.credit_inv.large() {
+                        self.num_proofs += 1;
                         return ProofNode::new_leaf("Local merge to large".into(), true);
                     }
                 }

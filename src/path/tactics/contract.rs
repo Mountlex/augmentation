@@ -1,20 +1,45 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{proof::{Tactic, ProofContext}, utils::hamiltonian_paths, PathMatchingInstance},
+    path::{
+        proof::{ProofContext, Statistics, Tactic},
+        utils::hamiltonian_paths,
+        PathMatchingInstance,
+    },
     proof_tree::ProofNode,
 };
 
+pub struct ContractabilityTactic {
+    num_calls: usize,
+    num_proofs: usize,
+}
 
+impl ContractabilityTactic {
+    pub fn new() -> Self {
+        Self {
+            num_calls: 0,
+            num_proofs: 0,
+        }
+    }
+}
 
-pub struct ContractabilityTactic;
+impl Statistics for ContractabilityTactic {
+    fn print_stats(&self) {
+        println!(
+            "Contractability proof {} / {}",
+            self.num_proofs, self.num_calls
+        );
+    }
+}
 
 impl Tactic<PathMatchingInstance> for ContractabilityTactic {
     fn action(
-        &self,
+        &mut self,
         data: PathMatchingInstance,
         _context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
+        self.num_calls += 1;
+
         let last = data.path.nodes.last().unwrap().to_zoomed();
         let last_comp = last.get_comp();
 
@@ -60,6 +85,7 @@ impl Tactic<PathMatchingInstance> for ContractabilityTactic {
             });
 
             if chord_implies_absent_np {
+                self.num_proofs += 1;
                 return ProofNode::new_leaf(
                     format!(
                         "Component {} is contractable and chords imply absent nice pairs!",

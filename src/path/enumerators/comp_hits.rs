@@ -1,11 +1,9 @@
 use itertools::Itertools;
 
-use crate::{
-    path::{
-        proof::{Enumerator, ProofContext},
-        Matching3, MatchingEdge, NicePairConfig, PathHit, PathInstance, PathMatchingInstance,
-        SelectedHitInstance,
-    },
+use crate::path::{
+    proof::{Enumerator, ProofContext},
+    Matching3, MatchingEdge, NicePairConfig, PathHit, PathInstance, PathMatchingInstance,
+    SelectedHitInstance,
 };
 
 #[derive(Clone)]
@@ -23,7 +21,7 @@ impl Enumerator<PathMatchingInstance, SelectedHitInstance> for ComponentHitEnume
     }
 
     fn iter(
-        &self,
+        &mut self,
         instance: PathMatchingInstance,
         _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedHitInstance>> {

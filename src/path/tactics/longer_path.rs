@@ -1,21 +1,41 @@
 use crate::{
     path::{
-        proof::{or, ProofContext, Tactic},
-         MatchingEdge, PathMatchingInstance,
+        proof::{or, ProofContext, Statistics, Tactic},
+        MatchingEdge, PathMatchingInstance,
     },
     proof_tree::ProofNode,
 };
 
-pub struct LongerPathTactic;
+pub struct LongerPathTactic {
+    num_calls: usize,
+    num_proofs: usize,
+}
+
+impl LongerPathTactic {
+    pub fn new() -> Self {
+        Self {
+            num_calls: 0,
+            num_proofs: 0,
+        }
+    }
+}
+
+impl Statistics for LongerPathTactic {
+    fn print_stats(&self) {
+        println!("Longer path {} / {}", self.num_proofs, self.num_calls);
+    }
+}
 
 impl Tactic<PathMatchingInstance> for LongerPathTactic {
     fn action(
-        &self,
+        &mut self,
         data: PathMatchingInstance,
         context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
+        self.num_calls += 1;
+
         let outside_hits = data.matching.outside_hits();
-        if outside_hits.len() == 2 {
+        let mut proof = if outside_hits.len() == 2 {
             or(
                 LongerNicePathCheck::check_for(&outside_hits[0]),
                 LongerNicePathCheck::check_for(&outside_hits[1]),
@@ -25,7 +45,11 @@ impl Tactic<PathMatchingInstance> for LongerPathTactic {
             LongerNicePathCheck::check_for(&outside_hits[0]).action(data, context)
         } else {
             panic!()
+        };
+        if proof.eval() {
+            self.num_proofs += 1;
         }
+        proof
     }
 
     fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
@@ -49,7 +73,7 @@ impl<'a> LongerNicePathCheck<'a> {
 
 impl<'a> Tactic<PathMatchingInstance> for LongerNicePathCheck<'a> {
     fn action(
-        &self,
+        &mut self,
         data: PathMatchingInstance,
         _context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
