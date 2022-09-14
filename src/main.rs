@@ -49,7 +49,7 @@ struct Path {
     #[clap(short, long, default_value = "proofs_path")]
     output_dir: PathBuf,
 
-    #[clap(short = 'd', long = "depth", default_value = "5")]
+    #[clap(short = 'd', long = "depth", default_value = "3")]
     output_depth: usize,
 }
 

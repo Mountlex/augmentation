@@ -6,6 +6,7 @@ use crate::{
     proof_tree::ProofNode,
 };
 
+use super::PathMatchingInstance;
 use super::enumerators::comp_hits::ComponentHitEnumTactic;
 use super::enumerators::matching_hits::MatchingHitEnumTactic;
 use super::enumerators::matching_nodes::MatchingNodesEnumTactic;
@@ -86,6 +87,27 @@ pub fn or4<I, A1, A2, A3, A4>(
     or3(tactic1, tactic2, or(tactic3, tactic4))
 }
 
+pub fn or5<I, A1, A2, A3, A4, A5>(
+    tactic1: A1,
+    tactic2: A2,
+    tactic3: A3,
+    tactic4: A4,
+    tactic5: A5,
+) -> Or<I, A1, Or<I, A2, Or<I, A3, Or<I, A4, A5>>>> {
+    or4(tactic1, tactic2, tactic3, or(tactic4, tactic5))
+}
+
+pub fn or6<I, A1, A2, A3, A4, A5, A6>(
+    tactic1: A1,
+    tactic2: A2,
+    tactic3: A3,
+    tactic4: A4,
+    tactic5: A5,
+    tactic6: A6,
+) -> Or<I, A1, Or<I, A2, Or<I, A3, Or<I, A4, Or<I, A5, A6>>>>> {
+    or5(tactic1, tactic2, tactic3, tactic4, or(tactic5, tactic6))
+}
+
 impl<I, A1, A2> Tactic<I> for Or<I, A1, A2>
 where
     A1: Tactic<I>,
@@ -115,13 +137,26 @@ where
 pub struct All<O, E, A> {
     enum_tactic: E,
     item_tactic: A,
+    short_circuiting: bool,
     _phantom_data: PhantomData<O>,
 }
+
 
 pub fn all<O, E, A>(enum_tactic: E, item_tactic: A) -> All<O, E, A> {
     All {
         enum_tactic,
         item_tactic,
+        short_circuiting: true,
+        _phantom_data: PhantomData,
+    }
+}
+
+
+pub fn all_no_sc<O, E, A>(enum_tactic: E, item_tactic: A) -> All<O, E, A> {
+    All {
+        enum_tactic,
+        item_tactic,
+        short_circuiting: false,
         _phantom_data: PhantomData,
     }
 }
@@ -144,8 +179,10 @@ where
         let mut proof = ProofNode::new_all(self.enum_tactic.msg(&data_in));
 
         let mut enumerator = self.enum_tactic.get_enumerator(data_in);
-        enumerator.iter(context).all(|d| {
-            if !self.item_tactic.precondition(&d, context) {
+        
+        
+        for d in enumerator.iter(context) {
+            let res = if !self.item_tactic.precondition(&d, context) {
                 false
             } else {
                 let item_msg = self.enum_tactic.item_msg(&d);
@@ -154,8 +191,12 @@ where
                 let cont = res.eval();
                 proof.add_child(res);
                 cont
+            };
+
+            if !res && self.short_circuiting {
+                break;
             }
-        });
+        }
 
         proof
     }
@@ -236,13 +277,14 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
             path_len: path_length,
         };
 
-        let mut proof_tactic = all(
+        let mut proof_tactic = all_no_sc(
             PathEnumTactic,
-            all(
+            all_no_sc(
                 MatchingHitEnumTactic::for_comp(path_length - 1),
-                all(
+                all_no_sc(
                     NPCEnumTactic,
-                    or4(
+                    or6(
+                                CountTactic::new(),
                         LongerPathTactic::new(),
                         ContractabilityTactic::new(),
                         any(
@@ -259,6 +301,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
                             ),
                         ),
                         CycleMerge::new(),
+                        TacticsExhausted::new()
                     ),
                 ),
             ),
@@ -292,5 +335,63 @@ pub fn prove_nice_path_progress<C: CreditInvariant>(
             .print_tree(&mut buf, output_depth)
             .expect("Unable to format tree");
         std::fs::write(filename, buf).expect("Unable to write file");
+    }
+}
+
+struct TacticsExhausted {
+    num_calls: usize
+}
+
+impl TacticsExhausted {
+    fn new() -> Self {
+        Self {
+            num_calls: 0
+        }
+    }
+}
+
+impl Tactic<PathMatchingInstance> for TacticsExhausted {
+    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
+        true    
+    }
+
+    fn action(&mut self, data: &PathMatchingInstance, context: &mut ProofContext) -> ProofNode {
+        self.num_calls += 1;
+        ProofNode::new_leaf("Tactics exhaused!".into(), false)
+    }
+}
+
+impl Statistics for TacticsExhausted {
+    fn print_stats(&self) {
+        println!("Unproved path matching instances {}", self.num_calls)
+    }
+}
+
+struct CountTactic {
+    num_calls: usize
+}
+
+impl CountTactic {
+    fn new() -> Self {
+        Self {
+            num_calls: 0
+        }
+    }
+}
+
+impl Tactic<PathMatchingInstance> for CountTactic {
+    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
+        true    
+    }
+
+    fn action(&mut self, data: &PathMatchingInstance, context: &mut ProofContext) -> ProofNode {
+        self.num_calls += 1;
+        ProofNode::new_leaf("".into(), false)
+    }
+}
+
+impl Statistics for CountTactic {
+    fn print_stats(&self) {
+        println!("PathMatchingInstances {}", self.num_calls)
     }
 }
