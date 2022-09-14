@@ -119,13 +119,13 @@ where
 {
     fn action(&mut self, data: &I, context: &mut ProofContext) -> ProofNode {
         if self.tactic1.precondition(data, context) {
-            let mut res1 = self.tactic1.action(data, context);
-            let result = res1.eval();
-            if result || !self.tactic2.precondition(data, context) {
-                return res1;
+            let mut proof1 = self.tactic1.action(data, context);
+            let outcome = proof1.eval();
+            if outcome.success() || !self.tactic2.precondition(data, context) {
+                return proof1;
             } else {
-                let res2 = self.tactic2.action(data, context);
-                return ProofNode::new_or(res1, res2);
+                let proof2 = self.tactic2.action(data, context);
+                return ProofNode::new_or(proof1, proof2);
             }
         } else {
             self.tactic2.action(data, context)
@@ -186,11 +186,11 @@ where
                 false
             } else {
                 let item_msg = self.enum_tactic.item_msg(&d);
-                let mut res = self.item_tactic.action(&d, context);
-                res = ProofNode::new_info(item_msg, res);
-                let cont = res.eval();
-                proof.add_child(res);
-                cont
+                let mut proof_item = self.item_tactic.action(&d, context);
+                proof_item = ProofNode::new_info(item_msg, proof_item);
+                let outcome = proof_item.eval();
+                proof.add_child(proof_item);
+                outcome.success()
             };
 
             if !res && self.short_circuiting {
@@ -243,11 +243,11 @@ where
                 false
             } else {
                 let item_msg = self.enum_tactic.item_msg(&d);
-                let mut res = self.item_tactic.action(&d, context);
-                res = ProofNode::new_info(item_msg, res);
-                let cont = res.eval();
-                proof.add_child(res);
-                cont
+                let mut proof_item = self.item_tactic.action(&d, context);
+                proof_item = ProofNode::new_info(item_msg, proof_item);
+                let outcome = proof_item.eval();
+                proof.add_child(proof_item);
+                outcome.success()
             }
         });
 
@@ -321,12 +321,12 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
             &mut context,
         );
 
-        let proved = proof.eval();
+        let outcome = proof.eval();
 
         println!("Results for nice paths ending with {}", last_comp);
         proof_tactic.print_stats();
 
-        let filename = if proved {
+        let filename = if outcome.success() {
             println!("✔️ Proved nice path progress ending in {}", last_comp);
             output_dir.join(format!("proof_{}.txt", last_comp.short_name()))
         } else {

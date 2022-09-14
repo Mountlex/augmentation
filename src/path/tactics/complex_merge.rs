@@ -64,6 +64,9 @@ impl Tactic<SelectedHitInstance> for LocalComplexMerge {
     }
 
     fn precondition(&self, data: &SelectedHitInstance, _context: &ProofContext) -> bool {
-        data.matched.len() == 1
+        let left_comp = data.path_matching.path.nodes[data.hit_comp_idx].get_comp();
+        let last_comp_ref = data.path_matching.path.last_comp();
+
+        left_comp.is_complex() && last_comp_ref.is_complex() && data.matched.len() == 1
     }
 }

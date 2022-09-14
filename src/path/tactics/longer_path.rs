@@ -46,7 +46,7 @@ impl Tactic<PathMatchingInstance> for LongerPathTactic {
         } else {
             panic!()
         };
-        if proof.eval() {
+        if proof.eval().success() {
             self.num_proofs += 1;
         }
         proof

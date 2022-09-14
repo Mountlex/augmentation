@@ -56,7 +56,7 @@ impl Tactic<PathMatchingInstance> for CycleMerge {
                 context.credit_inv.clone(),
                 &mut proof,
             ) {
-                if proof.eval() {
+                if proof.eval().success() {
                     self.num_proofs += 1;
                 }
                 return proof;
@@ -118,10 +118,11 @@ fn check_nice_path_with_cycle<C: CreditInvariant>(
         nodes: pseudo_nodes,
     };
 
-    if cycle.value(credit_inv.clone()) >= Credit::from_integer(2) {
-        proof.add_child(ProofNode::new_leaf(
+    let cycle_value = cycle.value(credit_inv.clone());
+    if cycle_value >= Credit::from_integer(2) {
+        proof.add_child(ProofNode::new_leaf_success(
             format!("PseudoCycle {} merged!", cycle),
-            true,
+            cycle_value == Credit::from_integer(2),
         ));
         return true;
     } else {

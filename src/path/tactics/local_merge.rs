@@ -114,7 +114,10 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
 
                             if total_plus_sell - buy_credits >= new_credits {
                                 self.num_proofs += 1;
-                                return ProofNode::new_leaf("Local merge to complex".into(), true);
+                                return ProofNode::new_leaf_success(
+                                    "Local merge to complex".into(),
+                                    total_plus_sell - buy_credits == new_credits,
+                                );
                             }
                         }
                         ComplexCheckResult::NoBridges => {
@@ -123,14 +126,18 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
                                     >= context.credit_inv.two_ec_credit(6)
                                 {
                                     self.num_proofs += 1;
-                                    return ProofNode::new_leaf("Local merge to c6".into(), true);
+                                    return ProofNode::new_leaf_success(
+                                        "Local merge to c6".into(),
+                                        total_plus_sell - buy_credits
+                                            == context.credit_inv.two_ec_credit(6),
+                                    );
                                 }
                             } else {
                                 self.num_proofs += 1;
                                 if total_plus_sell - buy_credits >= context.credit_inv.large() {
-                                    return ProofNode::new_leaf(
+                                    return ProofNode::new_leaf_success(
                                         "Local merge to large".into(),
-                                        true,
+                                        total_plus_sell - buy_credits == context.credit_inv.large(),
                                     );
                                 }
                             }
@@ -159,12 +166,18 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
                 if left_comp.is_c3() && right_comp.is_c3() {
                     if credits >= context.credit_inv.two_ec_credit(6) {
                         self.num_proofs += 1;
-                        return ProofNode::new_leaf("Local merge to c6".into(), true);
+                        return ProofNode::new_leaf_success(
+                            "Local merge to c6".into(),
+                            credits == context.credit_inv.two_ec_credit(6),
+                        );
                     }
                 } else {
                     if credits >= context.credit_inv.large() {
                         self.num_proofs += 1;
-                        return ProofNode::new_leaf("Local merge to large".into(), true);
+                        return ProofNode::new_leaf_success(
+                            "Local merge to large".into(),
+                            credits == context.credit_inv.large(),
+                        );
                     }
                 }
             }
