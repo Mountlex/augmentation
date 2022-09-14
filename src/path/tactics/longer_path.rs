@@ -29,7 +29,7 @@ impl Statistics for LongerPathTactic {
 impl Tactic<PathMatchingInstance> for LongerPathTactic {
     fn action(
         &mut self,
-        data: PathMatchingInstance,
+        data: &PathMatchingInstance,
         context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
@@ -74,7 +74,7 @@ impl<'a> LongerNicePathCheck<'a> {
 impl<'a> Tactic<PathMatchingInstance> for LongerNicePathCheck<'a> {
     fn action(
         &mut self,
-        data: PathMatchingInstance,
+        data: &PathMatchingInstance,
         _context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
         let last = data.path.nodes.last().unwrap().to_zoomed();

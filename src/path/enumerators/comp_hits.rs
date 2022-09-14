@@ -1,31 +1,23 @@
 use itertools::Itertools;
 
 use crate::path::{
-    proof::{Enumerator, ProofContext},
+    proof::{Enumerator, EnumeratorTactic, ProofContext},
     Matching3, MatchingEdge, NicePairConfig, PathHit, PathInstance, PathMatchingInstance,
     SelectedHitInstance,
 };
 
-#[derive(Clone)]
-pub struct ComponentHitInput {
-    pub nice_path: PathInstance,
-    pub three_matching: Matching3,
-    pub npc_last: NicePairConfig,
+pub struct ComponentHitEnumTactic;
+
+pub struct ComponentHitEnumerator<'a> {
+    input: &'a PathMatchingInstance,
 }
 
-pub struct ComponentHitEnumerator;
-
-impl Enumerator<PathMatchingInstance, SelectedHitInstance> for ComponentHitEnumerator {
-    fn msg(&self, _data_in: &PathMatchingInstance) -> String {
-        format!("Enumerate all components hit by matching edges")
-    }
-
+impl<'a> Enumerator<PathMatchingInstance, SelectedHitInstance> for ComponentHitEnumerator<'a> {
     fn iter(
         &mut self,
-        instance: PathMatchingInstance,
         _context: &mut ProofContext,
-    ) -> Box<dyn Iterator<Item = SelectedHitInstance>> {
-        let mut matching = instance.matching.to_vec();
+    ) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
+        let mut matching = self.input.matching.to_vec();
         matching.sort_by_key(|m| m.hit());
 
         let iter = matching
@@ -44,7 +36,7 @@ impl Enumerator<PathMatchingInstance, SelectedHitInstance> for ComponentHitEnume
                     assert_eq!(matched.len(), num_edges);
 
                     Some(SelectedHitInstance {
-                        path_matching: instance.clone(),
+                        path_matching: self.input.clone(),
                         hit_comp_idx,
                         matched,
                     })
@@ -55,6 +47,14 @@ impl Enumerator<PathMatchingInstance, SelectedHitInstance> for ComponentHitEnume
 
         Box::new(iter)
     }
+}
+
+impl EnumeratorTactic<PathMatchingInstance, SelectedHitInstance> for ComponentHitEnumTactic {
+    type Enumer<'a> = ComponentHitEnumerator<'a> where Self: 'a;
+
+    fn msg(&self, _data_in: &PathMatchingInstance) -> String {
+        format!("Enumerate all components hit by matching edges")
+    }
 
     fn item_msg(&self, item: &SelectedHitInstance) -> String {
         format!(
@@ -62,5 +62,9 @@ impl Enumerator<PathMatchingInstance, SelectedHitInstance> for ComponentHitEnume
             item.hit_comp_idx,
             item.matched.len()
         )
+    }
+
+    fn get_enumerator<'a>(&'a self, data: &'a PathMatchingInstance) -> Self::Enumer<'a> {
+        ComponentHitEnumerator { input: data }
     }
 }

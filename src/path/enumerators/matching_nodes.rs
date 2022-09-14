@@ -3,15 +3,20 @@ use itertools::Itertools;
 use crate::{
     comps::{Component, Node},
     path::{
-        proof::{Enumerator, ProofContext},
+        proof::{Enumerator, EnumeratorTactic, ProofContext},
         Matching3, NicePairConfig, SelectedHitInstance, SelectedMatchingInstance,
     },
     types::Edge,
 };
 
-pub struct MatchingNodesEnumerator;
+pub struct MatchingNodesEnumTactic;
 
-impl Enumerator<SelectedHitInstance, SelectedMatchingInstance> for MatchingNodesEnumerator {
+pub struct MatchingNodesEnumerator<'a> {
+    instance: &'a SelectedHitInstance,
+}
+
+impl EnumeratorTactic<SelectedHitInstance, SelectedMatchingInstance> for MatchingNodesEnumTactic {
+    type Enumer<'a> = MatchingNodesEnumerator<'a>;
     fn msg(&self, data_in: &SelectedHitInstance) -> String {
         format!(
             "Enumerate matching endpoints at Path[{}]",
@@ -19,35 +24,42 @@ impl Enumerator<SelectedHitInstance, SelectedMatchingInstance> for MatchingNodes
         )
     }
 
-    fn iter(
-        &mut self,
-        instance: SelectedHitInstance,
-        _context: &mut ProofContext,
-    ) -> Box<dyn Iterator<Item = SelectedMatchingInstance>> {
-        let left_comp = instance.path_matching.path.nodes[instance.hit_comp_idx].get_comp();
-
-        let iter = left_comp
-            .matching_permutations(instance.matched.len())
-            .into_iter()
-            .map(move |left_matched| SelectedMatchingInstance {
-                matched: instance
-                    .matched
-                    .iter()
-                    .zip(left_matched.into_iter())
-                    .map(|(r, l)| Edge(l, r.source()))
-                    .collect_vec(),
-                hit_comp_idx: instance.hit_comp_idx,
-                path_matching: instance.path_matching.clone(),
-            });
-
-        Box::new(iter)
-    }
-
     fn item_msg(&self, item: &SelectedMatchingInstance) -> String {
         format!(
             "Selected Matching {:?} between path[{}] and last component",
             item.matched, item.hit_comp_idx
         )
+    }
+
+    fn get_enumerator<'a>(&'a self, data: &'a SelectedHitInstance) -> Self::Enumer<'a> {
+        MatchingNodesEnumerator { instance: data }
+    }
+}
+
+impl<'a> Enumerator<SelectedHitInstance, SelectedMatchingInstance> for MatchingNodesEnumerator<'a> {
+    fn iter(
+        &mut self,
+        context: &mut ProofContext,
+    ) -> Box<dyn Iterator<Item = SelectedMatchingInstance> + '_> {
+        let left_comp =
+            self.instance.path_matching.path.nodes[self.instance.hit_comp_idx].get_comp();
+
+        let iter = left_comp
+            .matching_permutations(self.instance.matched.len())
+            .into_iter()
+            .map(move |left_matched| SelectedMatchingInstance {
+                matched: self
+                    .instance
+                    .matched
+                    .iter()
+                    .zip(left_matched.into_iter())
+                    .map(|(r, l)| Edge(l, r.source()))
+                    .collect_vec(),
+                hit_comp_idx: self.instance.hit_comp_idx,
+                path_matching: self.instance.path_matching.clone(),
+            });
+
+        Box::new(iter)
     }
 }
 

@@ -33,11 +33,11 @@ impl Statistics for LongerNicePathViaMatchingSwap {
 }
 
 impl Tactic<SelectedMatchingInstance> for LongerNicePathViaMatchingSwap {
-    fn action(&mut self, data: SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: &SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 
-        let three_matching = data.path_matching.matching;
-        let matched = data.matched;
+        let three_matching = &data.path_matching.matching;
+        let matched = &data.matched;
 
         let outside_hits = three_matching.outside_hits();
 

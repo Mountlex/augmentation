@@ -1,7 +1,7 @@
 use crate::{
     comps::{merge_components_to_base, Component, Graph},
     path::{
-        proof::{Enumerator, ProofContext},
+        proof::{Enumerator, EnumeratorTactic, ProofContext},
         AbstractNode, PathInstance, SuperNode,
     },
 };
@@ -17,22 +17,18 @@ impl PathEnumeratorInput {
     }
 }
 
-pub struct PathEnumerator;
+pub struct PathEnumTactic;
 
-impl Enumerator<PathEnumeratorInput, PathInstance> for PathEnumerator {
-    fn msg(&self, data_in: &PathEnumeratorInput) -> String {
-        format!("Enumerate all nice paths ending with {}", data_in.last_comp)
-    }
+pub struct PathEnumerator<'a> {
+    input: &'a PathEnumeratorInput,
+}
 
-    fn iter(
-        &mut self,
-        data_in: PathEnumeratorInput,
-        _context: &mut ProofContext,
-    ) -> Box<dyn Iterator<Item = PathInstance>> {
-        let comps = &data_in.comps;
+impl<'a> Enumerator<PathEnumeratorInput, PathInstance> for PathEnumerator<'a> {
+    fn iter(&mut self, context: &mut ProofContext) -> Box<dyn Iterator<Item = PathInstance> + '_> {
+        let comps = &self.input.comps;
         let iter = itertools::iproduct!(comps.clone(), comps.clone(), comps.clone()).map(
             move |(c1, c2, c3)| {
-                let path = vec![c1, c2, c3, data_in.last_comp.clone()];
+                let path = vec![c1, c2, c3, self.input.last_comp.clone()];
                 let (_path_graph, path) = merge_components_to_base(Graph::new(), path);
 
                 let nodes = path
@@ -59,8 +55,20 @@ impl Enumerator<PathEnumeratorInput, PathInstance> for PathEnumerator {
 
         Box::new(iter)
     }
+}
+
+impl EnumeratorTactic<PathEnumeratorInput, PathInstance> for PathEnumTactic {
+    type Enumer<'a> = PathEnumerator<'a>;
+
+    fn msg(&self, data_in: &PathEnumeratorInput) -> String {
+        format!("Enumerate all nice paths ending with {}", data_in.last_comp)
+    }
 
     fn item_msg(&self, item: &PathInstance) -> String {
         format!("Nice path {}", item)
+    }
+
+    fn get_enumerator<'a>(&'a self, data: &'a PathEnumeratorInput) -> Self::Enumer<'a> {
+        PathEnumerator { input: data }
     }
 }

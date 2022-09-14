@@ -35,7 +35,7 @@ impl Statistics for ContractabilityTactic {
 impl Tactic<PathMatchingInstance> for ContractabilityTactic {
     fn action(
         &mut self,
-        data: PathMatchingInstance,
+        data: &PathMatchingInstance,
         _context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;

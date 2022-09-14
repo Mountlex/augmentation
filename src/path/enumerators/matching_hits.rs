@@ -1,34 +1,28 @@
 use itertools::Itertools;
 
 use crate::path::{
-    proof::{Enumerator, ProofContext},
+    proof::{Enumerator, EnumeratorTactic, ProofContext},
     Matching3, MatchingEdge, PathHit, PathInstance, PathMatchingInstance,
 };
 
-pub struct MatchingHitEnumerator {
+pub struct MatchingHitEnumTactic {
     comp_index: usize,
 }
 
-impl MatchingHitEnumerator {
-    pub fn for_comp(idx: usize) -> Self {
-        Self { comp_index: idx }
-    }
+pub struct MatchingHitEnumerator<'a> {
+    comp_index: usize,
+    path: &'a PathInstance,
 }
 
-impl Enumerator<PathInstance, PathMatchingInstance> for MatchingHitEnumerator {
-    fn msg(&self, _data_in: &PathInstance) -> String {
-        format!("Enumerate all matching hits from last component")
-    }
-
+impl<'a> Enumerator<PathInstance, PathMatchingInstance> for MatchingHitEnumerator<'a> {
     fn iter(
         &mut self,
-        path: PathInstance,
         context: &mut ProofContext,
-    ) -> Box<dyn Iterator<Item = PathMatchingInstance>> {
+    ) -> Box<dyn Iterator<Item = PathMatchingInstance> + '_> {
         assert!(self.comp_index > 0);
 
-        let path_len = path.nodes.len();
-        let comp = path.nodes[self.comp_index].get_comp();
+        let path_len = self.path.nodes.len();
+        let comp = self.path.nodes[self.comp_index].get_comp();
         let nodes = comp.graph().nodes().collect_vec();
 
         let mut targets = vec![PathHit::Outside];
@@ -44,7 +38,7 @@ impl Enumerator<PathInstance, PathMatchingInstance> for MatchingHitEnumerator {
             1
         };
 
-        let path = path.clone();
+        let path = self.path.clone();
         let comp_index = self.comp_index;
 
         let iter = nodes
@@ -97,8 +91,29 @@ impl Enumerator<PathInstance, PathMatchingInstance> for MatchingHitEnumerator {
 
         Box::new(iter)
     }
+}
+
+impl MatchingHitEnumTactic {
+    pub fn for_comp(idx: usize) -> Self {
+        Self { comp_index: idx }
+    }
+}
+
+impl EnumeratorTactic<PathInstance, PathMatchingInstance> for MatchingHitEnumTactic {
+    type Enumer<'a> = MatchingHitEnumerator<'a>;
+
+    fn msg(&self, _data_in: &PathInstance) -> String {
+        format!("Enumerate all matching hits from last component")
+    }
 
     fn item_msg(&self, item: &PathMatchingInstance) -> String {
         format!("{}", item.matching)
+    }
+
+    fn get_enumerator<'a>(&'a self, data: &'a PathInstance) -> Self::Enumer<'a> {
+        MatchingHitEnumerator {
+            comp_index: self.comp_index,
+            path: data,
+        }
     }
 }

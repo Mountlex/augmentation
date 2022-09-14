@@ -35,7 +35,7 @@ impl Statistics for LocalMerge {
 }
 
 impl Tactic<SelectedMatchingInstance> for LocalMerge {
-    fn action(&mut self, data: SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: &SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 
         let left = data.path_matching.path.nodes[data.hit_comp_idx].to_zoomed();
@@ -141,7 +141,7 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
                 }
             }
         } else {
-            for buy in data.matched.into_iter().powerset().filter(|p| p.len() == 2) {
+            for buy in data.matched.iter().powerset().filter(|p| p.len() == 2) {
                 let l1 = buy[0].0;
                 let r1 = buy[0].1;
                 let l2 = buy[1].0;

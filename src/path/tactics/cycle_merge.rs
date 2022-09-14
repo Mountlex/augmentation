@@ -33,13 +33,13 @@ impl Statistics for CycleMerge {
 }
 
 impl Tactic<PathMatchingInstance> for CycleMerge {
-    fn action(&mut self, data: PathMatchingInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: &PathMatchingInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 
         let cycle_edges = data
             .matching
             .other_edges
-            .into_iter()
+            .iter()
             .filter(|m_edge| matches!(m_edge.hit(), PathHit::Path(r) if r <= context.path_len - 3))
             .collect_vec();
 
@@ -68,11 +68,11 @@ impl Tactic<PathMatchingInstance> for CycleMerge {
                 context.credit_inv.clone(),
                 &mut proof,
             ) {
-                cases_remain.push(MergeCases::NoNicePair(m_edge))
+                cases_remain.push(MergeCases::NoNicePair(m_edge.clone()))
                 // it remains to check merge for non-nice pair hit
             } else {
-                cases_remain.push(MergeCases::NoNicePair(m_edge));
-                cases_remain.push(MergeCases::NicePair(m_edge));
+                cases_remain.push(MergeCases::NoNicePair(m_edge.clone()));
+                cases_remain.push(MergeCases::NicePair(m_edge.clone()));
                 // it remains to check merge for nice pair and non-nice pair
             }
         }
