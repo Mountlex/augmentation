@@ -70,12 +70,12 @@ impl Tactic<SelectedMatchingInstance> for LongerNicePathViaMatchingSwap {
         }
 
         // Now if C_l-1 does not care about nice pairs, we are done!
-        if prelast_comp.is_c6() || prelast_comp.is_large() {
+        if prelast_comp.is_c6() || prelast_comp.is_large() || prelast_comp.is_c5() {
             self.num_proofs += 1;
             return ProofNode::new_leaf("Longer path via swapping matching edges".into(), true);
         }
 
-        // For others, we have to check that swaping the path edges keeps a nice pair
+        // For others, we have to check that swapping the path edges keeps a nice pair
         if prelast_comp
             .graph()
             .nodes()

@@ -49,8 +49,8 @@ impl Tactic<SelectedMatchingInstance> for PendantRewireTactic {
         let prelast = data.path_matching.path.nodes[data.hit_comp_idx].get_comp();
         let last = data.path_matching.path.last_comp();
 
-        if prelast.is_c6() || prelast.is_large() || prelast.is_complex() || prelast.is_c3() {
-            if last.is_c3() || last.is_large() {
+        //if prelast.is_c6() || prelast.is_large() || prelast.is_complex() || prelast.is_c3() {
+            if last.is_c3() || last.is_large() || last.is_c6() || last.is_c4() {
                 let new_last_matching_edge = other_matched.first().unwrap();
                 let new_matching = Matching3 {
                     source_comp_idx: matching3.source_comp_idx,
@@ -90,7 +90,7 @@ impl Tactic<SelectedMatchingInstance> for PendantRewireTactic {
                     true,
                 );
             }
-        }
+        //}
         ProofNode::new_leaf(format!("Rewire not possible"), false)
     }
 }
