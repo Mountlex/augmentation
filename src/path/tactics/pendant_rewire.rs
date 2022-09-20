@@ -72,7 +72,7 @@ impl Tactic<SelectedMatchingInstance> for PendantRewireTactic {
             };
 
             let mut path = data.path_matching.path.clone();
-            let mut new_last = path.nodes.last().unwrap().to_zoomed().clone();
+            let mut new_last = path.nodes.last().unwrap().get_zoomed().clone();
             new_last.in_node = Some(new_matching.path_edge_left.unwrap().source());
             *path.nodes.last_mut().unwrap() = SuperNode::Zoomed(new_last);
 

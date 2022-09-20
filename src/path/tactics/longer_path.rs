@@ -77,7 +77,7 @@ impl<'a> Tactic<PathMatchingInstance> for LongerNicePathCheck<'a> {
         data: &PathMatchingInstance,
         _context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
-        let last = data.path.nodes.last().unwrap().to_zoomed();
+        let last = data.path.nodes.last().unwrap().get_zoomed();
         let last_comp = last.get_comp();
 
         if last_comp.is_c6()

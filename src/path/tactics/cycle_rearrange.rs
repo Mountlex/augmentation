@@ -33,17 +33,17 @@ impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
         self.num_calls += 1;
 
         //let hit = data.cycle_edge.hits_path().unwrap();
-        let hit_node = data.pseudo_cycle.nodes.first().unwrap().to_abstract();
+        let hit_node = data.pseudo_cycle.nodes.first().unwrap().get_abstract();
         let hit_comp = hit_node.get_comp();
         let hit_np = hit_node.nice_pair;
 
-        let last_node = data.pseudo_cycle.nodes.last().unwrap().to_zoomed();
+        let last_node = data.pseudo_cycle.nodes.last().unwrap().get_zoomed();
         let last_comp = last_node.get_comp();
         let last_np = last_node
             .npc
             .is_nice_pair(last_node.in_node.unwrap(), last_node.out_node.unwrap());
 
-        let new_last = data.pseudo_cycle.nodes[1].to_abstract();
+        let new_last = data.pseudo_cycle.nodes[1].get_abstract();
         let new_last_comp = new_last.get_comp();
 
         if (last_comp.is_c3() || last_comp.is_c4()) && !last_np {
@@ -57,10 +57,12 @@ impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
         }
 
         if (hit_comp.is_c3() || hit_comp.is_c4()) && hit_np {
+            // Note that for aided C5 we dont have to ensure a nice pair, because it is not prelast.
             return ProofNode::new_leaf(format!("Cannot rearrange cycle: hit comp is {} but has nice pair in cycle, so we cannot guarantee nice pair on path!", last_comp), false);
         }
 
-        if last_comp.is_c6() && !new_last_comp.is_c3() {
+        // Reduce C6 to anything except C3 and C6
+        if last_comp.is_c6() && !new_last_comp.is_c3() && !new_last_comp.is_c6() {
             self.num_proofs += 1;
             return ProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),
@@ -68,6 +70,7 @@ impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
             );
         }
 
+        // Reduce C3 to anything except C3
         if last_comp.is_c3() && !new_last_comp.is_c3() {
             self.num_proofs += 1;
             return ProofNode::new_leaf(
@@ -76,7 +79,17 @@ impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
             );
         }
 
+        // Reduce C4 to C5
         if last_comp.is_c4() && new_last_comp.is_c5() {
+            self.num_proofs += 1;
+            return ProofNode::new_leaf(
+                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                true,
+            );
+        }
+
+        // Reduce anything that is not complex to complex
+        if !last_comp.is_complex() && new_last_comp.is_complex() {
             self.num_proofs += 1;
             return ProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),

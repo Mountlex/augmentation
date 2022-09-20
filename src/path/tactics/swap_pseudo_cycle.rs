@@ -2,8 +2,11 @@ use itertools::Itertools;
 
 use crate::{
     path::{
-        proof::{or, FilterMapTactic, Statistics, Tactic},
-        tactics::{cycle_merge::CycleMerge, cycle_rearrange::CycleRearrangeTactic},
+        proof::{or, or3, FilterMapTactic, Statistics, Tactic},
+        tactics::{
+            cycle_merge::CycleMerge, cycle_rearrange::CycleRearrangeTactic,
+            double_cycle_merge::DoubleCycleMergeTactic,
+        },
         utils::hamiltonian_paths,
         AbstractNode, MatchingEdge, PathHit, PseudoCycle, PseudoCycleInstance,
         SelectedMatchingInstance, SuperNode,
@@ -61,8 +64,8 @@ impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
             .find(|e| matches!(e.hit(), PathHit::Path(i) if i <= context.path_len - 3))
             .unwrap();
 
-        let last = data.path_matching.path.nodes.last().unwrap().to_zoomed();
-        let prelast = data.path_matching.path.nodes[context.path_len - 2].to_zoomed();
+        let last = data.path_matching.path.nodes.last().unwrap().get_zoomed();
+        let prelast = data.path_matching.path.nodes[context.path_len - 2].get_zoomed();
         let last_comp = last.get_comp();
         let prelast_comp = prelast.get_comp();
 
@@ -77,9 +80,10 @@ impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
             .unwrap()
             .clone();
 
-        let prelast_np = if (prelast_comp.is_c3()
+        // Check if a possible nice pair in prelast is destroyed by swapping the last edge!
+        let prelast_np = if prelast_comp.is_c3()
             || prelast_comp.is_c4()
-            || (prelast_comp.is_c5() && !prelast.used))
+            || (prelast_comp.is_c5() && !prelast.used)
         {
             prelast_comp
                 .graph()
@@ -111,7 +115,6 @@ impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
         };
 
         // Build new cycle
-
         let mut pseudo_nodes = data
             .path_matching
             .path
@@ -122,13 +125,14 @@ impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
 
         let length = pseudo_nodes.len();
 
-        assert!(matches!(pseudo_nodes.last(), Some(SuperNode::Zoomed(_))));
-        assert!(matches!(pseudo_nodes.first(), Some(SuperNode::Abstract(_))));
+        pseudo_nodes.last_mut().unwrap().get_zoomed_mut().out_node = Some(path_hit.source());
+        pseudo_nodes.last_mut().unwrap().get_zoomed_mut().out_node = Some(m_other.1);
 
-        if let Some(SuperNode::Zoomed(zoomed)) = pseudo_nodes.last_mut() {
-            zoomed.out_node = Some(path_hit.source());
-            zoomed.in_node = Some(m_other.1)
-        }
+        pseudo_nodes
+            .first_mut()
+            .unwrap()
+            .get_abstract_mut()
+            .nice_pair = false;
 
         let prelast_node = pseudo_nodes.get_mut(length - 2).unwrap();
         *prelast_node = SuperNode::Abstract(AbstractNode {
@@ -138,14 +142,6 @@ impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
             used: prelast.used,
         });
 
-        assert!(matches!(
-            pseudo_nodes.get(length - 2),
-            Some(SuperNode::Abstract(_))
-        ));
-
-        if let Some(SuperNode::Abstract(abs)) = pseudo_nodes.first_mut() {
-            abs.nice_pair = false
-        }
         let cycle = PseudoCycle {
             nodes: pseudo_nodes,
         };
@@ -155,8 +151,12 @@ impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
             pseudo_cycle: cycle,
         };
 
-        let mut proof =
-            or(CycleMerge::new(), CycleRearrangeTactic::new()).action(&cycle_instance, context);
+        let mut proof = or3(
+            CycleMerge::new(),
+            DoubleCycleMergeTactic::new(),
+            CycleRearrangeTactic::new(),
+        )
+        .action(&cycle_instance, context);
         if proof.eval().success() {
             self.num_proofs += 1;
         }

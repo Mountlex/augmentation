@@ -2,6 +2,7 @@ pub mod complex_merge;
 pub mod contract;
 pub mod cycle_merge;
 pub mod cycle_rearrange;
+pub mod double_cycle_merge;
 pub mod local_merge;
 pub mod longer_path;
 pub mod longer_path_swap;

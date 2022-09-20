@@ -41,8 +41,8 @@ impl Tactic<SelectedMatchingInstance> for LongerNicePathViaMatchingSwap {
 
         let outside_hits = three_matching.outside_hits();
 
-        let last = data.path_matching.path.nodes.last().unwrap().to_zoomed();
-        let prelast = data.path_matching.path.nodes[context.path_len - 2].to_zoomed();
+        let last = data.path_matching.path.nodes.last().unwrap().get_zoomed();
+        let prelast = data.path_matching.path.nodes[context.path_len - 2].get_zoomed();
         let last_comp = last.get_comp();
         let prelast_comp = prelast.get_comp();
 

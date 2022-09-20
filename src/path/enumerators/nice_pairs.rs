@@ -21,7 +21,7 @@ impl<'a> Enumerator<PathMatchingInstance, PathMatchingInstance>
         &mut self,
         _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = PathMatchingInstance> + '_> {
-        let super_node = &self.instance.path.nodes.last().unwrap().to_abstract();
+        let super_node = &self.instance.path.nodes.last().unwrap().get_abstract();
         let used = super_node.used;
 
         let comp = super_node.get_comp().clone();
@@ -56,7 +56,7 @@ impl<'a> Enumerator<SelectedMatchingInstance, SelectedMatchingInstance>
         _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedMatchingInstance> + '_> {
         let super_node =
-            &self.instance.path_matching.path.nodes[self.instance.hit_comp_idx].to_abstract();
+            &self.instance.path_matching.path.nodes[self.instance.hit_comp_idx].get_abstract();
         let used = super_node.used;
 
         let comp = super_node.get_comp().clone();
@@ -120,7 +120,7 @@ impl EnumeratorTactic<SelectedMatchingInstance, SelectedMatchingInstance> for NP
         format!(
             "NPC {}",
             item.path_matching.path.nodes[item.hit_comp_idx]
-                .to_zoomed()
+                .get_zoomed()
                 .npc
         )
     }

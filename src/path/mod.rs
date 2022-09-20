@@ -94,14 +94,28 @@ pub enum SuperNode {
 }
 
 impl SuperNode {
-    pub fn to_zoomed(&self) -> &ZoomedNode {
+    pub fn get_zoomed(&self) -> &ZoomedNode {
         match self {
             SuperNode::Zoomed(n) => n,
             SuperNode::Abstract(_) => panic!("Super node is not zoomed!"),
         }
     }
 
-    pub fn to_abstract(&self) -> &AbstractNode {
+    pub fn get_abstract(&self) -> &AbstractNode {
+        match self {
+            SuperNode::Zoomed(_) => panic!("Super node is not abstract!"),
+            SuperNode::Abstract(n) => n,
+        }
+    }
+
+    pub fn get_zoomed_mut(&mut self) -> &mut ZoomedNode {
+        match self {
+            SuperNode::Zoomed(n) => n,
+            SuperNode::Abstract(_) => panic!("Super node is not zoomed!"),
+        }
+    }
+
+    pub fn get_abstract_mut(&mut self) -> &mut AbstractNode {
         match self {
             SuperNode::Zoomed(_) => panic!("Super node is not abstract!"),
             SuperNode::Abstract(n) => n,

@@ -38,8 +38,8 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
     fn action(&mut self, data: &SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 
-        let left = data.path_matching.path.nodes[data.hit_comp_idx].to_zoomed();
-        let right = data.path_matching.path.nodes.last().unwrap().to_zoomed();
+        let left = data.path_matching.path.nodes[data.hit_comp_idx].get_zoomed();
+        let right = data.path_matching.path.nodes.last().unwrap().get_zoomed();
 
         let left_comp = data.path_matching.path.nodes[data.hit_comp_idx].get_comp();
         let right_comp = data.path_matching.path.last_comp();

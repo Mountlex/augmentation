@@ -111,7 +111,7 @@ fn prove_path(path: Path) {
         ComponentType::Cycle(5),
         ComponentType::Cycle(6),
         ComponentType::Large,
-        ComponentType::Complex,
+        //ComponentType::Complex,
     ];
 
     let comps = comps.into_iter().flat_map(|c| c.components()).collect_vec();

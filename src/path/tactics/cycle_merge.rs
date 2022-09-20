@@ -58,7 +58,7 @@ impl Tactic<PseudoCycleInstance> for CycleMerge {
 }
 
 impl PseudoCycle {
-    fn value<C: CreditInvariant>(&self, credit_inv: C) -> Credit {
+    pub fn value<C: CreditInvariant>(&self, credit_inv: C) -> Credit {
         let first_complex = self
             .nodes
             .iter()

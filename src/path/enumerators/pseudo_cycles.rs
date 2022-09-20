@@ -40,18 +40,13 @@ impl<'a> Enumerator<CycleEdgeInstance, PseudoCycleInstance> for PseudoCyclesEnum
                 .1
                 .to_vec();
 
-            assert!(matches!(
-                pseudo_nodes.last_mut(),
-                Some(SuperNode::Zoomed(_))
-            ));
+            pseudo_nodes.last_mut().unwrap().get_zoomed_mut().out_node = Some(cycle_edge.source());
+            pseudo_nodes
+                .first_mut()
+                .unwrap()
+                .get_abstract_mut()
+                .nice_pair = np;
 
-            if let Some(SuperNode::Zoomed(zoomed)) = pseudo_nodes.last_mut() {
-                zoomed.out_node = Some(cycle_edge.source())
-            }
-
-            if let Some(SuperNode::Abstract(abs)) = pseudo_nodes.first_mut() {
-                abs.nice_pair = np
-            }
             let cycle = PseudoCycle {
                 nodes: pseudo_nodes,
             };

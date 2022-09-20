@@ -7,6 +7,7 @@ use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use crate::path::enumerators::cycles_edges::CycleEdgeEnumTactic;
 use crate::path::enumerators::pseudo_cycles::PseudoCyclesEnumTactic;
 use crate::path::tactics::cycle_rearrange::CycleRearrangeTactic;
+use crate::path::tactics::double_cycle_merge::DoubleCycleMergeTactic;
 use crate::path::tactics::pendant_rewire::PendantRewireTactic;
 use crate::path::tactics::swap_pseudo_cycle::SwapPseudoCycleEdgeTactic;
 use crate::{
@@ -343,6 +344,13 @@ impl PathNode {
             PathNode::Used(c) | PathNode::Unused(c) => c,
         }
     }
+
+    fn short_name(&self) -> String {
+        match self {
+            PathNode::Used(c) => format!("aided-{}", c.short_name()),
+            PathNode::Unused(c) => c.short_name(),
+        }
+    }
 }
 
 pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
@@ -396,13 +404,20 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                 all_sc(
                     sc,
                     NPCEnumTactic,
-                    or7(
+                    or6(
                         CountTactic::new(),
                         LongerPathTactic::new(),
                         ContractabilityTactic::new(),
                         any(
                             CycleEdgeEnumTactic,
-                            all(PseudoCyclesEnumTactic::new(true), CycleMerge::new()),
+                            all(
+                                PseudoCyclesEnumTactic::new(true),
+                                or3(
+                                    CycleMerge::new(),
+                                    DoubleCycleMergeTactic::new(),
+                                    CycleRearrangeTactic::new(),
+                                ),
+                            ),
                         ),
                         any(
                             ComponentHitEnumTactic,
@@ -422,13 +437,6 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                 ),
                             ),
                         ),
-                        any(
-                            CycleEdgeEnumTactic,
-                            all(
-                                PseudoCyclesEnumTactic::new(false),
-                                or(CycleMerge::new(), CycleRearrangeTactic::new()),
-                            ),
-                        ),
                         TacticsExhausted::new(),
                     ),
                 ),
@@ -444,25 +452,22 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
 
         println!(
             "Results for nice paths ending with {}",
-            last_comp.get_comp()
+            last_comp.short_name()
         );
         proof_tactic.print_stats();
 
         let filename = if outcome.success() {
             println!(
                 "✔️ Proved nice path progress ending in {}",
-                last_comp.get_comp()
+                last_comp.short_name()
             );
-            output_dir.join(format!("proof_{}.txt", last_comp.get_comp().short_name()))
+            output_dir.join(format!("proof_{}.txt", last_comp.short_name()))
         } else {
             println!(
                 "❌ Disproved nice path progress ending in {}",
-                last_comp.get_comp()
+                last_comp.short_name()
             );
-            output_dir.join(format!(
-                "wrong_proof_{}.txt",
-                last_comp.get_comp().short_name()
-            ))
+            output_dir.join(format!("wrong_proof_{}.txt", last_comp.short_name()))
         };
 
         println!();

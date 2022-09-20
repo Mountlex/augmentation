@@ -205,7 +205,7 @@ impl Component {
 
     pub fn short_name(&self) -> String {
         match self {
-            Component::Cycle(g) => format!("{}c", g.edge_count()),
+            Component::Cycle(g) => format!("C{}", g.edge_count()),
             Component::Large(_) => format!("large"),
             Component::Complex(_, _, name) => name.clone(),
         }
