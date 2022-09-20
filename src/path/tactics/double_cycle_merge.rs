@@ -1,7 +1,7 @@
 use crate::{
     path::{
         proof::{Statistics, Tactic},
-        PseudoCycleInstance, SuperNode,
+        PseudoCycleInstance, 
     },
     proof_tree::ProofNode,
     Credit,

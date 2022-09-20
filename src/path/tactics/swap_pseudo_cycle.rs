@@ -1,17 +1,13 @@
 use itertools::Itertools;
 
-use crate::{
-    path::{
-        proof::{or, or3, FilterMapTactic, Statistics, Tactic},
-        tactics::{
-            cycle_merge::CycleMerge, cycle_rearrange::CycleRearrangeTactic,
-            double_cycle_merge::DoubleCycleMergeTactic,
-        },
-        utils::hamiltonian_paths,
-        AbstractNode, MatchingEdge, PathHit, PseudoCycle, PseudoCycleInstance,
-        SelectedMatchingInstance, SuperNode,
+use crate::path::{
+    proof::{or3, Statistics, Tactic},
+    tactics::{
+        cycle_merge::CycleMerge, cycle_rearrange::CycleRearrangeTactic,
+        double_cycle_merge::DoubleCycleMergeTactic,
     },
-    proof_tree::ProofNode,
+    utils::hamiltonian_paths,
+    AbstractNode, PathHit, PseudoCycle, PseudoCycleInstance, SelectedMatchingInstance, SuperNode,
 };
 
 pub struct SwapPseudoCycleEdgeTactic {

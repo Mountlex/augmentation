@@ -1,9 +1,8 @@
-use itertools::Itertools;
 
 use crate::{
     path::{
         proof::{ProofContext, Statistics, Tactic},
-        PathHit, PathMatchingInstance, PseudoCycleInstance,
+        PseudoCycleInstance,
     },
     proof_tree::ProofNode,
 };
@@ -100,7 +99,7 @@ impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
         return ProofNode::new_leaf(format!("Cannot rearrange cycle"), false);
     }
 
-    fn precondition(&self, data: &PseudoCycleInstance, _context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &PseudoCycleInstance, _context: &ProofContext) -> bool {
         true
     }
 }

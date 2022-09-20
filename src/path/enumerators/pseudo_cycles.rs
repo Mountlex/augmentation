@@ -1,6 +1,6 @@
 use crate::path::{
     proof::{Enumerator, EnumeratorTactic, ProofContext},
-    CycleEdgeInstance, PseudoCycle, PseudoCycleInstance, SuperNode,
+    CycleEdgeInstance, PseudoCycle, PseudoCycleInstance, 
 };
 
 pub struct PseudoCyclesEnumTactic {

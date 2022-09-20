@@ -90,7 +90,7 @@ impl Tactic<SelectedMatchingInstance> for PendantRewireTactic {
                 true,
             );
         }
-        //}
+
         ProofNode::new_leaf(format!("Rewire not possible"), false)
     }
 }

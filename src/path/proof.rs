@@ -48,12 +48,6 @@ pub trait Enumerator<I, O> {
     fn iter(&mut self, context: &mut ProofContext) -> Box<dyn Iterator<Item = O> + '_>;
 }
 
-pub trait FilterMapTactic<I, O> {
-    fn precondition(&self, data: &I, context: &ProofContext) -> bool;
-
-    fn map(&mut self, data: &I, context: &mut ProofContext) -> O;
-}
-
 pub trait Tactic<I> {
     fn precondition(&self, data: &I, context: &ProofContext) -> bool;
 
@@ -290,43 +284,6 @@ where
     }
 }
 
-pub struct FilterMap<O, M, A> {
-    map_tactic: M,
-    item_tactic: A,
-    _phantom_data: PhantomData<O>,
-}
-
-pub fn map<O, M, A>(mapper: M, tactic: A) -> FilterMap<O, M, A> {
-    FilterMap {
-        map_tactic: mapper,
-        item_tactic: tactic,
-        _phantom_data: PhantomData,
-    }
-}
-
-impl<O, M, A> Statistics for FilterMap<O, M, A>
-where
-    A: Statistics,
-{
-    fn print_stats(&self) {
-        self.item_tactic.print_stats();
-    }
-}
-
-impl<E, A, I, O> Tactic<I> for FilterMap<O, E, A>
-where
-    E: FilterMapTactic<I, O>,
-    A: Tactic<O>,
-{
-    fn action(&mut self, data_in: &I, context: &mut ProofContext) -> ProofNode {
-        let mapped = self.map_tactic.map(data_in, context);
-        self.item_tactic.action(&mapped, context)
-    }
-
-    fn precondition(&self, data: &I, context: &ProofContext) -> bool {
-        self.map_tactic.precondition(data, context)
-    }
-}
 
 #[derive(Clone, Debug)]
 pub enum PathNode {
