@@ -6,8 +6,7 @@ use crate::{
     comps::CreditInvariant,
     path::{
         proof::{ProofContext, Statistics, Tactic},
-        PseudoCycle,
-        PseudoCycleInstance, SuperNode,
+        PseudoCycle, PseudoCycleInstance, SuperNode,
     },
     proof_tree::ProofNode,
     Credit,
@@ -57,7 +56,6 @@ impl Tactic<PseudoCycleInstance> for CycleMerge {
         true
     }
 }
-
 
 impl PseudoCycle {
     fn value<C: CreditInvariant>(&self, credit_inv: C) -> Credit {

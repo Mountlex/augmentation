@@ -5,8 +5,8 @@ use crate::{
         proof::{or, FilterMapTactic, Statistics, Tactic},
         tactics::{cycle_merge::CycleMerge, cycle_rearrange::CycleRearrangeTactic},
         utils::hamiltonian_paths,
-        MatchingEdge, PathHit, PseudoCycle, PseudoCycleInstance, SelectedMatchingInstance,
-        SuperNode, AbstractNode,
+        AbstractNode, MatchingEdge, PathHit, PseudoCycle, PseudoCycleInstance,
+        SelectedMatchingInstance, SuperNode,
     },
     proof_tree::ProofNode,
 };
@@ -77,9 +77,11 @@ impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
             .unwrap()
             .clone();
 
-        let prelast_np = if (prelast_comp.is_c3() || prelast_comp.is_c4() || (prelast_comp.is_c5() && !prelast.used)) {
-
-        prelast_comp
+        let prelast_np = if (prelast_comp.is_c3()
+            || prelast_comp.is_c4()
+            || (prelast_comp.is_c5() && !prelast.used))
+        {
+            prelast_comp
                 .graph()
                 .nodes()
                 .filter(|left_in| *left_in != m_path.0)
@@ -104,11 +106,9 @@ impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
                                 })
                         })
                 })
-            
-            } else {
-                false
-            };
-        
+        } else {
+            false
+        };
 
         // Build new cycle
 
@@ -122,14 +122,8 @@ impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
 
         let length = pseudo_nodes.len();
 
-        assert!(matches!(
-            pseudo_nodes.last(),
-            Some(SuperNode::Zoomed(_))
-        ));
-        assert!(matches!(
-            pseudo_nodes.first(),
-            Some(SuperNode::Abstract(_))
-        ));
+        assert!(matches!(pseudo_nodes.last(), Some(SuperNode::Zoomed(_))));
+        assert!(matches!(pseudo_nodes.first(), Some(SuperNode::Abstract(_))));
 
         if let Some(SuperNode::Zoomed(zoomed)) = pseudo_nodes.last_mut() {
             zoomed.out_node = Some(path_hit.source());
@@ -161,10 +155,11 @@ impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
             pseudo_cycle: cycle,
         };
 
-        let mut proof = or(CycleMerge::new(), CycleRearrangeTactic::new()).action(&cycle_instance, context);
+        let mut proof =
+            or(CycleMerge::new(), CycleRearrangeTactic::new()).action(&cycle_instance, context);
         if proof.eval().success() {
             self.num_proofs += 1;
         }
-        return proof
+        return proof;
     }
 }

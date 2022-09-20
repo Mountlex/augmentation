@@ -1,17 +1,15 @@
 use crate::path::{
     proof::{Enumerator, EnumeratorTactic, ProofContext},
-    CycleEdgeInstance,  PseudoCycle, PseudoCycleInstance, SuperNode,
+    CycleEdgeInstance, PseudoCycle, PseudoCycleInstance, SuperNode,
 };
 
 pub struct PseudoCyclesEnumTactic {
-    worst_case: bool
+    worst_case: bool,
 }
 
 impl PseudoCyclesEnumTactic {
     pub fn new(worst_case: bool) -> Self {
-        Self {
-            worst_case,
-        }
+        Self { worst_case }
     }
 }
 
@@ -42,12 +40,15 @@ impl<'a> Enumerator<CycleEdgeInstance, PseudoCycleInstance> for PseudoCyclesEnum
                 .1
                 .to_vec();
 
-            assert!(matches!(pseudo_nodes.last_mut(), Some(SuperNode::Zoomed(_))));
+            assert!(matches!(
+                pseudo_nodes.last_mut(),
+                Some(SuperNode::Zoomed(_))
+            ));
 
             if let Some(SuperNode::Zoomed(zoomed)) = pseudo_nodes.last_mut() {
                 zoomed.out_node = Some(cycle_edge.source())
             }
-            
+
             if let Some(SuperNode::Abstract(abs)) = pseudo_nodes.first_mut() {
                 abs.nice_pair = np
             }
@@ -77,6 +78,9 @@ impl EnumeratorTactic<CycleEdgeInstance, PseudoCycleInstance> for PseudoCyclesEn
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a CycleEdgeInstance) -> Self::Enumer<'a> {
-        PseudoCyclesEnumerator { input: data, worst_case: self.worst_case }
+        PseudoCyclesEnumerator {
+            input: data,
+            worst_case: self.worst_case,
+        }
     }
 }

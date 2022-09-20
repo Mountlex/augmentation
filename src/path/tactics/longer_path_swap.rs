@@ -60,7 +60,10 @@ impl Tactic<SelectedMatchingInstance> for LongerNicePathViaMatchingSwap {
             .clone();
 
         // If matching edge swap cannot be a nice path
-        if (last_comp.is_c3() || last_comp.is_c4() || (last_comp.is_c5() && !last.used) || last_comp.is_complex())
+        if (last_comp.is_c3()
+            || last_comp.is_c4()
+            || (last_comp.is_c5() && !last.used)
+            || last_comp.is_complex())
             && !last.npc.is_nice_pair(m_other.1, m_outside.source())
         {
             return ProofNode::new_leaf(

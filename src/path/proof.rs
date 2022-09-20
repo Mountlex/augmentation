@@ -47,7 +47,7 @@ pub trait Enumerator<I, O> {
     fn iter(&mut self, context: &mut ProofContext) -> Box<dyn Iterator<Item = O> + '_>;
 }
 
-pub trait FilterMapTactic<I, O> {  
+pub trait FilterMapTactic<I, O> {
     fn precondition(&self, data: &I, context: &ProofContext) -> bool;
 
     fn map(&mut self, data: &I, context: &mut ProofContext) -> O;
@@ -131,7 +131,14 @@ pub fn or7<I, A1, A2, A3, A4, A5, A6, A7>(
     tactic6: A6,
     tactic7: A7,
 ) -> Or<I, A1, Or<I, A2, Or<I, A3, Or<I, A4, Or<I, A5, Or<I, A6, A7>>>>>> {
-    or6(tactic1, tactic2, tactic3, tactic4, tactic5, or(tactic6, tactic7))
+    or6(
+        tactic1,
+        tactic2,
+        tactic3,
+        tactic4,
+        tactic5,
+        or(tactic6, tactic7),
+    )
 }
 
 impl<I, A1, A2> Tactic<I> for Or<I, A1, A2>
@@ -323,7 +330,7 @@ where
 #[derive(Clone, Debug)]
 pub enum PathNode {
     Used(Component),
-    Unused(Component)
+    Unused(Component),
 }
 
 impl PathNode {
@@ -333,12 +340,10 @@ impl PathNode {
 
     pub fn get_comp(&self) -> &Component {
         match self {
-            PathNode::Used(c) |
-            PathNode::Unused(c) => c
+            PathNode::Used(c) | PathNode::Unused(c) => c,
         }
     }
 }
-
 
 pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
     comps: Vec<Component>,
@@ -354,28 +359,27 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
 
     let path_length = 4;
 
-    let nodes = comps.into_iter().flat_map(|comp| {
-        if comp.is_c5() {
-            vec![
-                PathNode::Used(comp.clone()),
-                PathNode::Unused(comp.clone()),
-            ]
-        } else {
-            vec![PathNode::Unused(comp.clone()),]
-        }
-    }).collect_vec();
+    let nodes = comps
+        .into_iter()
+        .flat_map(|comp| {
+            if comp.is_c5() {
+                vec![PathNode::Used(comp.clone()), PathNode::Unused(comp.clone())]
+            } else {
+                vec![PathNode::Unused(comp.clone())]
+            }
+        })
+        .collect_vec();
 
-
-    let last_nodes = last_comps.into_iter().flat_map(|comp| {
-        if comp.is_c5() {
-            vec![
-                PathNode::Used(comp.clone()),
-                PathNode::Unused(comp.clone()),
-            ]
-        } else {
-            vec![PathNode::Unused(comp.clone()),]
-        }
-    }).collect_vec();
+    let last_nodes = last_comps
+        .into_iter()
+        .flat_map(|comp| {
+            if comp.is_c5() {
+                vec![PathNode::Used(comp.clone()), PathNode::Unused(comp.clone())]
+            } else {
+                vec![PathNode::Unused(comp.clone())]
+            }
+        })
+        .collect_vec();
 
     last_nodes.par_iter().for_each(|last_comp| {
         let mut context = ProofContext {
@@ -398,10 +402,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                         ContractabilityTactic::new(),
                         any(
                             CycleEdgeEnumTactic,
-                            all(
-                                PseudoCyclesEnumTactic::new(true),   
-                                    CycleMerge::new(),
-                            )
+                            all(PseudoCyclesEnumTactic::new(true), CycleMerge::new()),
                         ),
                         any(
                             ComponentHitEnumTactic,
@@ -420,23 +421,20 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                     ),
                                 ),
                             ),
-                        ),      
+                        ),
                         any(
                             CycleEdgeEnumTactic,
                             all(
-                                PseudoCyclesEnumTactic::new(false),   
-                                or(
-                                    CycleMerge::new(),
-                                    CycleRearrangeTactic::new(),
-                                )
-                            )
-                        ),               
+                                PseudoCyclesEnumTactic::new(false),
+                                or(CycleMerge::new(), CycleRearrangeTactic::new()),
+                            ),
+                        ),
                         TacticsExhausted::new(),
                     ),
                 ),
             ),
         );
-      
+
         let mut proof = proof_tactic.action(
             &PathEnumeratorInput::new(last_comp.clone(), nodes.clone()),
             &mut context,
@@ -444,15 +442,27 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
 
         let outcome = proof.eval();
 
-        println!("Results for nice paths ending with {}", last_comp.get_comp());
+        println!(
+            "Results for nice paths ending with {}",
+            last_comp.get_comp()
+        );
         proof_tactic.print_stats();
 
         let filename = if outcome.success() {
-            println!("✔️ Proved nice path progress ending in {}", last_comp.get_comp());
+            println!(
+                "✔️ Proved nice path progress ending in {}",
+                last_comp.get_comp()
+            );
             output_dir.join(format!("proof_{}.txt", last_comp.get_comp().short_name()))
         } else {
-            println!("❌ Disproved nice path progress ending in {}", last_comp.get_comp());
-            output_dir.join(format!("wrong_proof_{}.txt", last_comp.get_comp().short_name()))
+            println!(
+                "❌ Disproved nice path progress ending in {}",
+                last_comp.get_comp()
+            );
+            output_dir.join(format!(
+                "wrong_proof_{}.txt",
+                last_comp.get_comp().short_name()
+            ))
         };
 
         println!();

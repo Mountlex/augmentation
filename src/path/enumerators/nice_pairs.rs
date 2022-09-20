@@ -34,7 +34,7 @@ impl<'a> Enumerator<PathMatchingInstance, PathMatchingInstance>
                     npc,
                     in_node: self.instance.matching.path_edge_left.map(|e| e.source()),
                     out_node: self.instance.matching.path_edge_right.map(|e| e.source()),
-                    used
+                    used,
                 };
 
                 *path_clone.nodes.last_mut().unwrap() = SuperNode::Zoomed(zoomed_node);
@@ -55,7 +55,8 @@ impl<'a> Enumerator<SelectedMatchingInstance, SelectedMatchingInstance>
         &mut self,
         _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedMatchingInstance> + '_> {
-        let super_node = &self.instance.path_matching.path.nodes[self.instance.hit_comp_idx].to_abstract();
+        let super_node =
+            &self.instance.path_matching.path.nodes[self.instance.hit_comp_idx].to_abstract();
         let used = super_node.used;
 
         let comp = super_node.get_comp().clone();
@@ -71,7 +72,7 @@ impl<'a> Enumerator<SelectedMatchingInstance, SelectedMatchingInstance>
                 npc,
                 in_node: None,
                 out_node: None,
-                used
+                used,
             };
 
             instance.path.nodes[self.instance.hit_comp_idx] = SuperNode::Zoomed(zoomed_node);

@@ -1,6 +1,12 @@
 use itertools::Itertools;
 
-use crate::{path::{proof::{Statistics, Tactic, ProofContext}, PathMatchingInstance, PathHit, PseudoCycleInstance}, proof_tree::ProofNode};
+use crate::{
+    path::{
+        proof::{ProofContext, Statistics, Tactic},
+        PathHit, PathMatchingInstance, PseudoCycleInstance,
+    },
+    proof_tree::ProofNode,
+};
 
 pub struct CycleRearrangeTactic {
     num_calls: usize,
@@ -23,14 +29,9 @@ impl Statistics for CycleRearrangeTactic {
 }
 
 impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
-    fn action(
-        &mut self,
-        data: &PseudoCycleInstance,
-        _context: &mut ProofContext,
-    ) -> ProofNode {
+    fn action(&mut self, data: &PseudoCycleInstance, _context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 
-        
         //let hit = data.cycle_edge.hits_path().unwrap();
         let hit_node = data.pseudo_cycle.nodes.first().unwrap().to_abstract();
         let hit_comp = hit_node.get_comp();
@@ -38,14 +39,21 @@ impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
 
         let last_node = data.pseudo_cycle.nodes.last().unwrap().to_zoomed();
         let last_comp = last_node.get_comp();
-        let last_np = last_node.npc.is_nice_pair(last_node.in_node.unwrap(), last_node.out_node.unwrap());
+        let last_np = last_node
+            .npc
+            .is_nice_pair(last_node.in_node.unwrap(), last_node.out_node.unwrap());
 
         let new_last = data.pseudo_cycle.nodes[1].to_abstract();
         let new_last_comp = new_last.get_comp();
 
-        
         if (last_comp.is_c3() || last_comp.is_c4()) && !last_np {
-            return ProofNode::new_leaf(format!("Cannot rearrange cycle: last comp is {} but has no nice pair!", last_comp), false);
+            return ProofNode::new_leaf(
+                format!(
+                    "Cannot rearrange cycle: last comp is {} but has no nice pair!",
+                    last_comp
+                ),
+                false,
+            );
         }
 
         if (hit_comp.is_c3() || hit_comp.is_c4()) && hit_np {
@@ -54,21 +62,29 @@ impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
 
         if last_comp.is_c6() && !new_last_comp.is_c3() {
             self.num_proofs += 1;
-            return ProofNode::new_leaf(format!("Rearrange cycle: now ends with {}!", new_last_comp), true);
+            return ProofNode::new_leaf(
+                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                true,
+            );
         }
 
         if last_comp.is_c3() && !new_last_comp.is_c3() {
             self.num_proofs += 1;
-            return ProofNode::new_leaf(format!("Rearrange cycle: now ends with {}!", new_last_comp), true);
+            return ProofNode::new_leaf(
+                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                true,
+            );
         }
 
         if last_comp.is_c4() && new_last_comp.is_c5() {
             self.num_proofs += 1;
-            return ProofNode::new_leaf(format!("Rearrange cycle: now ends with {}!", new_last_comp), true);
+            return ProofNode::new_leaf(
+                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                true,
+            );
         }
-        
+
         return ProofNode::new_leaf(format!("Cannot rearrange cycle"), false);
-        
     }
 
     fn precondition(&self, data: &PseudoCycleInstance, _context: &ProofContext) -> bool {
