@@ -21,9 +21,8 @@ impl<'a> Enumerator<PathMatchingInstance, PathMatchingInstance>
         &mut self,
         _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = PathMatchingInstance> + '_> {
-        let super_node = &self.instance.path.nodes.last().unwrap();
-
-        assert!(matches!(super_node, crate::path::SuperNode::Abstract(_)));
+        let super_node = &self.instance.path.nodes.last().unwrap().to_abstract();
+        let used = super_node.used;
 
         let comp = super_node.get_comp().clone();
         let iterator = comp_npcs(&comp, &self.instance.matching.sources())
@@ -35,6 +34,7 @@ impl<'a> Enumerator<PathMatchingInstance, PathMatchingInstance>
                     npc,
                     in_node: self.instance.matching.path_edge_left.map(|e| e.source()),
                     out_node: self.instance.matching.path_edge_right.map(|e| e.source()),
+                    used
                 };
 
                 *path_clone.nodes.last_mut().unwrap() = SuperNode::Zoomed(zoomed_node);
@@ -55,9 +55,8 @@ impl<'a> Enumerator<SelectedMatchingInstance, SelectedMatchingInstance>
         &mut self,
         _context: &mut ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedMatchingInstance> + '_> {
-        let super_node = &self.instance.path_matching.path.nodes[self.instance.hit_comp_idx];
-
-        assert!(matches!(super_node, crate::path::SuperNode::Abstract(_)));
+        let super_node = &self.instance.path_matching.path.nodes[self.instance.hit_comp_idx].to_abstract();
+        let used = super_node.used;
 
         let comp = super_node.get_comp().clone();
         let iterator = comp_npcs(
@@ -72,6 +71,7 @@ impl<'a> Enumerator<SelectedMatchingInstance, SelectedMatchingInstance>
                 npc,
                 in_node: None,
                 out_node: None,
+                used
             };
 
             instance.path.nodes[self.instance.hit_comp_idx] = SuperNode::Zoomed(zoomed_node);

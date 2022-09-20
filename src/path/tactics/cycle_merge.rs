@@ -6,7 +6,8 @@ use crate::{
     comps::CreditInvariant,
     path::{
         proof::{ProofContext, Statistics, Tactic},
-        MatchingEdge, PathHit, PathInstance, PathMatchingInstance, SuperNode,
+        PseudoCycle,
+        PseudoCycleInstance, SuperNode,
     },
     proof_tree::ProofNode,
     Credit,
@@ -32,112 +33,31 @@ impl Statistics for CycleMerge {
     }
 }
 
-impl Tactic<PathMatchingInstance> for CycleMerge {
-    fn action(&mut self, data: &PathMatchingInstance, context: &mut ProofContext) -> ProofNode {
+impl Tactic<PseudoCycleInstance> for CycleMerge {
+    fn action(&mut self, data: &PseudoCycleInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 
-        let cycle_edges = data
-            .matching
-            .other_edges
-            .iter()
-            .filter(|m_edge| matches!(m_edge.hit(), PathHit::Path(r) if r <= context.path_len - 3))
-            .collect_vec();
-
-        let mut proof = ProofNode::new_any("Any cycle merge".into());
-
-        // Try worst-case merge
-        // TODO also good cases and then exclude the rest
-        let mut cases_remain: Vec<MergeCases> = vec![];
-        for m_edge in cycle_edges {
-            if check_nice_path_with_cycle(
-                &data.path,
-                &m_edge,
+        let cycle_value = data.pseudo_cycle.value(context.credit_inv.clone());
+        if cycle_value >= Credit::from_integer(2) {
+            self.num_proofs += 1;
+            ProofNode::new_leaf_success(
+                format!("Merged pseudo cycle with value {}!", cycle_value),
+                cycle_value == Credit::from_integer(2),
+            )
+        } else {
+            ProofNode::new_leaf(
+                format!("Failed cycle merge with value {}", cycle_value),
                 false,
-                context.credit_inv.clone(),
-                &mut proof,
-            ) {
-                if proof.eval().success() {
-                    self.num_proofs += 1;
-                }
-                return proof;
-            } else if check_nice_path_with_cycle(
-                &data.path,
-                &m_edge,
-                true,
-                context.credit_inv.clone(),
-                &mut proof,
-            ) {
-                cases_remain.push(MergeCases::NoNicePair(m_edge.clone()))
-                // it remains to check merge for non-nice pair hit
-            } else {
-                cases_remain.push(MergeCases::NoNicePair(m_edge.clone()));
-                cases_remain.push(MergeCases::NicePair(m_edge.clone()));
-                // it remains to check merge for nice pair and non-nice pair
-            }
+            )
         }
-
-        proof
     }
 
-    fn precondition(&self, data: &PathMatchingInstance, context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &PseudoCycleInstance, _context: &ProofContext) -> bool {
         // If we land here, we want that at least one matching edge hits C_j for j <= l - 2.
-        data.matching
-            .other_edges
-            .iter()
-            .filter(|m_edge| matches!(m_edge.hit(), PathHit::Path(r) if r <= context.path_len - 3))
-            .count()
-            > 0
+        true
     }
 }
 
-pub enum MergeCases {
-    NoNicePair(MatchingEdge),
-    NicePair(MatchingEdge),
-}
-
-fn check_nice_path_with_cycle<C: CreditInvariant>(
-    path: &PathInstance,
-    cycle_edge: &MatchingEdge,
-    cycle_edge_hits_np: bool,
-    credit_inv: C,
-    proof: &mut ProofNode,
-) -> bool {
-    // check worst-case merge
-    let mut pseudo_nodes = path
-        .nodes
-        .split_at(cycle_edge.hits_path().unwrap())
-        .1
-        .to_vec();
-    if let Some(SuperNode::Zoomed(zoomed)) = pseudo_nodes.last_mut() {
-        zoomed.out_node = Some(cycle_edge.source())
-    }
-    if let Some(SuperNode::Abstract(abs)) = pseudo_nodes.first_mut() {
-        abs.nice_pair = cycle_edge_hits_np
-    }
-    let cycle = PseudoCycle {
-        nodes: pseudo_nodes,
-    };
-
-    let cycle_value = cycle.value(credit_inv.clone());
-    if cycle_value >= Credit::from_integer(2) {
-        proof.add_child(ProofNode::new_leaf_success(
-            format!("PseudoCycle {} merged!", cycle),
-            cycle_value == Credit::from_integer(2),
-        ));
-        return true;
-    } else {
-        proof.add_child(ProofNode::new_leaf(
-            format!("Failed worst-case merge for PseudoCycle {} ", cycle),
-            false,
-        ));
-        return false;
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct PseudoCycle {
-    nodes: Vec<SuperNode>,
-}
 
 impl PseudoCycle {
     fn value<C: CreditInvariant>(&self, credit_inv: C) -> Credit {

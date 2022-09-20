@@ -101,6 +101,13 @@ impl SuperNode {
         }
     }
 
+    pub fn to_abstract(&self) -> &AbstractNode {
+        match self {
+            SuperNode::Zoomed(_) => panic!("Super node is not abstract!"),
+            SuperNode::Abstract(n) => n,
+        }
+    }
+
     pub fn get_comp(&self) -> &Component {
         match self {
             SuperNode::Zoomed(node) => node.get_comp(),
@@ -175,6 +182,8 @@ impl Display for Matching3 {
 #[derive(Debug, Clone)]
 pub struct AbstractNode {
     pub comp: Component,
+
+    pub in_not_out: bool,
     pub nice_pair: bool,
     pub used: bool,
 }
@@ -185,36 +194,43 @@ impl AbstractNode {
     }
 
     fn value<C: CreditInvariant>(&self, credit_inv: C, lower_complex: bool) -> Credit {
-        let comp_credit_minus_edge = credit_inv.credits(&self.comp) - Credit::from_integer(1);
-        let complex = if lower_complex {
-            credit_inv.complex_comp()
-        } else {
-            Credit::from_integer(0)
-        };
-
-        if self.nice_pair {
-            if self.comp.is_complex() {
-                complex + credit_inv.complex_black(4)
-            } else {
-                comp_credit_minus_edge + Credit::from_integer(1)
-            }
-        } else {
-            if self.comp.is_complex() {
-                complex + credit_inv.complex_black(2)
-            } else {
-                comp_credit_minus_edge
-            }
+        match self.comp {
+            Component::Cycle(_) if !self.used => {
+                if self.nice_pair {
+                    credit_inv.credits(&self.comp)    
+                } else {
+                    credit_inv.credits(&self.comp) - Credit::from_integer(1)
+                }
+            },
+            Component::Cycle(_) if self.used => {
+                assert!(self.comp.is_c5());
+                if self.in_not_out {
+                    credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5) - Credit::from_integer(1)
+                } else {
+                    credit_inv.credits(&self.comp) - Credit::from_integer(1)
+                }
+            },
+            Component::Large(_) => credit_inv.credits(&self.comp) - Credit::from_integer(1),
+            Component::Complex(_, _, _) => {
+                let complex = if lower_complex {
+                    credit_inv.complex_comp()
+                } else {
+                    Credit::from_integer(0)
+                };
+                if self.nice_pair {
+                    complex + credit_inv.complex_black(4)
+                } else {
+                    complex + credit_inv.complex_black(2)
+                }
+            },
+            _ => panic!()
         }
     }
 }
 
 impl Display for AbstractNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.nice_pair {
-            write!(f, "Abstract Node {} with nice pair", self.comp)
-        } else {
-            write!(f, "Abstract Node {}", self.comp)
-        }
+            write!(f, "[ {} np={}, used={}, in_not_out={} ]", self.comp, self.nice_pair, self.used, self.in_not_out)
     }
 }
 
@@ -224,6 +240,7 @@ pub struct ZoomedNode {
     pub npc: NicePairConfig,
     pub in_node: Option<Node>,
     pub out_node: Option<Node>,
+    pub used: bool,
 }
 
 impl ZoomedNode {
@@ -232,40 +249,53 @@ impl ZoomedNode {
     }
 
     fn value<C: CreditInvariant>(&self, credit_inv: C, lower_complex: bool) -> Credit {
-        let comp_credit_minus_edge = credit_inv.credits(&self.comp) - Credit::from_integer(1);
-        let complex = if lower_complex {
-            credit_inv.complex_comp()
-        } else {
-            Credit::from_integer(0)
-        };
+        
+        let nice_pair = self
+        .npc
+        .is_nice_pair(self.in_node.unwrap(), self.out_node.unwrap());
 
-        if self
-            .npc
-            .is_nice_pair(self.in_node.unwrap(), self.out_node.unwrap())
-        {
-            if self.comp.is_complex() {
-                complex
+        match self.comp {
+            Component::Cycle(_) if !self.used => {
+                if nice_pair {
+                    credit_inv.credits(&self.comp)    
+                } else {
+                    credit_inv.credits(&self.comp) - Credit::from_integer(1)
+                }
+            },
+            Component::Cycle(_) if self.used => {
+                assert!(self.comp.is_c5());
+                if self.in_node != self.out_node {
+                    credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5) - Credit::from_integer(1)
+                } else {
+                    credit_inv.credits(&self.comp) - Credit::from_integer(1)
+                }
+            },
+            Component::Large(_) => credit_inv.credits(&self.comp) - Credit::from_integer(1),
+            Component::Complex(_, _, _) => {
+                let complex = if lower_complex {
+                    credit_inv.complex_comp()
+                } else {
+                    Credit::from_integer(0)
+                };
+                if nice_pair {
+                    complex
                     + complex_cycle_value_base(
                         credit_inv.clone(),
                         self.comp.graph(),
                         self.in_node.unwrap(),
                         self.out_node.unwrap(),
                     )
-            } else {
-                comp_credit_minus_edge + Credit::from_integer(1)
-            }
-        } else {
-            if self.comp.is_complex() {
-                complex
+                } else {
+                    complex
                     + complex_cycle_value_base(
                         credit_inv.clone(),
                         self.comp.graph(),
                         self.in_node.unwrap(),
                         self.out_node.unwrap(),
                     )
-            } else {
-                comp_credit_minus_edge
-            }
+                }
+            },
+            _ => panic!()
         }
     }
 }
@@ -279,7 +309,7 @@ impl Display for ZoomedNode {
         if let Some(n) = self.out_node {
             write!(f, "out={}", n)?;
         }
-        write!(f, "npc={} ]", self.npc)
+        write!(f, "npc={}, used={} ]", self.npc, self.used)
     }
 }
 
@@ -327,4 +357,23 @@ pub struct SelectedMatchingInstance {
     pub path_matching: PathMatchingInstance,
     pub hit_comp_idx: usize,
     pub matched: Vec<Edge>,
+}
+
+
+#[derive(Clone, Debug)]
+pub struct CycleEdgeInstance {
+    pub path_matching: PathMatchingInstance,
+    pub cycle_edge: MatchingEdge,
+}
+
+#[derive(Clone, Debug)]
+pub struct PseudoCycleInstance {
+    pub path_matching: PathMatchingInstance,
+    pub cycle_edge: MatchingEdge,
+    pub pseudo_cycle: PseudoCycle,
+}
+
+#[derive(Clone, Debug)]
+pub struct PseudoCycle {
+    nodes: Vec<SuperNode>,
 }
