@@ -33,7 +33,7 @@ impl<'a> Enumerator<PathMatchingInstance, SelectedHitInstance> for ComponentHitE
                         .cloned()
                         .collect();
                     assert_eq!(matched.len(), num_edges);
-
+                   
                     Some(SelectedHitInstance {
                         path_matching: self.input.clone(),
                         hit_comp_idx,

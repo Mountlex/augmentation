@@ -10,12 +10,12 @@ use crate::path::{
     AbstractNode, PathHit, PseudoCycle, PseudoCycleInstance, SelectedMatchingInstance, SuperNode,
 };
 
-pub struct SwapPseudoCycleEdgeTactic {
+pub struct CycleMergeViaMatchingSwap {
     num_calls: usize,
     num_proofs: usize,
 }
 
-impl SwapPseudoCycleEdgeTactic {
+impl CycleMergeViaMatchingSwap {
     pub fn new() -> Self {
         Self {
             num_calls: 0,
@@ -24,7 +24,7 @@ impl SwapPseudoCycleEdgeTactic {
     }
 }
 
-impl Statistics for SwapPseudoCycleEdgeTactic {
+impl Statistics for CycleMergeViaMatchingSwap {
     fn print_stats(&self) {
         println!(
             "Cycle merges via matching swap {} / {}",
@@ -33,7 +33,7 @@ impl Statistics for SwapPseudoCycleEdgeTactic {
     }
 }
 
-impl Tactic<SelectedMatchingInstance> for SwapPseudoCycleEdgeTactic {
+impl Tactic<SelectedMatchingInstance> for CycleMergeViaMatchingSwap {
     fn precondition(
         &self,
         data: &SelectedMatchingInstance,

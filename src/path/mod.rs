@@ -79,6 +79,16 @@ impl NicePairConfig {
         NicePairConfig { nice_pairs: vec![] }
     }
 
+    pub fn merge(self, other: NicePairConfig) -> NicePairConfig {
+        NicePairConfig {
+            nice_pairs: vec![self.nice_pairs, other.nice_pairs].concat()
+        }
+    }
+
+    pub fn add_nice_pair(&mut self,  u: Node, v: Node)  {
+        self.nice_pairs.push((u,v))
+    }
+
     pub fn is_nice_pair(&self, u: Node, v: Node) -> bool {
         self.nice_pairs
             .iter()
@@ -394,4 +404,11 @@ pub struct PseudoCycleInstance {
 #[derive(Clone, Debug)]
 pub struct PseudoCycle {
     nodes: Vec<SuperNode>,
+}
+
+#[derive(Clone, Debug)]
+pub struct AugmentedPathInstance {
+    pub path: PathInstance,
+    pub non_path_matching_edges: Vec<MatchingEdge>,
+    pub fixed_edge: Vec<Edge>
 }

@@ -130,7 +130,7 @@ impl EnumeratorTactic<SelectedMatchingInstance, SelectedMatchingInstance> for NP
     }
 }
 
-fn comp_npcs(comp: &Component, nodes: &Vec<Node>) -> Vec<NicePairConfig> {
+pub fn comp_npcs(comp: &Component, nodes: &Vec<Node>) -> Vec<NicePairConfig> {
     match comp {
         Component::Cycle(c) if c.edge_count() <= 5 => {
             let all_pairs = nodes

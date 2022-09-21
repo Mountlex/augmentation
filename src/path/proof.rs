@@ -9,7 +9,7 @@ use crate::path::enumerators::pseudo_cycles::PseudoCyclesEnumTactic;
 use crate::path::tactics::cycle_rearrange::CycleRearrangeTactic;
 use crate::path::tactics::double_cycle_merge::DoubleCycleMergeTactic;
 use crate::path::tactics::pendant_rewire::PendantRewireTactic;
-use crate::path::tactics::swap_pseudo_cycle::SwapPseudoCycleEdgeTactic;
+use crate::path::tactics::swap_pseudo_cycle::CycleMergeViaMatchingSwap;
 use crate::{
     comps::{Component, CreditInvariant, DefaultCredits},
     proof_tree::ProofNode,
@@ -284,7 +284,6 @@ where
     }
 }
 
-
 #[derive(Clone, Debug)]
 pub enum PathNode {
     Used(Component),
@@ -361,20 +360,13 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                 all_sc(
                     sc,
                     NPCEnumTactic,
-                    or6(
+                    or7(
                         CountTactic::new(),
                         LongerPathTactic::new(),
                         ContractabilityTactic::new(),
                         any(
                             CycleEdgeEnumTactic,
-                            all(
-                                PseudoCyclesEnumTactic::new(true),
-                                or3(
-                                    CycleMerge::new(),
-                                    DoubleCycleMergeTactic::new(),
-                                    CycleRearrangeTactic::new(),
-                                ),
-                            ),
+                            all(PseudoCyclesEnumTactic::new(true), CycleMerge::new()),
                         ),
                         any(
                             ComponentHitEnumTactic,
@@ -388,10 +380,17 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                             LocalMerge::new(),
                                             LongerNicePathViaMatchingSwap::new(),
                                             PendantRewireTactic::new(),
-                                            SwapPseudoCycleEdgeTactic::new(),
+                                            CycleMergeViaMatchingSwap::new(),
                                         ),
                                     ),
                                 ),
+                            ),
+                        ),
+                        any(
+                            CycleEdgeEnumTactic,
+                            all(
+                                PseudoCyclesEnumTactic::new(true),
+                                or(DoubleCycleMergeTactic::new(), CycleRearrangeTactic::new()),
                             ),
                         ),
                         TacticsExhausted::new(),

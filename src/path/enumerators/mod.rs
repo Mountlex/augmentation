@@ -5,3 +5,4 @@ pub mod matching_nodes;
 pub mod nice_pairs;
 pub mod nice_paths;
 pub mod pseudo_cycles;
+pub mod cycle_expand;
