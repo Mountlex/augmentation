@@ -5,7 +5,7 @@ use crate::path::{
     AugmentedPathInstance, MatchingEdge, PathHit,
 };
 
-pub struct MatchingHitEnumTactic {
+pub struct MatchingHitEnum {
     comp_index: usize,
 }
 
@@ -69,13 +69,13 @@ impl<'a> Enumerator<AugmentedPathInstance> for MatchingHitEnumerator<'a> {
     }
 }
 
-impl MatchingHitEnumTactic {
+impl MatchingHitEnum {
     pub fn for_comp(idx: usize) -> Self {
         Self { comp_index: idx }
     }
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for MatchingHitEnumTactic {
+impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for MatchingHitEnum {
     type Enumer<'a> = MatchingHitEnumerator<'a>;
 
     fn msg(&self, _data_in: &AugmentedPathInstance) -> String {

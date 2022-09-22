@@ -5,7 +5,7 @@ use crate::path::{
     AugmentedPathInstance, PathHit, SelectedHitInstance,
 };
 
-pub struct ComponentHitEnumTactic;
+pub struct ComponentHitEnum;
 
 pub struct ComponentHitEnumerator<'a> {
     input: &'a AugmentedPathInstance,
@@ -39,7 +39,7 @@ impl<'a> Enumerator<SelectedHitInstance> for ComponentHitEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, SelectedHitInstance> for ComponentHitEnumTactic {
+impl EnumeratorTactic<AugmentedPathInstance, SelectedHitInstance> for ComponentHitEnum {
     type Enumer<'a> = ComponentHitEnumerator<'a> where Self: 'a;
 
     fn msg(&self, _data_in: &AugmentedPathInstance) -> String {

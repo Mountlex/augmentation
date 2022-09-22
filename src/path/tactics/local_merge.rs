@@ -14,12 +14,12 @@ use crate::{
     Credit,
 };
 
-pub struct LocalMerge {
+pub struct LocalMergeTactic {
     num_calls: usize,
     num_proofs: usize,
 }
 
-impl LocalMerge {
+impl LocalMergeTactic {
     pub fn new() -> Self {
         Self {
             num_calls: 0,
@@ -28,13 +28,13 @@ impl LocalMerge {
     }
 }
 
-impl Statistics for LocalMerge {
+impl Statistics for LocalMergeTactic {
     fn print_stats(&self) {
         println!("Local merge {} / {}", self.num_proofs, self.num_calls);
     }
 }
 
-impl Tactic<SelectedHitInstance> for LocalMerge {
+impl Tactic<SelectedHitInstance> for LocalMergeTactic {
     fn action(&mut self, data: &SelectedHitInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 

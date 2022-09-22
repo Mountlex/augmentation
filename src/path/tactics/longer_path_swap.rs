@@ -6,12 +6,12 @@ use crate::{
     proof_tree::ProofNode,
 };
 
-pub struct LongerNicePathViaMatchingSwap {
+pub struct LongerPathViaSwap {
     num_calls: usize,
     num_proofs: usize,
 }
 
-impl LongerNicePathViaMatchingSwap {
+impl LongerPathViaSwap {
     pub fn new() -> Self {
         Self {
             num_calls: 0,
@@ -20,7 +20,7 @@ impl LongerNicePathViaMatchingSwap {
     }
 }
 
-impl Statistics for LongerNicePathViaMatchingSwap {
+impl Statistics for LongerPathViaSwap {
     fn print_stats(&self) {
         println!(
             "Longer nice path via matching swap {} / {}",
@@ -29,7 +29,7 @@ impl Statistics for LongerNicePathViaMatchingSwap {
     }
 }
 
-impl Tactic<SelectedHitInstance> for LongerNicePathViaMatchingSwap {
+impl Tactic<SelectedHitInstance> for LongerPathViaSwap {
     fn action(&mut self, data: &SelectedHitInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 

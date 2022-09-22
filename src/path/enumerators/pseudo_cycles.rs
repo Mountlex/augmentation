@@ -6,7 +6,7 @@ use crate::{
     },
 };
 
-pub struct PseudoCyclesEnumTactic;
+pub struct PseudoCyclesEnum;
 
 pub struct PseudoCyclesEnumerator<'a> {
     input: &'a AugmentedPathInstance,
@@ -86,7 +86,7 @@ impl<'a> Enumerator<PseudoCycleInstance> for PseudoCyclesEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, PseudoCycleInstance> for PseudoCyclesEnumTactic {
+impl EnumeratorTactic<AugmentedPathInstance, PseudoCycleInstance> for PseudoCyclesEnum {
     type Enumer<'a> = PseudoCyclesEnumerator<'a> where Self: 'a;
 
     fn msg(&self, _data_in: &AugmentedPathInstance) -> String {
@@ -102,7 +102,7 @@ impl EnumeratorTactic<AugmentedPathInstance, PseudoCycleInstance> for PseudoCycl
     }
 }
 
-impl EnumeratorTactic<SelectedHitInstance, PseudoCycleInstance> for PseudoCyclesEnumTactic {
+impl EnumeratorTactic<SelectedHitInstance, PseudoCycleInstance> for PseudoCyclesEnum {
     type Enumer<'a> = PseudoCyclesEnumerator<'a> where Self: 'a;
 
     fn msg(&self, _data_in: &SelectedHitInstance) -> String {

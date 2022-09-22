@@ -12,12 +12,12 @@ use crate::{
     Credit,
 };
 
-pub struct CycleMerge {
+pub struct CycleMergeTactic {
     num_calls: usize,
     num_proofs: usize,
 }
 
-impl CycleMerge {
+impl CycleMergeTactic {
     pub fn new() -> Self {
         Self {
             num_calls: 0,
@@ -26,13 +26,13 @@ impl CycleMerge {
     }
 }
 
-impl Statistics for CycleMerge {
+impl Statistics for CycleMergeTactic {
     fn print_stats(&self) {
         println!("Cycle merge {} / {}", self.num_proofs, self.num_calls);
     }
 }
 
-impl Tactic<PseudoCycleInstance> for CycleMerge {
+impl Tactic<PseudoCycleInstance> for CycleMergeTactic {
     fn action(&mut self, data: &PseudoCycleInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 

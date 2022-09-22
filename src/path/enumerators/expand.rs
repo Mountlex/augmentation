@@ -8,8 +8,8 @@ use crate::{
     },
 };
 
-pub struct ExpandEnumTactic;
-pub struct ExpandLastEnumTactic;
+pub struct ExpandEnum;
+pub struct ExpandLastEnum;
 
 pub struct ExpandEnumerator<'a> {
     instance: &'a AugmentedPathInstance,
@@ -110,7 +110,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for ExpandLastEnumTactic {
+impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for ExpandLastEnum {
     type Enumer<'a> = ExpandEnumerator<'a>;
 
     fn msg(&self, _data: &AugmentedPathInstance) -> String {
@@ -129,7 +129,7 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for ExpandLa
     }
 }
 
-impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for ExpandEnumTactic {
+impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for ExpandEnum {
     type Enumer<'a> = ExpandEnumerator<'a>;
 
     fn msg(&self, data: &SelectedHitInstance) -> String {

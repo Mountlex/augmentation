@@ -4,28 +4,28 @@ use std::{marker::PhantomData, path::PathBuf};
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::path::enumerators::expand::{ExpandEnumTactic, ExpandLastEnumTactic};
-use crate::path::enumerators::pseudo_cycles::PseudoCyclesEnumTactic;
+use crate::path::enumerators::expand::{ExpandEnum, ExpandLastEnum};
+use crate::path::enumerators::pseudo_cycles::PseudoCyclesEnum;
 use crate::path::tactics::cycle_rearrange::CycleRearrangeTactic;
 use crate::path::tactics::double_cycle_merge::DoubleCycleMergeTactic;
 use crate::path::tactics::pendant_rewire::PendantRewireTactic;
-use crate::path::tactics::swap_pseudo_cycle::CycleMergeViaMatchingSwap;
+use crate::path::tactics::swap_pseudo_cycle::CycleMergeViaSwap;
 use crate::{
     comps::{Component, CreditInvariant, DefaultCredits},
     proof_tree::ProofNode,
 };
 
-use super::enumerators::comp_hits::ComponentHitEnumTactic;
-use super::enumerators::matching_hits::MatchingHitEnumTactic;
-use super::enumerators::matching_nodes::MatchingNodesEnumTactic;
-use super::enumerators::nice_paths::{PathEnumTactic, PathEnumeratorInput};
+use super::enumerators::comp_hits::ComponentHitEnum;
+use super::enumerators::matching_hits::MatchingHitEnum;
+use super::enumerators::matching_nodes::MatchingNodesEnum;
+use super::enumerators::nice_paths::{PathEnum, PathEnumeratorInput};
 use super::tactics::complex_merge::LocalComplexMerge;
 use super::tactics::contract::ContractabilityTactic;
-use super::tactics::cycle_merge::CycleMerge;
-use super::tactics::local_merge::LocalMerge;
+use super::tactics::cycle_merge::CycleMergeTactic;
+use super::tactics::local_merge::LocalMergeTactic;
 use super::tactics::longer_path::LongerPathTactic;
-use super::tactics::longer_path_swap::LongerNicePathViaMatchingSwap;
-use super::{AugmentedPathInstance};
+use super::tactics::longer_path_swap::LongerPathViaSwap;
+use super::AugmentedPathInstance;
 
 pub struct ProofContext {
     pub credit_inv: DefaultCredits,
@@ -352,38 +352,40 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
 
         let mut proof_tactic = all_sc(
             sc,
-            PathEnumTactic,
+            PathEnum,
             all_sc(
                 sc,
-                MatchingHitEnumTactic::for_comp(path_length - 1),
+                MatchingHitEnum::for_comp(path_length - 1),
                 all_sc(
                     sc,
-                    ExpandLastEnumTactic,
-                    or7(
+                    ExpandLastEnum,
+                    or6(
                         CountTactic::new(),
                         LongerPathTactic::new(),
                         ContractabilityTactic::new(),
-                        any(PseudoCyclesEnumTactic, CycleMerge::new()),
                         any(
-                            ComponentHitEnumTactic,
+                            PseudoCyclesEnum,
+                            or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
+                        ),
+                        any(
+                            ComponentHitEnum,
                             or(
                                 LocalComplexMerge::new(),
                                 all(
-                                    MatchingNodesEnumTactic,
+                                    MatchingNodesEnum,
                                     all(
-                                        ExpandEnumTactic,
+                                        ExpandEnum,
                                         or5(
                                             PendantRewireTactic::new(),
-                                            LocalMerge::new(),
-                                            any(PseudoCyclesEnumTactic, CycleMerge::new()),
-                                            LongerNicePathViaMatchingSwap::new(),
-                                            CycleMergeViaMatchingSwap::new(),
+                                            LocalMergeTactic::new(),
+                                            any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                                            LongerPathViaSwap::new(),
+                                            CycleMergeViaSwap::new(),
                                         ),
                                     ),
                                 ),
                             ),
                         ),
-                        any(PseudoCyclesEnumTactic, CycleRearrangeTactic::new()),
                         TacticsExhausted::new(),
                     ),
                 ),

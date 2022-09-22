@@ -1,15 +1,15 @@
 use crate::path::{
     proof::{or, Statistics, Tactic},
-    tactics::{cycle_merge::CycleMerge, cycle_rearrange::CycleRearrangeTactic},
+    tactics::{cycle_merge::CycleMergeTactic, cycle_rearrange::CycleRearrangeTactic},
     CycleEdge, PathHit, PseudoCycle, PseudoCycleInstance, SelectedHitInstance,
 };
 
-pub struct CycleMergeViaMatchingSwap {
+pub struct CycleMergeViaSwap {
     num_calls: usize,
     num_proofs: usize,
 }
 
-impl CycleMergeViaMatchingSwap {
+impl CycleMergeViaSwap {
     pub fn new() -> Self {
         Self {
             num_calls: 0,
@@ -18,7 +18,7 @@ impl CycleMergeViaMatchingSwap {
     }
 }
 
-impl Statistics for CycleMergeViaMatchingSwap {
+impl Statistics for CycleMergeViaSwap {
     fn print_stats(&self) {
         println!(
             "Cycle merges via matching swap {} / {}",
@@ -27,7 +27,7 @@ impl Statistics for CycleMergeViaMatchingSwap {
     }
 }
 
-impl Tactic<SelectedHitInstance> for CycleMergeViaMatchingSwap {
+impl Tactic<SelectedHitInstance> for CycleMergeViaSwap {
     fn precondition(
         &self,
         data: &SelectedHitInstance,
@@ -100,7 +100,7 @@ impl Tactic<SelectedHitInstance> for CycleMergeViaMatchingSwap {
         };
 
         let mut proof = or(
-            CycleMerge::new(),
+            CycleMergeTactic::new(),
             //DoubleCycleMergeTactic::new(),
             CycleRearrangeTactic::new(),
         )

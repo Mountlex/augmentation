@@ -19,7 +19,7 @@ impl PathEnumeratorInput {
     }
 }
 
-pub struct PathEnumTactic;
+pub struct PathEnum;
 
 pub struct PathEnumerator<'a> {
     input: &'a PathEnumeratorInput,
@@ -93,7 +93,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for PathEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<PathEnumeratorInput, AugmentedPathInstance> for PathEnumTactic {
+impl EnumeratorTactic<PathEnumeratorInput, AugmentedPathInstance> for PathEnum {
     type Enumer<'a> = PathEnumerator<'a>;
 
     fn msg(&self, data_in: &PathEnumeratorInput) -> String {

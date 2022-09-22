@@ -5,13 +5,13 @@ use crate::path::{
     SelectedHitInstance,
 };
 
-pub struct MatchingNodesEnumTactic;
+pub struct MatchingNodesEnum;
 
 pub struct MatchingNodesEnumerator<'a> {
     instance: &'a SelectedHitInstance,
 }
 
-impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for MatchingNodesEnumTactic {
+impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for MatchingNodesEnum {
     type Enumer<'a> = MatchingNodesEnumerator<'a>;
     fn msg(&self, data_in: &SelectedHitInstance) -> String {
         format!(
