@@ -14,9 +14,7 @@ pub struct NPCEnumerator<'a, I> {
     instance: &'a I,
 }
 
-impl<'a> Enumerator<PathMatchingInstance, PathMatchingInstance>
-    for NPCEnumerator<'a, PathMatchingInstance>
-{
+impl<'a> Enumerator<PathMatchingInstance> for NPCEnumerator<'a, PathMatchingInstance> {
     fn iter(
         &mut self,
         _context: &mut ProofContext,
@@ -48,9 +46,7 @@ impl<'a> Enumerator<PathMatchingInstance, PathMatchingInstance>
     }
 }
 
-impl<'a> Enumerator<SelectedMatchingInstance, SelectedMatchingInstance>
-    for NPCEnumerator<'a, SelectedMatchingInstance>
-{
+impl<'a> Enumerator<SelectedMatchingInstance> for NPCEnumerator<'a, SelectedMatchingInstance> {
     fn iter(
         &mut self,
         _context: &mut ProofContext,

@@ -4,7 +4,7 @@ use crate::{
     path::{
         proof::{ProofContext, Statistics, Tactic},
         utils::hamiltonian_paths,
-        PathMatchingInstance,
+        AugmentedPathInstance,
     },
     proof_tree::ProofNode,
 };
@@ -32,11 +32,11 @@ impl Statistics for ContractabilityTactic {
     }
 }
 
-impl Tactic<PathMatchingInstance> for ContractabilityTactic {
+impl Tactic<AugmentedPathInstance> for ContractabilityTactic {
     fn action(
         &mut self,
-        data: &PathMatchingInstance,
-        _context: &mut ProofContext,
+        data: &AugmentedPathInstance,
+        context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
@@ -50,11 +50,8 @@ impl Tactic<PathMatchingInstance> for ContractabilityTactic {
             );
         }
 
-        let free_nodes = last_comp
-            .graph()
-            .nodes()
-            .filter(|n| !data.matching.sources().contains(n))
-            .collect_vec();
+        let free_nodes = data.free_nodes(context.path_len - 1);
+        let used_nodes = data.all_edge_endpoints(context.path_len - 1);
 
         let num_edges_between_free_nodes = last_comp
             .graph()
@@ -66,8 +63,7 @@ impl Tactic<PathMatchingInstance> for ContractabilityTactic {
 
         if opt_lb * 5 >= last_comp.graph().node_count() * 4 {
             let chord_implies_absent_np = free_nodes.iter().combinations(2).any(|free_edge| {
-                data.matching
-                    .sources()
+                used_nodes
                     .iter()
                     .combinations(2)
                     .filter(|m| !last.npc.is_nice_pair(*m[0], *m[1]))
@@ -107,7 +103,7 @@ impl Tactic<PathMatchingInstance> for ContractabilityTactic {
         }
     }
 
-    fn precondition(&self, _data: &PathMatchingInstance, _context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &AugmentedPathInstance, _context: &ProofContext) -> bool {
         true
     }
 }

@@ -35,12 +35,13 @@ impl Tactic<SelectedHitInstance> for LocalComplexMerge {
     fn action(&mut self, data: &SelectedHitInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 
-        let left_comp = data.path_matching.path.nodes[data.hit_comp_idx].get_comp();
-        let last_comp_ref = data.path_matching.path.last_comp();
+        let left_comp = data.instance.path.nodes[data.hit_comp_idx].get_comp();
+        let last_comp_ref = data.instance.path.last_comp();
 
-        assert!(data.matched.len() == 1);
+        let matched = data.instance.matching_edges_hit(data.hit_comp_idx);
+        assert!(matched.len() == 1);
 
-        let right_match = data.matched.first().unwrap().source();
+        let right_match = matched.first().unwrap().source();
         // only try complex merges
 
         let complex_merge = left_comp.graph().nodes().all(|left_match| {
@@ -64,9 +65,10 @@ impl Tactic<SelectedHitInstance> for LocalComplexMerge {
     }
 
     fn precondition(&self, data: &SelectedHitInstance, _context: &ProofContext) -> bool {
-        let left_comp = data.path_matching.path.nodes[data.hit_comp_idx].get_comp();
-        let last_comp_ref = data.path_matching.path.last_comp();
+        let left_comp = data.instance.path.nodes[data.hit_comp_idx].get_comp();
+        let last_comp_ref = data.instance.path.last_comp();
+        let matched = data.instance.matching_edges_hit(data.hit_comp_idx);
 
-        left_comp.is_complex() && last_comp_ref.is_complex() && data.matched.len() == 1
+        left_comp.is_complex() && last_comp_ref.is_complex() && matched.len() == 1
     }
 }

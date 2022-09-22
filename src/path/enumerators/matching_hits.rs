@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::path::{
     proof::{Enumerator, EnumeratorTactic, ProofContext},
-    Matching3, MatchingEdge, PathHit, PathInstance, PathMatchingInstance,
+    AugmentedPathInstance, MatchingEdge, PathHit,
 };
 
 pub struct MatchingHitEnumTactic {
@@ -11,18 +11,18 @@ pub struct MatchingHitEnumTactic {
 
 pub struct MatchingHitEnumerator<'a> {
     comp_index: usize,
-    path: &'a PathInstance,
+    instance: &'a AugmentedPathInstance,
 }
 
-impl<'a> Enumerator<PathInstance, PathMatchingInstance> for MatchingHitEnumerator<'a> {
+impl<'a> Enumerator<AugmentedPathInstance> for MatchingHitEnumerator<'a> {
     fn iter(
         &mut self,
         context: &mut ProofContext,
-    ) -> Box<dyn Iterator<Item = PathMatchingInstance> + '_> {
+    ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         assert!(self.comp_index > 0);
 
-        let path_len = self.path.nodes.len();
-        let comp = self.path.nodes[self.comp_index].get_comp();
+        let path_len = context.path_len;
+        let comp = self.instance.path[self.comp_index].get_comp();
         let nodes = comp.graph().nodes().collect_vec();
 
         let mut targets = vec![PathHit::Outside];
@@ -32,60 +32,36 @@ impl<'a> Enumerator<PathInstance, PathMatchingInstance> for MatchingHitEnumerato
             }
         }
 
-        let free_edges = if self.comp_index == context.path_len - 1 {
+        let num_edges = if self.comp_index == context.path_len - 1 {
             2
         } else {
             1
         };
 
-        let path = self.path.clone();
-        let comp_index = self.comp_index;
+        let instance = self.instance.clone();
 
         let iter = nodes
             .into_iter()
-            .permutations(3)
+            .filter(|n| *n != comp.fixed_node()) // in of last component already matched!
+            .permutations(num_edges)
             .flat_map(move |m_endpoints| {
-                let path_clone = path.clone();
+                let instance_clone = instance.clone();
                 targets
                     .clone()
                     .into_iter()
-                    .combinations_with_replacement(free_edges)
+                    .combinations_with_replacement(num_edges)
                     .map(move |hits| {
-                        let matching = if free_edges == 2 {
-                            let m1 = MatchingEdge(m_endpoints[1], hits[0]);
-                            let m2 = MatchingEdge(m_endpoints[2], hits[1]);
-                            Matching3 {
-                                source_comp_idx: comp_index,
-                                path_edge_left: MatchingEdge(
-                                    m_endpoints[0],
-                                    PathHit::Path(path_len - 2),
-                                )
-                                .into(),
-                                path_edge_right: None,
-                                other_edges: vec![m1, m2],
-                            }
-                        } else {
-                            let m2 = MatchingEdge(m_endpoints[2], hits[0]);
-                            Matching3 {
-                                source_comp_idx: comp_index,
-                                path_edge_left: MatchingEdge(
-                                    m_endpoints[0],
-                                    PathHit::Path(comp_index - 1),
-                                )
-                                .into(),
-                                path_edge_right: MatchingEdge(
-                                    m_endpoints[1],
-                                    PathHit::Path(comp_index + 1),
-                                )
-                                .into(),
-                                other_edges: vec![m2],
-                            }
-                        };
+                        let mut matching_edges = m_endpoints
+                            .iter()
+                            .zip(hits.into_iter())
+                            .map(|(source, hit)| MatchingEdge(*source, hit))
+                            .collect_vec();
 
-                        PathMatchingInstance {
-                            path: path_clone.clone(),
-                            matching,
-                        }
+                        let mut instance_clone = instance_clone.clone();
+                        instance_clone
+                            .non_path_matching_edges
+                            .append(&mut matching_edges);
+                        instance_clone
                     })
             });
 
@@ -99,21 +75,21 @@ impl MatchingHitEnumTactic {
     }
 }
 
-impl EnumeratorTactic<PathInstance, PathMatchingInstance> for MatchingHitEnumTactic {
+impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for MatchingHitEnumTactic {
     type Enumer<'a> = MatchingHitEnumerator<'a>;
 
-    fn msg(&self, _data_in: &PathInstance) -> String {
+    fn msg(&self, _data_in: &AugmentedPathInstance) -> String {
         format!("Enumerate all matching hits from last component")
     }
 
-    fn item_msg(&self, item: &PathMatchingInstance) -> String {
-        format!("{}", item.matching)
+    fn item_msg(&self, item: &AugmentedPathInstance) -> String {
+        format!("{:?}", item.non_path_matching_edges)
     }
 
-    fn get_enumerator<'a>(&'a self, data: &'a PathInstance) -> Self::Enumer<'a> {
+    fn get_enumerator<'a>(&'a self, data: &'a AugmentedPathInstance) -> Self::Enumer<'a> {
         MatchingHitEnumerator {
             comp_index: self.comp_index,
-            path: data,
+            instance: data,
         }
     }
 }

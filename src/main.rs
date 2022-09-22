@@ -1,3 +1,5 @@
+#![feature(drain_filter)]
+
 use std::{fs::OpenOptions, path::PathBuf};
 
 use clap::Parser;

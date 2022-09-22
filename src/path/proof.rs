@@ -5,6 +5,7 @@ use itertools::Itertools;
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::path::enumerators::cycles_edges::CycleEdgeEnumTactic;
+use crate::path::enumerators::expand::{ExpandEnumTactic, ExpandLastEnumTactic};
 use crate::path::enumerators::pseudo_cycles::PseudoCyclesEnumTactic;
 use crate::path::tactics::cycle_rearrange::CycleRearrangeTactic;
 use crate::path::tactics::double_cycle_merge::DoubleCycleMergeTactic;
@@ -26,7 +27,7 @@ use super::tactics::cycle_merge::CycleMerge;
 use super::tactics::local_merge::LocalMerge;
 use super::tactics::longer_path::LongerPathTactic;
 use super::tactics::longer_path_swap::LongerNicePathViaMatchingSwap;
-use super::PathMatchingInstance;
+use super::{AugmentedPathInstance, PathMatchingInstance};
 
 pub struct ProofContext {
     pub credit_inv: DefaultCredits,
@@ -34,7 +35,7 @@ pub struct ProofContext {
 }
 
 pub trait EnumeratorTactic<I, O> {
-    type Enumer<'a>: Enumerator<I, O>
+    type Enumer<'a>: Enumerator<O>
     where
         Self: 'a,
         I: 'a;
@@ -44,7 +45,7 @@ pub trait EnumeratorTactic<I, O> {
     fn item_msg(&self, item: &O) -> String;
 }
 
-pub trait Enumerator<I, O> {
+pub trait Enumerator<O> {
     fn iter(&mut self, context: &mut ProofContext) -> Box<dyn Iterator<Item = O> + '_>;
 }
 
@@ -327,7 +328,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
         .into_iter()
         .flat_map(|comp| {
             if comp.is_c5() {
-                vec![PathNode::Used(comp.clone()), PathNode::Unused(comp.clone())]
+                vec![PathNode::Unused(comp.clone()), PathNode::Used(comp.clone())]
             } else {
                 vec![PathNode::Unused(comp.clone())]
             }
@@ -338,7 +339,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
         .into_iter()
         .flat_map(|comp| {
             if comp.is_c5() {
-                vec![PathNode::Used(comp.clone()), PathNode::Unused(comp.clone())]
+                vec![PathNode::Unused(comp.clone()), PathNode::Used(comp.clone())]
             } else {
                 vec![PathNode::Unused(comp.clone())]
             }
@@ -359,15 +360,12 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                 MatchingHitEnumTactic::for_comp(path_length - 1),
                 all_sc(
                     sc,
-                    NPCEnumTactic,
+                    ExpandLastEnumTactic,
                     or7(
                         CountTactic::new(),
                         LongerPathTactic::new(),
                         ContractabilityTactic::new(),
-                        any(
-                            CycleEdgeEnumTactic,
-                            all(PseudoCyclesEnumTactic::new(true), CycleMerge::new()),
-                        ),
+                        any(PseudoCyclesEnumTactic, CycleMerge::new()),
                         any(
                             ComponentHitEnumTactic,
                             or(
@@ -375,24 +373,19 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                 all(
                                     MatchingNodesEnumTactic,
                                     all(
-                                        NPCEnumTactic,
-                                        or4(
-                                            LocalMerge::new(),
-                                            LongerNicePathViaMatchingSwap::new(),
+                                        ExpandEnumTactic,
+                                        or5(
                                             PendantRewireTactic::new(),
+                                            LocalMerge::new(),
+                                            any(PseudoCyclesEnumTactic, CycleMerge::new()),
+                                            LongerNicePathViaMatchingSwap::new(),
                                             CycleMergeViaMatchingSwap::new(),
                                         ),
                                     ),
                                 ),
                             ),
                         ),
-                        any(
-                            CycleEdgeEnumTactic,
-                            all(
-                                PseudoCyclesEnumTactic::new(true),
-                                or(DoubleCycleMergeTactic::new(), CycleRearrangeTactic::new()),
-                            ),
-                        ),
+                        any(PseudoCyclesEnumTactic, CycleRearrangeTactic::new()),
                         TacticsExhausted::new(),
                     ),
                 ),
@@ -453,12 +446,12 @@ impl TacticsExhausted {
     }
 }
 
-impl Tactic<PathMatchingInstance> for TacticsExhausted {
-    fn precondition(&self, _data: &PathMatchingInstance, _context: &ProofContext) -> bool {
+impl Tactic<AugmentedPathInstance> for TacticsExhausted {
+    fn precondition(&self, _data: &AugmentedPathInstance, _context: &ProofContext) -> bool {
         true
     }
 
-    fn action(&mut self, _data: &PathMatchingInstance, _context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, _data: &AugmentedPathInstance, _context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
         ProofNode::new_leaf("Tactics exhausted!".into(), false)
     }
@@ -480,12 +473,12 @@ impl CountTactic {
     }
 }
 
-impl Tactic<PathMatchingInstance> for CountTactic {
-    fn precondition(&self, _data: &PathMatchingInstance, _context: &ProofContext) -> bool {
+impl Tactic<AugmentedPathInstance> for CountTactic {
+    fn precondition(&self, _data: &AugmentedPathInstance, _context: &ProofContext) -> bool {
         true
     }
 
-    fn action(&mut self, _data: &PathMatchingInstance, _context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, _data: &AugmentedPathInstance, _context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
         ProofNode::new_leaf("".into(), false)
     }
@@ -493,6 +486,6 @@ impl Tactic<PathMatchingInstance> for CountTactic {
 
 impl Statistics for CountTactic {
     fn print_stats(&self) {
-        println!("PathMatchingInstances {}", self.num_calls)
+        println!("AugmentedPathInstances {}", self.num_calls)
     }
 }

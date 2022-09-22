@@ -224,6 +224,14 @@ impl Component {
         }
     }
 
+    pub fn fixed_node(&self) -> Node {
+        match self {
+            Component::Cycle(c) => c.nodes().find(|_| true).unwrap(),
+            Component::Large(c) => c.nodes().find(|_| true).unwrap(),
+            Component::Complex(_, blacks, _) => blacks[3],
+        }
+    }
+
     pub fn matching_permutations(&self, size: usize) -> Vec<Vec<Node>> {
         match self {
             Component::Cycle(g) => g.nodes().permutations(size).collect(),

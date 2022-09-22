@@ -1,10 +1,7 @@
-use itertools::Itertools;
-
 use crate::{
     path::{
         proof::{ProofContext, Statistics, Tactic},
-        utils::hamiltonian_paths,
-        SelectedMatchingInstance,
+        SelectedHitInstance,
     },
     proof_tree::ProofNode,
 };
@@ -32,32 +29,24 @@ impl Statistics for LongerNicePathViaMatchingSwap {
     }
 }
 
-impl Tactic<SelectedMatchingInstance> for LongerNicePathViaMatchingSwap {
-    fn action(&mut self, data: &SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
+impl Tactic<SelectedHitInstance> for LongerNicePathViaMatchingSwap {
+    fn action(&mut self, data: &SelectedHitInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 
-        let three_matching = &data.path_matching.matching;
-        let matched = &data.matched;
+        let matched = data
+            .instance
+            .fixed_edges_between(context.path_len - 2, context.path_len - 1);
+        let outside_hits = data.instance.outside_hits();
 
-        let outside_hits = three_matching.outside_hits();
-
-        let last = data.path_matching.path.nodes.last().unwrap().get_zoomed();
-        let prelast = data.path_matching.path.nodes[context.path_len - 2].get_zoomed();
+        let last = data.instance.path.nodes.last().unwrap().get_zoomed();
+        let prelast = data.instance.path[context.path_len - 2].get_zoomed();
         let last_comp = last.get_comp();
         let prelast_comp = prelast.get_comp();
 
         let m_outside = outside_hits[0];
 
-        let m_path = matched
-            .iter()
-            .find(|e| three_matching.path_edge_left.unwrap().source() == e.1)
-            .unwrap()
-            .clone();
-        let m_other = matched
-            .iter()
-            .find(|e| three_matching.path_edge_left.unwrap().source() != e.1)
-            .unwrap()
-            .clone();
+        let m_path = data.instance.path_edge(context.path_len - 1).unwrap();
+        let m_other = matched.iter().find(|e| m_path.1 != e.1).unwrap().clone();
 
         // If matching edge swap cannot be a nice path
         if (last_comp.is_c3()
@@ -78,33 +67,10 @@ impl Tactic<SelectedMatchingInstance> for LongerNicePathViaMatchingSwap {
             return ProofNode::new_leaf("Longer path via swapping matching edges".into(), true);
         }
 
-        // For others, we have to check that swapping the path edges keeps a nice pair
-        if prelast_comp
-            .graph()
-            .nodes()
-            .filter(|left_in| *left_in != m_path.0)
-            .all(|left_in| {
-                // for any left_in, we consider all possible hamiltonian paths for the current nice pair
-                hamiltonian_paths(left_in, m_path.0, &prelast_comp.nodes())
-                    .into_iter()
-                    .all(|ham_path| {
-                        let edges = ham_path
-                            .windows(2)
-                            .map(|e| (e[0], e[1]))
-                            .chain(prelast_comp.edges().into_iter())
-                            .collect_vec();
+        let left_in = prelast.in_node.unwrap();
 
-                        // If for every such path, a nice pair using _any_ hamiltonian path for left_in and the new path edge endpoint is possible, it must be a nice pair
-                        hamiltonian_paths(left_in, m_other.0, &prelast_comp.nodes())
-                            .into_iter()
-                            .any(|path| {
-                                path.windows(2).map(|e| (e[0], e[1])).all(|(u, v)| {
-                                    edges.contains(&(u, v)) || edges.contains(&(v, u))
-                                })
-                            })
-                    })
-            })
-        {
+        // Check if new path edge still ensures nice pair property of prelast
+        if prelast.npc.is_nice_pair(left_in, m_other.0) {
             self.num_proofs += 1;
             return ProofNode::new_leaf("Longer path via swapping matching edges".into(), true);
         }
@@ -114,9 +80,12 @@ impl Tactic<SelectedMatchingInstance> for LongerNicePathViaMatchingSwap {
         );
     }
 
-    fn precondition(&self, data: &SelectedMatchingInstance, context: &ProofContext) -> bool {
-        let outside_hits = data.path_matching.matching.outside_hits();
-        data.matched.len() == 2
+    fn precondition(&self, data: &SelectedHitInstance, context: &ProofContext) -> bool {
+        let outside_hits = data.instance.outside_hits();
+        data.instance
+            .fixed_edges_between(context.path_len - 2, context.path_len - 1)
+            .len()
+            == 2
             && outside_hits.len() == 1
             && data.hit_comp_idx == context.path_len - 2
     }

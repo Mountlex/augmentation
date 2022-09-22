@@ -1,4 +1,3 @@
-
 use crate::{
     path::{
         proof::{ProofContext, Statistics, Tactic},
@@ -42,7 +41,7 @@ impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
             .npc
             .is_nice_pair(last_node.in_node.unwrap(), last_node.out_node.unwrap());
 
-        let new_last = data.pseudo_cycle.nodes[1].get_abstract();
+        let new_last = &data.pseudo_cycle.nodes[1];
         let new_last_comp = new_last.get_comp();
 
         if (last_comp.is_c3() || last_comp.is_c4()) && !last_np {

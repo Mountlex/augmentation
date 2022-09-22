@@ -1,13 +1,7 @@
-use itertools::Itertools;
-
 use crate::path::{
-    proof::{or3, Statistics, Tactic},
-    tactics::{
-        cycle_merge::CycleMerge, cycle_rearrange::CycleRearrangeTactic,
-        double_cycle_merge::DoubleCycleMergeTactic,
-    },
-    utils::hamiltonian_paths,
-    AbstractNode, PathHit, PseudoCycle, PseudoCycleInstance, SelectedMatchingInstance, SuperNode,
+    proof::{or, Statistics, Tactic},
+    tactics::{cycle_merge::CycleMerge, cycle_rearrange::CycleRearrangeTactic},
+    CycleEdge, PathHit, PseudoCycle, PseudoCycleInstance, SelectedHitInstance,
 };
 
 pub struct CycleMergeViaMatchingSwap {
@@ -33,123 +27,81 @@ impl Statistics for CycleMergeViaMatchingSwap {
     }
 }
 
-impl Tactic<SelectedMatchingInstance> for CycleMergeViaMatchingSwap {
+impl Tactic<SelectedHitInstance> for CycleMergeViaMatchingSwap {
     fn precondition(
         &self,
-        data: &SelectedMatchingInstance,
+        data: &SelectedHitInstance,
         context: &crate::path::proof::ProofContext,
     ) -> bool {
         data.hit_comp_idx == context.path_len - 2
-            && data.matched.len() == 2
-            && data.path_matching.matching.outside_hits().is_empty()
+            && data
+                .instance
+                .fixed_edges_between(context.path_len - 2, context.path_len - 1)
+                .len()
+                == 2
+            && data
+                .instance
+                .non_path_matching_edges
+                .iter()
+                .any(|m| matches!(m.hit(), PathHit::Path(i) if i <= context.path_len - 3))
     }
 
     fn action(
         &mut self,
-        data: &SelectedMatchingInstance,
+        data: &SelectedHitInstance,
         context: &mut crate::path::proof::ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
-        let three_matching = &data.path_matching.matching;
-        let matched = &data.matched;
+        let matched = data
+            .instance
+            .fixed_edges_between(context.path_len - 2, context.path_len - 1);
 
-        let path_hit = three_matching
-            .other_edges
+        let m_path = data.instance.path_edge(context.path_len - 1).unwrap();
+        let m_other = matched.iter().find(|e| m_path.1 != e.1).unwrap().clone();
+
+        let mut new_instance = data.clone();
+        new_instance
+            .instance
+            .swap_path_edge(m_other, context.path_len - 1);
+
+        //dbg!(&new_instance);
+        let path_hit = new_instance
+            .instance
+            .non_path_matching_edges
             .iter()
             .find(|e| matches!(e.hit(), PathHit::Path(i) if i <= context.path_len - 3))
             .unwrap();
 
-        let last = data.path_matching.path.nodes.last().unwrap().get_zoomed();
-        let prelast = data.path_matching.path.nodes[context.path_len - 2].get_zoomed();
-        let last_comp = last.get_comp();
-        let prelast_comp = prelast.get_comp();
-
-        let m_path = matched
-            .iter()
-            .find(|e| three_matching.path_edge_left.unwrap().source() == e.1)
-            .unwrap()
-            .clone();
-        let m_other = matched
-            .iter()
-            .find(|e| three_matching.path_edge_left.unwrap().source() != e.1)
-            .unwrap()
-            .clone();
-
-        // Check if a possible nice pair in prelast is destroyed by swapping the last edge!
-        let prelast_np = if prelast_comp.is_c3()
-            || prelast_comp.is_c4()
-            || (prelast_comp.is_c5() && !prelast.used)
-        {
-            prelast_comp
-                .graph()
-                .nodes()
-                .filter(|left_in| *left_in != m_path.0)
-                .all(|left_in| {
-                    // for any left_in, we consider all possible hamiltonian paths for the current nice pair
-                    hamiltonian_paths(left_in, m_path.0, &prelast_comp.nodes())
-                        .into_iter()
-                        .all(|ham_path| {
-                            let edges = ham_path
-                                .windows(2)
-                                .map(|e| (e[0], e[1]))
-                                .chain(prelast_comp.edges().into_iter())
-                                .collect_vec();
-
-                            // If for every such path, a nice pair using _any_ hamiltonian path for left_in and the new path edge endpoint is possible, it must be a nice pair
-                            hamiltonian_paths(left_in, m_other.0, &prelast_comp.nodes())
-                                .into_iter()
-                                .any(|path| {
-                                    path.windows(2).map(|e| (e[0], e[1])).all(|(u, v)| {
-                                        edges.contains(&(u, v)) || edges.contains(&(v, u))
-                                    })
-                                })
-                        })
-                })
-        } else {
-            false
-        };
-
         // Build new cycle
-        let mut pseudo_nodes = data
-            .path_matching
+        let mut pseudo_nodes = new_instance
+            .instance
             .path
             .nodes
             .split_at(path_hit.hits_path().unwrap())
             .1
             .to_vec();
 
-        let length = pseudo_nodes.len();
-
+        // Set in and out for matching edge
         pseudo_nodes.last_mut().unwrap().get_zoomed_mut().out_node = Some(path_hit.source());
-        pseudo_nodes.last_mut().unwrap().get_zoomed_mut().out_node = Some(m_other.1);
-
         pseudo_nodes
             .first_mut()
             .unwrap()
             .get_abstract_mut()
             .nice_pair = false;
 
-        let prelast_node = pseudo_nodes.get_mut(length - 2).unwrap();
-        *prelast_node = SuperNode::Abstract(AbstractNode {
-            comp: prelast_node.get_comp().clone(),
-            in_not_out: true,
-            nice_pair: prelast_np,
-            used: prelast.used,
-        });
-
         let cycle = PseudoCycle {
             nodes: pseudo_nodes,
         };
         let cycle_instance = PseudoCycleInstance {
-            path_matching: data.path_matching.clone(),
-            cycle_edge: path_hit.clone(),
+            cycle_edge: CycleEdge::Matching(path_hit.clone()),
+            path_matching: new_instance.instance,
             pseudo_cycle: cycle,
         };
 
-        let mut proof = or3(
+        let mut proof = or(
             CycleMerge::new(),
-            DoubleCycleMergeTactic::new(),
+            //DoubleCycleMergeTactic::new(),
             CycleRearrangeTactic::new(),
         )
         .action(&cycle_instance, context);

@@ -9,7 +9,7 @@ pub struct CycleEdgeEnumerator<'a> {
     input: &'a PathMatchingInstance,
 }
 
-impl<'a> Enumerator<PathMatchingInstance, CycleEdgeInstance> for CycleEdgeEnumerator<'a> {
+impl<'a> Enumerator<CycleEdgeInstance> for CycleEdgeEnumerator<'a> {
     fn iter(
         &mut self,
         context: &mut ProofContext,

@@ -1,12 +1,8 @@
 use itertools::Itertools;
 
-use crate::{
-    comps::{Component, Node},
-    path::{
-        proof::{Enumerator, EnumeratorTactic, ProofContext},
-        Matching3, NicePairConfig, SelectedHitInstance, SelectedMatchingInstance,
-    },
-    types::Edge,
+use crate::path::{
+    proof::{Enumerator, EnumeratorTactic, ProofContext},
+    SelectedHitInstance,
 };
 
 pub struct MatchingNodesEnumTactic;
@@ -15,7 +11,7 @@ pub struct MatchingNodesEnumerator<'a> {
     instance: &'a SelectedHitInstance,
 }
 
-impl EnumeratorTactic<SelectedHitInstance, SelectedMatchingInstance> for MatchingNodesEnumTactic {
+impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for MatchingNodesEnumTactic {
     type Enumer<'a> = MatchingNodesEnumerator<'a>;
     fn msg(&self, data_in: &SelectedHitInstance) -> String {
         format!(
@@ -24,10 +20,14 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedMatchingInstance> for Matchin
         )
     }
 
-    fn item_msg(&self, item: &SelectedMatchingInstance) -> String {
+    fn item_msg(&self, item: &SelectedHitInstance) -> String {
         format!(
-            "Selected Matching {:?} between path[{}] and last component",
-            item.matched, item.hit_comp_idx
+            "Selected matching between path[{}] and last component: {}",
+            item.hit_comp_idx,
+            item.instance
+                .fixed_edges_between(item.hit_comp_idx, item.instance.path.nodes.len() - 1)
+                .into_iter()
+                .join(", ")
         )
     }
 
@@ -36,39 +36,54 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedMatchingInstance> for Matchin
     }
 }
 
-impl<'a> Enumerator<SelectedHitInstance, SelectedMatchingInstance> for MatchingNodesEnumerator<'a> {
+impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
     fn iter(
         &mut self,
-        _context: &mut ProofContext,
-    ) -> Box<dyn Iterator<Item = SelectedMatchingInstance> + '_> {
-        let left_comp =
-            self.instance.path_matching.path.nodes[self.instance.hit_comp_idx].get_comp();
+        context: &mut ProofContext,
+    ) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
+        let left_comp = self.instance.instance.path[self.instance.hit_comp_idx].get_comp();
+        let path_len = context.path_len;
+        let hit_comp_idx = self.instance.hit_comp_idx;
 
-        let iter = left_comp
-            .matching_permutations(self.instance.matched.len())
-            .into_iter()
-            .map(move |left_matched| SelectedMatchingInstance {
-                matched: self
-                    .instance
-                    .matched
-                    .iter()
-                    .zip(left_matched.into_iter())
-                    .map(|(r, l)| Edge(l, r.source()))
-                    .collect_vec(),
-                hit_comp_idx: self.instance.hit_comp_idx,
-                path_matching: self.instance.path_matching.clone(),
-            });
+        if self.instance.hit_comp_idx == path_len - 2 {
+            let matching_edges = self.instance.instance.matching_edges_hit(hit_comp_idx);
 
-        Box::new(iter)
+            let iter = left_comp
+                .matching_permutations(matching_edges.len())
+                .into_iter()
+                .filter(|left_matched| {
+                    left_matched
+                        .iter()
+                        .all(|matched| *matched != left_comp.fixed_node())
+                })
+                .map(move |left_matched| {
+                    let mut instance = self.instance.clone();
+                    for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
+                        instance
+                            .instance
+                            .fix_matching_edge(right.source(), hit_comp_idx, left);
+                    }
+                    instance
+                });
+
+            return Box::new(iter);
+        } else {
+            let matching_edges = self.instance.instance.matching_edges_hit(hit_comp_idx);
+
+            let iter = left_comp
+                .matching_permutations(matching_edges.len())
+                .into_iter()
+                .map(move |left_matched| {
+                    let mut instance = self.instance.clone();
+                    for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
+                        instance
+                            .instance
+                            .fix_matching_edge(right.source(), hit_comp_idx, left);
+                    }
+                    instance
+                });
+
+            return Box::new(iter);
+        }
     }
-}
-
-#[derive(Clone)]
-pub struct MatchingNodesEnumeratorOutput {
-    pub three_matching: Matching3,
-    pub left_matched: Vec<Node>,
-    pub right_matched: Vec<Node>,
-    pub last_comp: Component,
-    pub left_comp: Component,
-    pub npc_last: NicePairConfig,
 }

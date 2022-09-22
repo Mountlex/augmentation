@@ -7,7 +7,7 @@ use crate::{
     path::{
         proof::{ProofContext, Statistics, Tactic},
         utils::get_local_merge_graph,
-        SelectedMatchingInstance,
+        SelectedHitInstance,
     },
     proof_tree::ProofNode,
     types::Edge,
@@ -34,20 +34,25 @@ impl Statistics for LocalMerge {
     }
 }
 
-impl Tactic<SelectedMatchingInstance> for LocalMerge {
-    fn action(&mut self, data: &SelectedMatchingInstance, context: &mut ProofContext) -> ProofNode {
+impl Tactic<SelectedHitInstance> for LocalMerge {
+    fn action(&mut self, data: &SelectedHitInstance, context: &mut ProofContext) -> ProofNode {
         self.num_calls += 1;
 
-        let left = data.path_matching.path.nodes[data.hit_comp_idx].get_zoomed();
-        let right = data.path_matching.path.nodes.last().unwrap().get_zoomed();
+        let left = data.instance.path[data.hit_comp_idx].get_zoomed();
+        let right = data.instance.path.nodes.last().unwrap().get_zoomed();
 
-        let left_comp = data.path_matching.path.nodes[data.hit_comp_idx].get_comp();
-        let right_comp = data.path_matching.path.last_comp();
+        let left_comp = data.instance.path[data.hit_comp_idx].get_comp();
+        let right_comp = data.instance.path.last_comp();
+        let edges_between = data
+            .instance
+            .fixed_edges_between(data.hit_comp_idx, context.path_len - 1);
+
+        //dbg!(&edges_between);
 
         let graph_with_matching = get_local_merge_graph(
             &left_comp,
             &right_comp,
-            &data.matched.iter().map(|e| (e.0, e.1)).collect_vec(),
+            &edges_between.iter().map(|e| (e.0, e.1)).collect_vec(),
         );
 
         let total_comp_credit =
@@ -61,8 +66,7 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
                 let sell_credits = Credit::from_integer(sell.len() as i64);
                 let mut total_plus_sell = total_comp_credit + sell_credits;
 
-                for buy in data
-                    .matched
+                for buy in edges_between
                     .iter()
                     .cloned()
                     .powerset()
@@ -148,7 +152,7 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
                 }
             }
         } else {
-            for buy in data.matched.iter().powerset().filter(|p| p.len() == 2) {
+            for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
                 let l1 = buy[0].0;
                 let r1 = buy[0].1;
                 let l2 = buy[1].0;
@@ -186,7 +190,7 @@ impl Tactic<SelectedMatchingInstance> for LocalMerge {
         return ProofNode::new_leaf("Local merge impossible".into(), false);
     }
 
-    fn precondition(&self, _data: &SelectedMatchingInstance, _context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &SelectedHitInstance, _context: &ProofContext) -> bool {
         true
     }
 }

@@ -1,9 +1,12 @@
 use itertools::Itertools;
 
-use crate::{path::{
-    proof::{Enumerator, EnumeratorTactic},
-    AugmentedPathInstance, NicePairConfig, PathInstance, SuperNode, ZoomedNode,
-}, types::Edge};
+use crate::{
+    path::{
+        proof::{Enumerator, EnumeratorTactic},
+        AugmentedPathInstance, NicePairConfig, PathInstance, SuperNode, ZoomedNode,
+    },
+    types::Edge,
+};
 
 use super::nice_pairs::comp_npcs;
 
@@ -13,7 +16,7 @@ pub struct CycleExpanderEnumerator<'a> {
     input: &'a AugmentedPathInstance,
 }
 
-impl<'a> Enumerator<AugmentedPathInstance, AugmentedPathInstance> for CycleExpanderEnumerator<'a> {
+impl<'a> Enumerator<AugmentedPathInstance> for CycleExpanderEnumerator<'a> {
     fn iter(
         &mut self,
         context: &mut crate::path::proof::ProofContext,
@@ -169,11 +172,14 @@ impl<'a> Enumerator<AugmentedPathInstance, AugmentedPathInstance> for CycleExpan
                 .collect_vec();
         });
 
-        let mut new_instances = paths.into_iter().map(|path| AugmentedPathInstance {
-            path,
-            non_path_matching_edges: vec![],
-            fixed_edge: fixed_edges.clone(),
-        }).collect_vec();
+        let mut new_instances = paths
+            .into_iter()
+            .map(|path| AugmentedPathInstance {
+                path,
+                non_path_matching_edges: vec![],
+                fixed_edge: fixed_edges.clone(),
+            })
+            .collect_vec();
 
         self.input
             .non_path_matching_edges
@@ -213,14 +219,21 @@ impl<'a> Enumerator<AugmentedPathInstance, AugmentedPathInstance> for CycleExpan
                                     .powerset()
                                     .map(|np_with_node| {
                                         let mut new_path = path.clone();
-                                        let npc = &mut new_path.nodes.get_mut(hit).unwrap().get_zoomed_mut().npc;
+                                        let npc = &mut new_path
+                                            .nodes
+                                            .get_mut(hit)
+                                            .unwrap()
+                                            .get_zoomed_mut()
+                                            .npc;
                                         for &n in np_with_node {
                                             npc.add_nice_pair(hit_node, n);
                                         }
-                                        
+
                                         let mut new_instance = instance.clone();
                                         new_instance.path = new_path;
-                                        new_instance.fixed_edge.push(Edge(hit_node, m_edge.source()));
+                                        new_instance
+                                            .fixed_edge
+                                            .push(Edge(hit_node, m_edge.source()));
                                         new_instance
                                     })
                                     .collect_vec()

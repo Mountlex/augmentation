@@ -1,7 +1,7 @@
 use crate::{
     path::{
         proof::{Statistics, Tactic},
-        PseudoCycleInstance, 
+        PseudoCycleInstance,
     },
     proof_tree::ProofNode,
     Credit,
@@ -36,8 +36,10 @@ impl Tactic<PseudoCycleInstance> for DoubleCycleMergeTactic {
         data: &PseudoCycleInstance,
         context: &crate::path::proof::ProofContext,
     ) -> bool {
-        data.cycle_edge.hits_path().unwrap() == context.path_len - 3
-            && data.pseudo_cycle.nodes.first().unwrap().get_comp().is_c3()
+        // data.cycle_edge.hits_path().unwrap() == context.path_len - 3
+        //     &&
+        //     data.pseudo_cycle.nodes.first().unwrap().get_comp().is_c3()
+        true
     }
 
     fn action(

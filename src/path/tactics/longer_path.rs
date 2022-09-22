@@ -1,7 +1,7 @@
 use crate::{
     path::{
         proof::{or, ProofContext, Statistics, Tactic},
-        MatchingEdge, PathMatchingInstance,
+        AugmentedPathInstance, MatchingEdge,
     },
     proof_tree::ProofNode,
 };
@@ -26,15 +26,15 @@ impl Statistics for LongerPathTactic {
     }
 }
 
-impl Tactic<PathMatchingInstance> for LongerPathTactic {
+impl Tactic<AugmentedPathInstance> for LongerPathTactic {
     fn action(
         &mut self,
-        data: &PathMatchingInstance,
+        data: &AugmentedPathInstance,
         context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
-        let outside_hits = data.matching.outside_hits();
+        let outside_hits = data.outside_hits();
         let mut proof = if outside_hits.len() == 2 {
             or(
                 LongerNicePathCheck::check_for(&outside_hits[0]),
@@ -52,8 +52,8 @@ impl Tactic<PathMatchingInstance> for LongerPathTactic {
         proof
     }
 
-    fn precondition(&self, data: &PathMatchingInstance, _context: &ProofContext) -> bool {
-        !data.matching.outside_hits().is_empty()
+    fn precondition(&self, data: &AugmentedPathInstance, _context: &ProofContext) -> bool {
+        !data.outside_hits().is_empty()
     }
 }
 
@@ -71,10 +71,10 @@ impl<'a> LongerNicePathCheck<'a> {
     }
 }
 
-impl<'a> Tactic<PathMatchingInstance> for LongerNicePathCheck<'a> {
+impl<'a> Tactic<AugmentedPathInstance> for LongerNicePathCheck<'a> {
     fn action(
         &mut self,
-        data: &PathMatchingInstance,
+        data: &AugmentedPathInstance,
         _context: &mut ProofContext,
     ) -> crate::proof_tree::ProofNode {
         let last = data.path.nodes.last().unwrap().get_zoomed();
@@ -104,7 +104,7 @@ impl<'a> Tactic<PathMatchingInstance> for LongerNicePathCheck<'a> {
         }
     }
 
-    fn precondition(&self, _data: &PathMatchingInstance, _context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &AugmentedPathInstance, _context: &ProofContext) -> bool {
         true
     }
 }

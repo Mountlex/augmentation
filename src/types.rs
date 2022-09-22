@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::comps::Node;
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -10,3 +12,9 @@ impl PartialEq for Edge {
 }
 
 impl Eq for Edge {}
+
+impl Display for Edge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.0, self.1)
+    }
+}
