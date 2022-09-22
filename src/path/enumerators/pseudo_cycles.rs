@@ -1,10 +1,9 @@
 use crate::{
     path::{
         proof::{Enumerator, EnumeratorTactic, ProofContext},
-        AugmentedPathInstance, CycleEdge, MatchingEdge, PathHit, PseudoCycle, PseudoCycleInstance,
+        AugmentedPathInstance, CycleEdge,PathHit, PseudoCycle, PseudoCycleInstance,
         SelectedHitInstance,
     },
-    types::Edge,
 };
 
 pub struct PseudoCyclesEnumTactic;

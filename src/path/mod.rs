@@ -162,59 +162,7 @@ impl Display for SuperNode {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Matching3 {
-    pub source_comp_idx: usize,
-    pub path_edge_left: Option<MatchingEdge>,
-    pub path_edge_right: Option<MatchingEdge>,
-    pub other_edges: Vec<MatchingEdge>,
-}
 
-impl Matching3 {
-    pub fn outside_hits(&self) -> Vec<MatchingEdge> {
-        self.other_edges
-            .iter()
-            .filter(|e| e.hits_outside())
-            .cloned()
-            .collect_vec()
-    }
-
-    pub fn sources(&self) -> Vec<Node> {
-        let mut sources = self.other_edges.iter().map(|e| e.source()).collect_vec();
-        if let Some(e) = self.path_edge_left {
-            sources.push(e.source())
-        }
-        if let Some(e) = self.path_edge_right {
-            sources.push(e.source())
-        }
-        sources
-    }
-
-    pub fn to_vec(&self) -> Vec<MatchingEdge> {
-        vec![self.path_edge_left, self.path_edge_right]
-            .into_iter()
-            .flatten()
-            .chain(self.other_edges.iter().cloned())
-            .collect()
-    }
-}
-
-impl Display for Matching3 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Matching for path[{}]: ", self.source_comp_idx)?;
-        if let Some(e) = self.path_edge_left {
-            write!(f, "left = {}, ", e)?;
-        }
-        if let Some(e) = self.path_edge_right {
-            write!(f, "right = {}, ", e)?;
-        }
-        write!(
-            f,
-            "others = [{}]",
-            self.other_edges.iter().map(|e| format!("{}", e)).join(", ")
-        )
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct AbstractNode {
@@ -404,29 +352,12 @@ impl Display for PathInstance {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct PathMatchingInstance {
-    pub path: PathInstance,
-    pub matching: Matching3,
-}
+
 
 #[derive(Clone, Debug)]
 pub struct SelectedHitInstance {
     pub instance: AugmentedPathInstance,
     pub hit_comp_idx: usize,
-}
-
-#[derive(Clone)]
-pub struct SelectedMatchingInstance {
-    pub path_matching: PathMatchingInstance,
-    pub hit_comp_idx: usize,
-    pub matched: Vec<Edge>,
-}
-
-#[derive(Clone, Debug)]
-pub struct CycleEdgeInstance {
-    pub path_matching: PathMatchingInstance,
-    pub cycle_edge: MatchingEdge,
 }
 
 #[derive(Clone, Debug)]

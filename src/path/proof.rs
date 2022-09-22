@@ -4,7 +4,6 @@ use std::{marker::PhantomData, path::PathBuf};
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::path::enumerators::cycles_edges::CycleEdgeEnumTactic;
 use crate::path::enumerators::expand::{ExpandEnumTactic, ExpandLastEnumTactic};
 use crate::path::enumerators::pseudo_cycles::PseudoCyclesEnumTactic;
 use crate::path::tactics::cycle_rearrange::CycleRearrangeTactic;
@@ -19,7 +18,6 @@ use crate::{
 use super::enumerators::comp_hits::ComponentHitEnumTactic;
 use super::enumerators::matching_hits::MatchingHitEnumTactic;
 use super::enumerators::matching_nodes::MatchingNodesEnumTactic;
-use super::enumerators::nice_pairs::NPCEnumTactic;
 use super::enumerators::nice_paths::{PathEnumTactic, PathEnumeratorInput};
 use super::tactics::complex_merge::LocalComplexMerge;
 use super::tactics::contract::ContractabilityTactic;
@@ -27,7 +25,7 @@ use super::tactics::cycle_merge::CycleMerge;
 use super::tactics::local_merge::LocalMerge;
 use super::tactics::longer_path::LongerPathTactic;
 use super::tactics::longer_path_swap::LongerNicePathViaMatchingSwap;
-use super::{AugmentedPathInstance, PathMatchingInstance};
+use super::{AugmentedPathInstance};
 
 pub struct ProofContext {
     pub credit_inv: DefaultCredits,
