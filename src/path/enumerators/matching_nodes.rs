@@ -2,19 +2,22 @@ use itertools::Itertools;
 
 use crate::path::{
     proof::{Enumerator, EnumeratorTactic, ProofContext},
-    SelectedHitInstance, AugmentedPathInstance,
+    AugmentedPathInstance, SelectedHitInstance,
 };
 
 pub struct MatchingNodesEnum;
 
 pub struct MatchingNodesEnumerator<'a> {
     pub instance: &'a AugmentedPathInstance,
-    pub hit_comp_idx: usize
+    pub hit_comp_idx: usize,
 }
 
-impl <'a> MatchingNodesEnumerator<'a> {
+impl<'a> MatchingNodesEnumerator<'a> {
     pub fn new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize) -> Self {
-        Self { instance, hit_comp_idx }
+        Self {
+            instance,
+            hit_comp_idx,
+        }
     }
 }
 
@@ -39,7 +42,10 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for MatchingNode
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a SelectedHitInstance) -> Self::Enumer<'a> {
-        MatchingNodesEnumerator { instance: &data.instance, hit_comp_idx: data.hit_comp_idx }
+        MatchingNodesEnumerator {
+            instance: &data.instance,
+            hit_comp_idx: data.hit_comp_idx,
+        }
     }
 }
 
@@ -83,8 +89,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for MatchingNodesEnumerator<'a> {
                 .map(move |left_matched| {
                     let mut instance = self.instance.clone();
                     for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
-                        instance
-                            .fix_matching_edge(right.source(), hit_comp_idx, left);
+                        instance.fix_matching_edge(right.source(), hit_comp_idx, left);
                     }
                     instance
                 });
@@ -99,8 +104,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for MatchingNodesEnumerator<'a> {
                 .map(move |left_matched| {
                     let mut instance = self.instance.clone();
                     for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
-                        instance
-                            .fix_matching_edge(right.source(), hit_comp_idx, left);
+                        instance.fix_matching_edge(right.source(), hit_comp_idx, left);
                     }
                     instance
                 });

@@ -162,8 +162,6 @@ impl Display for SuperNode {
     }
 }
 
-
-
 #[derive(Debug, Clone)]
 pub struct AbstractNode {
     pub comp: Component,
@@ -351,8 +349,6 @@ impl Display for PathInstance {
         write!(f, "]")
     }
 }
-
-
 
 #[derive(Clone, Debug)]
 pub struct SelectedHitInstance {

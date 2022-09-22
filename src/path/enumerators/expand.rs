@@ -16,9 +16,12 @@ pub struct ExpandEnumerator<'a> {
     pub hit_comp_idx: usize,
 }
 
-impl <'a> ExpandEnumerator<'a> {
+impl<'a> ExpandEnumerator<'a> {
     pub fn new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize) -> Self {
-        Self { instance, hit_comp_idx }
+        Self {
+            instance,
+            hit_comp_idx,
+        }
     }
 }
 
@@ -169,21 +172,20 @@ fn comp_npcs(
                 .cloned()
                 .tuple_combinations::<(_, _)>()
                 .collect_vec();
-            let adj_pairs: Vec<(u32, u32)> = all_pairs
-                .iter()
-                .filter(|(u, v)| comp.is_adjacent(*u, *v))
-                .cloned()
-                .collect();
+            // let adj_pairs: Vec<(u32, u32)> = all_pairs
+            //     .iter()
+            //     .filter(|(u, v)| comp.is_adjacent(*u, *v))
+            //     .cloned()
+            //     .collect();
             all_pairs
                 .into_iter()
                 .powerset()
                 .map(|config| NicePairConfig { nice_pairs: config })
+                // .filter(|npc| {
+                //     // if config misses a nice pair although it is a pair of adjacent vertices, remove it
+                //     adj_pairs.iter().all(|(u, v)| npc.is_nice_pair(*u, *v))
+                // })
                 .filter(|npc| {
-                    // if config misses a nice pair although it is a pair of adjacent vertices, remove it
-                    adj_pairs.iter().all(|(u, v)| npc.is_nice_pair(*u, *v))
-                })
-                .filter(|npc| {
-                    // if config misses a nice pair although it is a pair of adjacent vertices, remove it
                     if in_out.is_some()
                         && (comp.is_complex()
                             || comp.is_c3()
@@ -196,6 +198,11 @@ fn comp_npcs(
                     } else {
                         true
                     }
+                })
+                .map(|mut npc| {
+                    // adjacent vertices are always nice pairs!
+                    npc.nice_pairs.append(&mut comp.edges());
+                    npc
                 })
                 .collect_vec()
         }

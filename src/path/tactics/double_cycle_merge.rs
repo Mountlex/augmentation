@@ -1,7 +1,9 @@
+use itertools::Itertools;
+
 use crate::{
     path::{
         proof::{Statistics, Tactic},
-        PseudoCycleInstance,
+        AugmentedPathInstance, PseudoCycle, PseudoCycleInstance,
     },
     proof_tree::ProofNode,
     Credit,
@@ -30,55 +32,68 @@ impl Statistics for DoubleCycleMergeTactic {
     }
 }
 
-impl Tactic<PseudoCycleInstance> for DoubleCycleMergeTactic {
+impl Tactic<AugmentedPathInstance> for DoubleCycleMergeTactic {
     fn precondition(
         &self,
-        data: &PseudoCycleInstance,
+        data: &AugmentedPathInstance,
         context: &crate::path::proof::ProofContext,
     ) -> bool {
-        // data.cycle_edge.hits_path().unwrap() == context.path_len - 3
-        //     &&
-        //     data.pseudo_cycle.nodes.first().unwrap().get_comp().is_c3()
-        true
+        data.fixed_edges_between(0, 2).len() > 0 && data.fixed_edges_between(1, 3).len() > 0
     }
 
     fn action(
         &mut self,
-        data: &PseudoCycleInstance,
+        data: &AugmentedPathInstance,
         context: &mut crate::path::proof::ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
-        let mut cycle = data.pseudo_cycle.clone();
-        cycle
-            .nodes
-            .insert(1, data.path_matching.path.nodes.first().unwrap().clone());
+        let left_cycle_edges = data.fixed_edges_between(0, 2);
+        let right_cycle_edges = data.fixed_edges_between(1, 3);
 
-        // if prelast is a C3, we can guarantee that there is a nice pair
-        let prelast_np = cycle.nodes.get(2).unwrap().get_comp().is_c3();
+        for left_cycle_edge in &left_cycle_edges {
+            for right_cycle_edge in &right_cycle_edges {
+                let mut cycle_nodes = vec![
+                    data.path[0].clone(),
+                    data.path[2].clone(),
+                    data.path[3].clone(),
+                    data.path[1].clone(),
+                ];
 
-        cycle.nodes.get_mut(0).unwrap().get_abstract_mut().nice_pair = true;
-        cycle.nodes.get_mut(1).unwrap().get_abstract_mut().nice_pair = false;
-        cycle.nodes.get_mut(2).unwrap().get_abstract_mut().nice_pair = prelast_np;
+                cycle_nodes[0].get_zoomed_mut().in_node = cycle_nodes[0].get_zoomed().out_node;
+                cycle_nodes[0].get_zoomed_mut().out_node = Some(left_cycle_edge.0);
 
-        let cycle_value = cycle.value(context.credit_inv.clone());
-        if cycle_value >= Credit::from_integer(2) {
-            self.num_proofs += 1;
-            ProofNode::new_leaf_success(
-                format!(
-                    "Merged double pseudo cycle {} with value {}!",
-                    cycle, cycle_value
-                ),
-                cycle_value == Credit::from_integer(2),
-            )
-        } else {
-            ProofNode::new_leaf(
-                format!(
-                    "Failed double cycle merge {} with value {}",
-                    cycle, cycle_value
-                ),
-                false,
-            )
+                cycle_nodes[1].get_zoomed_mut().in_node = Some(left_cycle_edge.1);
+
+                cycle_nodes[2].get_zoomed_mut().out_node = Some(right_cycle_edge.1);
+
+                cycle_nodes[3].get_zoomed_mut().out_node = cycle_nodes[3].get_zoomed().in_node;
+                cycle_nodes[3].get_zoomed_mut().in_node = Some(right_cycle_edge.0);
+
+                // NICE PAIRS DONT FIT!
+
+                let cycle = PseudoCycle { nodes: cycle_nodes };
+
+                let cycle_value = cycle.value(context.credit_inv.clone());
+                if cycle_value >= Credit::from_integer(2) {
+                    self.num_proofs += 1;
+                    return ProofNode::new_leaf_success(
+                        format!(
+                            "Merged double pseudo cycle {} with value {}!",
+                            cycle, cycle_value
+                        ),
+                        cycle_value == Credit::from_integer(2),
+                    );
+                }
+            }
         }
+        ProofNode::new_leaf(
+            format!(
+                "Failed double cycle merge using edges {} and {}",
+                left_cycle_edges.into_iter().join(", "),
+                right_cycle_edges.into_iter().join(", ")
+            ),
+            false,
+        )
     }
 }

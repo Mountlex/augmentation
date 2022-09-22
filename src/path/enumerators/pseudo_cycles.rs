@@ -1,9 +1,7 @@
-use crate::{
-    path::{
-        proof::{Enumerator, EnumeratorTactic, ProofContext},
-        AugmentedPathInstance, CycleEdge,PathHit, PseudoCycle, PseudoCycleInstance,
-        SelectedHitInstance,
-    },
+use crate::path::{
+    proof::{Enumerator, EnumeratorTactic, ProofContext},
+    AugmentedPathInstance, CycleEdge, PathHit, PseudoCycle, PseudoCycleInstance,
+    SelectedHitInstance,
 };
 
 pub struct PseudoCyclesEnum;

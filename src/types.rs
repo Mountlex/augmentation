@@ -11,6 +11,12 @@ impl PartialEq for Edge {
     }
 }
 
+impl Edge {
+    pub fn incident(&self, nodes: &[Node]) -> bool {
+        nodes.contains(&self.0) || nodes.contains(&self.1)
+    }
+}
+
 impl Eq for Edge {}
 
 impl Display for Edge {

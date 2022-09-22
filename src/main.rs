@@ -108,10 +108,10 @@ fn prove_path(path: Path) {
     ];
 
     let last_comps = vec![
-        ComponentType::Cycle(3),
-        ComponentType::Cycle(4),
-        ComponentType::Cycle(5),
-        ComponentType::Cycle(6),
+        //ComponentType::Cycle(3),
+        //ComponentType::Cycle(4),
+        //ComponentType::Cycle(5),
+        //ComponentType::Cycle(6),
         ComponentType::Large,
         //ComponentType::Complex,
     ];

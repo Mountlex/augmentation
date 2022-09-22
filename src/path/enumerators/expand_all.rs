@@ -40,8 +40,12 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandAllEnumerator<'a> {
             }
         }
 
-        assert!(cases.iter().all(|case| case.path.nodes.iter().all(|node| node.is_zoomed())));
-        assert!(cases.iter().all(|case| case.non_path_matching_edges.is_empty()));
+        assert!(cases
+            .iter()
+            .all(|case| case.path.nodes.iter().all(|node| node.is_zoomed())));
+        assert!(cases
+            .iter()
+            .all(|case| case.non_path_matching_edges.is_empty()));
 
         Box::new(cases.into_iter())
     }
@@ -71,7 +75,9 @@ impl EnumeratorTactic<SelectedHitInstance, AugmentedPathInstance> for ExpandAllE
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a SelectedHitInstance) -> Self::Enumer<'a> {
-        ExpandAllEnumerator { instance: &data.instance }
+        ExpandAllEnumerator {
+            instance: &data.instance,
+        }
     }
 
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
