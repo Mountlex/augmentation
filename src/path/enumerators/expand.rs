@@ -12,8 +12,14 @@ pub struct ExpandEnum;
 pub struct ExpandLastEnum;
 
 pub struct ExpandEnumerator<'a> {
-    instance: &'a AugmentedPathInstance,
-    hit_comp_idx: usize,
+    pub instance: &'a AugmentedPathInstance,
+    pub hit_comp_idx: usize,
+}
+
+impl <'a> ExpandEnumerator<'a> {
+    pub fn new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize) -> Self {
+        Self { instance, hit_comp_idx }
+    }
 }
 
 impl<'a> Enumerator<SelectedHitInstance> for ExpandEnumerator<'a> {

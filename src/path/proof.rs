@@ -5,6 +5,7 @@ use itertools::Itertools;
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::path::enumerators::expand::{ExpandEnum, ExpandLastEnum};
+use crate::path::enumerators::expand_all::ExpandAllEnum;
 use crate::path::enumerators::pseudo_cycles::PseudoCyclesEnum;
 use crate::path::tactics::cycle_rearrange::CycleRearrangeTactic;
 use crate::path::tactics::double_cycle_merge::DoubleCycleMergeTactic;
@@ -375,12 +376,16 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                     MatchingNodesEnum,
                                     all(
                                         ExpandEnum,
-                                        or5(
+                                        or6(
                                             PendantRewireTactic::new(),
                                             LocalMergeTactic::new(),
                                             any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                             LongerPathViaSwap::new(),
                                             CycleMergeViaSwap::new(),
+                                            all(
+                                                ExpandAllEnum,
+                                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                                            ),
                                         ),
                                     ),
                                 ),

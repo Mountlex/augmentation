@@ -2,13 +2,20 @@ use itertools::Itertools;
 
 use crate::path::{
     proof::{Enumerator, EnumeratorTactic, ProofContext},
-    SelectedHitInstance,
+    SelectedHitInstance, AugmentedPathInstance,
 };
 
 pub struct MatchingNodesEnum;
 
 pub struct MatchingNodesEnumerator<'a> {
-    instance: &'a SelectedHitInstance,
+    pub instance: &'a AugmentedPathInstance,
+    pub hit_comp_idx: usize
+}
+
+impl <'a> MatchingNodesEnumerator<'a> {
+    pub fn new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize) -> Self {
+        Self { instance, hit_comp_idx }
+    }
 }
 
 impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for MatchingNodesEnum {
@@ -32,21 +39,38 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for MatchingNode
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a SelectedHitInstance) -> Self::Enumer<'a> {
-        MatchingNodesEnumerator { instance: data }
+        MatchingNodesEnumerator { instance: &data.instance, hit_comp_idx: data.hit_comp_idx }
     }
 }
 
 impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
     fn iter(
         &mut self,
-        context: &mut ProofContext,
+        context: &mut crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
-        let left_comp = self.instance.instance.path[self.instance.hit_comp_idx].get_comp();
-        let path_len = context.path_len;
-        let hit_comp_idx = self.instance.hit_comp_idx;
+        let hit_comp_idx = self.hit_comp_idx;
+        let iter = Enumerator::<AugmentedPathInstance>::iter(self, context).map(move |aug| {
+            SelectedHitInstance {
+                instance: aug,
+                hit_comp_idx,
+            }
+        });
 
-        if self.instance.hit_comp_idx == path_len - 2 {
-            let matching_edges = self.instance.instance.matching_edges_hit(hit_comp_idx);
+        Box::new(iter)
+    }
+}
+
+impl<'a> Enumerator<AugmentedPathInstance> for MatchingNodesEnumerator<'a> {
+    fn iter(
+        &mut self,
+        context: &mut ProofContext,
+    ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+        let left_comp = self.instance.path[self.hit_comp_idx].get_comp();
+        let path_len = context.path_len;
+        let hit_comp_idx = self.hit_comp_idx;
+
+        if self.hit_comp_idx == path_len - 2 {
+            let matching_edges = self.instance.matching_edges_hit(hit_comp_idx);
 
             let iter = left_comp
                 .matching_permutations(matching_edges.len())
@@ -60,7 +84,6 @@ impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
                     let mut instance = self.instance.clone();
                     for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
                         instance
-                            .instance
                             .fix_matching_edge(right.source(), hit_comp_idx, left);
                     }
                     instance
@@ -68,7 +91,7 @@ impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
 
             return Box::new(iter);
         } else {
-            let matching_edges = self.instance.instance.matching_edges_hit(hit_comp_idx);
+            let matching_edges = self.instance.matching_edges_hit(hit_comp_idx);
 
             let iter = left_comp
                 .matching_permutations(matching_edges.len())
@@ -77,7 +100,6 @@ impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
                     let mut instance = self.instance.clone();
                     for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
                         instance
-                            .instance
                             .fix_matching_edge(right.source(), hit_comp_idx, left);
                     }
                     instance
