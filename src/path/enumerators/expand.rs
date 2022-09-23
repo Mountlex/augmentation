@@ -167,8 +167,18 @@ fn comp_npcs(
 
     match comp {
         Component::Cycle(_) => {
-            comp.nodes().into_iter()
+            let all_pairs = nodes
+                .iter()
+                .cloned()
                 .tuple_combinations::<(_, _)>()
+                .collect_vec();
+            // let adj_pairs: Vec<(u32, u32)> = all_pairs
+            //     .iter()
+            //     .filter(|(u, v)| comp.is_adjacent(*u, *v))
+            //     .cloned()
+            //     .collect();
+            all_pairs
+                .into_iter()
                 .powerset()
                 .map(|config| NicePairConfig { nice_pairs: config })
                 // .filter(|npc| {
