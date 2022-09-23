@@ -462,7 +462,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
         })
         .collect_vec();
 
-    last_nodes.par_iter().for_each(|last_comp| {
+    last_nodes.iter().for_each(|last_comp| {
         let mut context = ProofContext {
             credit_inv: DefaultCredits::new(c),
             path_len: path_length,
