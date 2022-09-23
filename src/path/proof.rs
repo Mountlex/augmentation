@@ -361,7 +361,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                 all_sc(
                     sc,
                     ExpandLastEnum,
-                    or6(
+                    or7(
                         CountTactic::new(),
                         LongerPathTactic::new(),
                         ContractabilityTactic::new(),
@@ -377,29 +377,29 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                     MatchingNodesEnum,
                                     all(
                                         ExpandEnum,
-                                        or6(
+                                        or5(
                                             PendantRewireTactic::new(),
                                             LocalMergeTactic::new(),
                                             any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                             LongerPathViaSwap::new(),
                                             CycleMergeViaSwap::new(),
-                                            all(
-                                                ExpandAllEnum,
-                                                or(
-                                                    any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                                    all(
-                                                        FindMatchingEdgesEnum,
-                                                        or(
-                                                            DoubleCycleMergeTactic::new(),
-                                                            LocalMergeTactic::new(),
-                                                        ),
-                                                    ),
-                                               ),
-                                            ),
                                         ),
                                     ),
                                 ),
                             ),
+                        ),
+                        all(
+                            ExpandAllEnum,
+                            or(
+                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                                all(
+                                    FindMatchingEdgesEnum,
+                                    or(
+                                        DoubleCycleMergeTactic::new(),
+                                        LocalMergeTactic::new(),
+                                    ),
+                                ),
+                           ),
                         ),
                         TacticsExhausted::new(),
                     ),
