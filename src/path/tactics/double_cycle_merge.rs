@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::{
     path::{
         proof::{Statistics, Tactic},
-        AugmentedPathInstance, PseudoCycle, PseudoCycleInstance,
+        AugmentedPathInstance, PseudoCycle,
     },
     proof_tree::ProofNode,
     Credit,
@@ -36,7 +36,7 @@ impl Tactic<AugmentedPathInstance> for DoubleCycleMergeTactic {
     fn precondition(
         &self,
         data: &AugmentedPathInstance,
-        context: &crate::path::proof::ProofContext,
+        _context: &crate::path::proof::ProofContext,
     ) -> bool {
         data.fixed_edges_between(0, 2).len() > 0 && data.fixed_edges_between(1, 3).len() > 0
     }
@@ -62,15 +62,13 @@ impl Tactic<AugmentedPathInstance> for DoubleCycleMergeTactic {
 
                 cycle_nodes[0].get_zoomed_mut().in_node = cycle_nodes[0].get_zoomed().out_node;
                 cycle_nodes[0].get_zoomed_mut().out_node = Some(left_cycle_edge.0);
-                
+
                 cycle_nodes[1].get_zoomed_mut().in_node = Some(left_cycle_edge.1);
-                
+
                 cycle_nodes[2].get_zoomed_mut().out_node = Some(right_cycle_edge.1);
 
                 cycle_nodes[3].get_zoomed_mut().out_node = cycle_nodes[3].get_zoomed().in_node;
                 cycle_nodes[3].get_zoomed_mut().in_node = Some(right_cycle_edge.0);
-
-                
 
                 let cycle = PseudoCycle { nodes: cycle_nodes };
 

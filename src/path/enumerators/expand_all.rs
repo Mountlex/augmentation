@@ -13,12 +13,6 @@ pub struct ExpandAllEnumerator<'a> {
     instance: &'a AugmentedPathInstance,
 }
 
-impl <'a> ExpandAllEnumerator<'a> {
-    pub fn new(instance: &'a AugmentedPathInstance) -> Self {
-        Self { instance }
-    }
-}
-
 impl<'a> Enumerator<AugmentedPathInstance> for ExpandAllEnumerator<'a> {
     fn iter(
         &mut self,
@@ -28,21 +22,21 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandAllEnumerator<'a> {
 
         for (i, _node) in self.instance.path.nodes.iter().enumerate() {
             //if !node.is_zoomed() {
-                cases = cases
-                    .into_iter()
-                    .flat_map(|instance| {
-                        MatchingNodesEnumerator::new(&instance, i)
-                            .iter(context)
-                            .flat_map(|instance| {
-                                Enumerator::<AugmentedPathInstance>::iter(
-                                    &mut ExpandEnumerator::new(&instance, i),
-                                    context,
-                                )
-                                .collect_vec()
-                            })
+            cases = cases
+                .into_iter()
+                .flat_map(|instance| {
+                    MatchingNodesEnumerator::new(&instance, i)
+                        .iter(context)
+                        .flat_map(|instance| {
+                            Enumerator::<AugmentedPathInstance>::iter(
+                                &mut ExpandEnumerator::new(&instance, i),
+                                context,
+                            )
                             .collect_vec()
-                    })
-                    .collect_vec()
+                        })
+                        .collect_vec()
+                })
+                .collect_vec()
             //}
         }
 

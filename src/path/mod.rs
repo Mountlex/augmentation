@@ -317,7 +317,7 @@ impl PathInstance {
         self.nodes
             .iter()
             .enumerate()
-            .find(|(i, super_node)| super_node.get_comp().nodes().contains(&node))
+            .find(|(_i, super_node)| super_node.get_comp().nodes().contains(&node))
             .unwrap()
             .0
     }

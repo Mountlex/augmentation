@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::{
     path::{
         proof::{Enumerator, EnumeratorTactic},
-        AugmentedPathInstance, enumerators::expand_all::ExpandAllEnumerator,
+        AugmentedPathInstance,
     },
     types::Edge,
 };
@@ -17,7 +17,7 @@ pub struct FindMatchingEdgesEnumerator<'a> {
 impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
     fn iter(
         &mut self,
-        context: &crate::path::proof::ProofContext,
+        _context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         assert!(self.instance.non_path_matching_edges.len() == self.instance.outside_hits().len());
 
@@ -28,7 +28,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
         left_nodes.drain_filter(|node| *node == path[1].get_comp().fixed_node());
 
         let last_nodes = path.last_comp().nodes();
-        let first_comp = path[0].get_comp().clone();
+        //let first_comp = path[0].get_comp().clone();
 
         let num_crossing = self
             .instance
@@ -36,7 +36,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
             .iter()
             .filter(|edge| edge.incident(&left_nodes) && edge.incident(&last_nodes))
             .count();
-        
+
         if num_crossing <= 1 {
             let prelast_in = path[2].get_zoomed().in_node.unwrap();
             let iter = path[2]
@@ -48,9 +48,14 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
                     left_nodes
                         .iter()
                         .permutations(2 - num_crossing)
-                        .filter(|left_matched| left_matched.iter().any(|&l| !path[1].get_comp().is_adjacent(path[1].get_comp().fixed_node(), *l)))
+                        .filter(|left_matched| {
+                            left_matched.iter().any(|&l| {
+                                !path[1]
+                                    .get_comp()
+                                    .is_adjacent(path[1].get_comp().fixed_node(), *l)
+                            })
+                        })
                         .map(|left_matched| {
-
                             let mut new_instance = self.instance.clone();
                             for (left, right) in left_matched.into_iter().zip(right_matched.iter())
                             {

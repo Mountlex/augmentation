@@ -180,7 +180,8 @@ impl Tactic<AugmentedPathInstance> for LocalMergeTactic {
     fn action(&mut self, data: &AugmentedPathInstance, context: &ProofContext) -> ProofNode {
         self.num_calls += 1;
 
-        let res = data.path
+        let res = data
+            .path
             .nodes
             .iter()
             .enumerate()

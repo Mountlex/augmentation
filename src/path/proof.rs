@@ -363,7 +363,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                     sc,
                     ExpandLastEnum,
                     or7(
-                        CountTactic::new(),
+                        CountTactic::new("AugmentedPathInstances".into()),
                         LongerPathTactic::new(),
                         ContractabilityTactic::new(),
                         any(
@@ -391,7 +391,8 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                         ),
                         all(
                             ExpandAllEnum,
-                            or(
+                            or3(
+                                CountTactic::new("Fully expanded AugmentedPathInstances".into()),
                                 any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                 all(
                                     FindMatchingEdgesEnum,
@@ -480,12 +481,13 @@ impl Statistics for TacticsExhausted {
 }
 
 struct CountTactic {
+    name: String,
     num_calls: usize,
 }
 
 impl CountTactic {
-    fn new() -> Self {
-        Self { num_calls: 0 }
+    fn new(name: String) -> Self {
+        Self { name, num_calls: 0 }
     }
 }
 
@@ -502,6 +504,6 @@ impl Tactic<AugmentedPathInstance> for CountTactic {
 
 impl Statistics for CountTactic {
     fn print_stats(&self) {
-        println!("AugmentedPathInstances {}", self.num_calls)
+        println!("{} {}", self.name, self.num_calls)
     }
 }

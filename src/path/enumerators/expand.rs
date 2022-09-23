@@ -67,14 +67,13 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandEnumerator<'a> {
             .cloned()
             .collect_vec();
 
-            
         if node.is_zoomed() {
             if let Some(in_node) = node.get_zoomed().in_node {
-                connected_nodes.push(in_node);            
-            } 
+                connected_nodes.push(in_node);
+            }
             if let Some(out_node) = node.get_zoomed().out_node {
-                connected_nodes.push(out_node);            
-            } 
+                connected_nodes.push(out_node);
+            }
             connected_nodes.sort();
             connected_nodes.dedup();
 
