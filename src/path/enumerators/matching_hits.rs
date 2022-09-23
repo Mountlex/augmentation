@@ -5,6 +5,7 @@ use crate::path::{
     AugmentedPathInstance, MatchingEdge, PathHit,
 };
 
+#[derive(Clone)]
 pub struct MatchingHitEnum {
     comp_index: usize,
 }

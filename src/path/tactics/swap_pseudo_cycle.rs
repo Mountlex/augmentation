@@ -4,6 +4,7 @@ use crate::path::{
     CycleEdge, PathHit, PseudoCycle, PseudoCycleInstance, SelectedHitInstance,
 };
 
+#[derive(Clone)]
 pub struct CycleMergeViaSwap {
     num_calls: usize,
     num_proofs: usize,

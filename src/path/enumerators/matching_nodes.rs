@@ -5,6 +5,7 @@ use crate::path::{
     AugmentedPathInstance, SelectedHitInstance,
 };
 
+#[derive(Clone)]
 pub struct MatchingNodesEnum;
 
 pub struct MatchingNodesEnumerator<'a> {

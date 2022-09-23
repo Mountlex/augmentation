@@ -6,6 +6,7 @@ use crate::{
     proof_tree::ProofNode,
 };
 
+#[derive(Clone)]
 pub struct PendantRewireTactic {
     num_calls: usize,
     num_proofs: usize,

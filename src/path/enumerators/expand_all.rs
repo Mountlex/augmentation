@@ -7,6 +7,7 @@ use crate::path::{
 
 use super::{expand::ExpandEnumerator, matching_nodes::MatchingNodesEnumerator};
 
+#[derive(Clone)]
 pub struct ExpandAllEnum;
 
 pub struct ExpandAllEnumerator<'a> {

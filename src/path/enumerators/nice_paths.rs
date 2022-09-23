@@ -8,6 +8,7 @@ use crate::{
     },
 };
 
+#[derive(Clone)]
 pub struct PathEnumeratorInput {
     comps: Vec<PathNode>,
     last_comp: PathNode,
@@ -19,6 +20,7 @@ impl PathEnumeratorInput {
     }
 }
 
+#[derive(Clone)]
 pub struct PathEnum;
 
 pub struct PathEnumerator<'a> {

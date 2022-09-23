@@ -5,6 +5,7 @@ use crate::path::{
     AugmentedPathInstance, PathHit, SelectedHitInstance,
 };
 
+#[derive(Clone)]
 pub struct ComponentHitEnum;
 
 pub struct ComponentHitEnumerator<'a> {

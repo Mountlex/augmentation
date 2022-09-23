@@ -8,7 +8,7 @@ use crate::{
     },
     proof_tree::ProofNode,
 };
-
+#[derive(Clone)]
 pub struct ContractabilityTactic {
     num_calls: usize,
     num_proofs: usize,

@@ -14,6 +14,7 @@ use crate::{
     Credit,
 };
 
+#[derive(Clone)]
 pub struct LocalMergeTactic {
     num_calls: usize,
     num_proofs: usize,

@@ -8,6 +8,7 @@ use crate::{
     proof_tree::ProofNode,
 };
 
+#[derive(Clone)]
 pub struct LocalComplexMerge {
     num_calls: usize,
     num_proofs: usize,

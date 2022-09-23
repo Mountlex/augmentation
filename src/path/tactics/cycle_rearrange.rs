@@ -6,6 +6,7 @@ use crate::{
     proof_tree::ProofNode,
 };
 
+#[derive(Clone)]
 pub struct CycleRearrangeTactic {
     num_calls: usize,
     num_proofs: usize,

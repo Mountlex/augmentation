@@ -8,7 +8,9 @@ use crate::{
     },
 };
 
+#[derive(Clone)]
 pub struct ExpandEnum;
+#[derive(Clone)]
 pub struct ExpandLastEnum;
 
 pub struct ExpandEnumerator<'a> {

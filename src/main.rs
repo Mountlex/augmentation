@@ -55,6 +55,9 @@ struct Path {
     output_depth: usize,
 
     #[clap(short, long)]
+    parallel: bool,
+
+    #[clap(short, long)]
     sc: bool,
 }
 
@@ -129,6 +132,7 @@ fn prove_path(path: Path) {
         path.output_dir,
         path.output_depth,
         path.sc,
+        path.parallel
     )
 }
 

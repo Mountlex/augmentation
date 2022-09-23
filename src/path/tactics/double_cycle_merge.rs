@@ -9,6 +9,7 @@ use crate::{
     Credit,
 };
 
+#[derive(Clone)]
 pub struct DoubleCycleMergeTactic {
     num_calls: usize,
     num_proofs: usize,

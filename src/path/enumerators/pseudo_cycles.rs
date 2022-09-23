@@ -4,6 +4,7 @@ use crate::path::{
     SelectedHitInstance,
 };
 
+#[derive(Clone)]
 pub struct PseudoCyclesEnum;
 
 pub struct PseudoCyclesEnumerator<'a> {

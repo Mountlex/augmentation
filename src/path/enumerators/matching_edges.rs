@@ -8,6 +8,7 @@ use crate::{
     types::Edge,
 };
 
+#[derive(Clone)]
 pub struct FindMatchingEdgesEnum;
 
 pub struct FindMatchingEdgesEnumerator<'a> {

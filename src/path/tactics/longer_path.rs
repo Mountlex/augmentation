@@ -6,6 +6,7 @@ use crate::{
     proof_tree::ProofNode,
 };
 
+#[derive(Clone)]
 pub struct LongerPathTactic {
     num_calls: usize,
     num_proofs: usize,
@@ -59,6 +60,7 @@ impl Tactic<AugmentedPathInstance> for LongerPathTactic {
 
 // Private tactics (subroutines)
 
+#[derive(Clone)]
 struct LongerNicePathCheck<'a> {
     other_matching_edge: &'a MatchingEdge,
 }
