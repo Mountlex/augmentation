@@ -167,18 +167,8 @@ fn comp_npcs(
 
     match comp {
         Component::Cycle(_) => {
-            let all_pairs = nodes
-                .iter()
-                .cloned()
+            comp.nodes().into_iter()
                 .tuple_combinations::<(_, _)>()
-                .collect_vec();
-            // let adj_pairs: Vec<(u32, u32)> = all_pairs
-            //     .iter()
-            //     .filter(|(u, v)| comp.is_adjacent(*u, *v))
-            //     .cloned()
-            //     .collect();
-            all_pairs
-                .into_iter()
                 .powerset()
                 .map(|config| NicePairConfig { nice_pairs: config })
                 // .filter(|npc| {
@@ -199,13 +189,12 @@ fn comp_npcs(
                         true
                     }
                 })          
-                .map(|mut npc| {
+                .filter(|npc| {
                     // adjacent vertices are always nice pairs!
-                    npc.nice_pairs.append(&mut comp.edges());
-                    npc
+                    comp.edges().into_iter().all(|(u,v)| npc.is_nice_pair(u, v))
                 })
-                .sorted()
-                .dedup()
+                //.sorted()
+                //.dedup()
                 .collect_vec()
         }
         Component::Large(_) => vec![NicePairConfig::empty()],
