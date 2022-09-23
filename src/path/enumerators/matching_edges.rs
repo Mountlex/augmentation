@@ -42,9 +42,10 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
             let prelast_in = path[2].get_zoomed().in_node.unwrap();
             let iter = path[2]
                 .get_comp()
-                .matching_permutations(2 - num_crossing)
-                .into_iter()
-                .filter(move |right_matched| !right_matched.contains(&prelast_in))
+                .graph()
+                .nodes()
+                .filter(move |n| n != &prelast_in)
+                .permutations(2 - num_crossing)
                 .flat_map(move |right_matched| {
                     left_nodes
                         .iter()
