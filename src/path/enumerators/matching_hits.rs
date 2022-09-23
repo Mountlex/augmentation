@@ -17,7 +17,7 @@ pub struct MatchingHitEnumerator<'a> {
 impl<'a> Enumerator<AugmentedPathInstance> for MatchingHitEnumerator<'a> {
     fn iter(
         &mut self,
-        context: &mut ProofContext,
+        context: &ProofContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         assert!(self.comp_index > 0);
 

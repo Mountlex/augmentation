@@ -29,6 +29,7 @@ use super::tactics::longer_path::LongerPathTactic;
 use super::tactics::longer_path_swap::LongerPathViaSwap;
 use super::AugmentedPathInstance;
 
+#[derive(Clone)]
 pub struct ProofContext {
     pub credit_inv: DefaultCredits,
     pub path_len: usize,
@@ -46,13 +47,13 @@ pub trait EnumeratorTactic<I, O> {
 }
 
 pub trait Enumerator<O> {
-    fn iter(&mut self, context: &mut ProofContext) -> Box<dyn Iterator<Item = O> + '_>;
+    fn iter(&mut self, context: &ProofContext) -> Box<dyn Iterator<Item = O> + '_>;
 }
 
 pub trait Tactic<I> {
     fn precondition(&self, data: &I, context: &ProofContext) -> bool;
 
-    fn action(&mut self, data: &I, context: &mut ProofContext) -> ProofNode;
+    fn action(&mut self, data: &I, context: &ProofContext) -> ProofNode;
 }
 
 pub trait Statistics {
@@ -143,7 +144,7 @@ where
     A2: Tactic<I>,
     I: Clone,
 {
-    fn action(&mut self, data: &I, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: &I, context: &ProofContext) -> ProofNode {
         if self.tactic1.precondition(data, context) {
             let mut proof1 = self.tactic1.action(data, context);
             let outcome = proof1.eval();
@@ -202,7 +203,7 @@ where
     E: EnumeratorTactic<I, O>,
     A: Tactic<O>,
 {
-    fn action(&mut self, data_in: &I, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data_in: &I, context: &ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_all(self.enum_tactic.msg(&data_in));
 
         let mut enumerator = self.enum_tactic.get_enumerator(data_in);
@@ -260,7 +261,7 @@ where
     E: EnumeratorTactic<I, O>,
     A: Tactic<O>,
 {
-    fn action(&mut self, data_in: &I, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data_in: &I, context: &ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_any(self.enum_tactic.msg(&data_in));
 
         let mut enumerator = self.enum_tactic.get_enumerator(data_in);
@@ -466,7 +467,7 @@ impl Tactic<AugmentedPathInstance> for TacticsExhausted {
         true
     }
 
-    fn action(&mut self, _data: &AugmentedPathInstance, _context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, _data: &AugmentedPathInstance, _context: &ProofContext) -> ProofNode {
         self.num_calls += 1;
         ProofNode::new_leaf("Tactics exhausted!".into(), false)
     }
@@ -493,7 +494,7 @@ impl Tactic<AugmentedPathInstance> for CountTactic {
         true
     }
 
-    fn action(&mut self, _data: &AugmentedPathInstance, _context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, _data: &AugmentedPathInstance, _context: &ProofContext) -> ProofNode {
         self.num_calls += 1;
         ProofNode::new_leaf("".into(), false)
     }

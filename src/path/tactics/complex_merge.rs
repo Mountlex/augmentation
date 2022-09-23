@@ -32,7 +32,7 @@ impl Statistics for LocalComplexMerge {
 }
 
 impl Tactic<SelectedHitInstance> for LocalComplexMerge {
-    fn action(&mut self, data: &SelectedHitInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: &SelectedHitInstance, context: &ProofContext) -> ProofNode {
         self.num_calls += 1;
 
         let left_comp = data.instance.path.nodes[data.hit_comp_idx].get_comp();

@@ -36,7 +36,7 @@ impl Tactic<AugmentedPathInstance> for ContractabilityTactic {
     fn action(
         &mut self,
         data: &AugmentedPathInstance,
-        context: &mut ProofContext,
+        context: &ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 

@@ -82,8 +82,6 @@ impl NicePairConfig {
         NicePairConfig { nice_pairs: vec![] }
     }
 
-   
-
     pub fn is_nice_pair(&self, u: Node, v: Node) -> bool {
         self.nice_pairs
             .iter()
@@ -91,8 +89,15 @@ impl NicePairConfig {
             .is_some()
     }
 
-    pub fn is_consistent_with(&self, consistent_npc: &NicePairConfig) -> bool {
-        consistent_npc.nice_pairs.iter().all(|(u,v)| self.is_nice_pair(*u, *v))
+    pub fn is_consistent_with(
+        &self,
+        consistent_npc: &NicePairConfig,
+        consistent_nodes: &[Node],
+    ) -> bool {
+        consistent_nodes
+            .iter()
+            .tuple_combinations::<(_, _)>()
+            .all(|(u, v)| self.is_nice_pair(*u, *v) == consistent_npc.is_nice_pair(*u, *v))
     }
 }
 
@@ -224,6 +229,7 @@ pub struct ZoomedNode {
     pub npc: NicePairConfig,
     pub in_node: Option<Node>,
     pub out_node: Option<Node>,
+    pub connected_nodes: Vec<Node>,
     pub used: bool,
 }
 

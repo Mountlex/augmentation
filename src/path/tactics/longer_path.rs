@@ -30,7 +30,7 @@ impl Tactic<AugmentedPathInstance> for LongerPathTactic {
     fn action(
         &mut self,
         data: &AugmentedPathInstance,
-        context: &mut ProofContext,
+        context: &ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
@@ -75,7 +75,7 @@ impl<'a> Tactic<AugmentedPathInstance> for LongerNicePathCheck<'a> {
     fn action(
         &mut self,
         data: &AugmentedPathInstance,
-        _context: &mut ProofContext,
+        _context: &ProofContext,
     ) -> crate::proof_tree::ProofNode {
         let last = data.path.nodes.last().unwrap().get_zoomed();
         let last_comp = last.get_comp();

@@ -27,7 +27,7 @@ impl Statistics for CycleRearrangeTactic {
 }
 
 impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
-    fn action(&mut self, data: &PseudoCycleInstance, _context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: &PseudoCycleInstance, _context: &ProofContext) -> ProofNode {
         self.num_calls += 1;
 
         //let hit = data.cycle_edge.hits_path().unwrap();

@@ -28,7 +28,7 @@ impl<'a> ExpandEnumerator<'a> {
 impl<'a> Enumerator<SelectedHitInstance> for ExpandEnumerator<'a> {
     fn iter(
         &mut self,
-        context: &mut crate::path::proof::ProofContext,
+        context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
         let hit_comp_idx = self.hit_comp_idx;
         let iter = Enumerator::<AugmentedPathInstance>::iter(self, context).map(move |aug| {
@@ -45,16 +45,16 @@ impl<'a> Enumerator<SelectedHitInstance> for ExpandEnumerator<'a> {
 impl<'a> Enumerator<AugmentedPathInstance> for ExpandEnumerator<'a> {
     fn iter(
         &mut self,
-        context: &mut crate::path::proof::ProofContext,
+        context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let path_len = context.path_len;
         let node_idx = self.hit_comp_idx;
-        let instance = &self.instance;
+        let instance = self.instance;
         let path = &instance.path;
         let node = &path[node_idx];
         let comp = node.get_comp();
 
-        let mut nodes_with_outgoing = comp
+        let mut connected_nodes = comp
             .nodes()
             .iter()
             .filter(|&n| {
@@ -67,62 +67,95 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandEnumerator<'a> {
             .cloned()
             .collect_vec();
 
-        nodes_with_outgoing.push(comp.fixed_node());
-        nodes_with_outgoing.sort();
-        nodes_with_outgoing.dedup();
+            
+        if node.is_zoomed() {
+            connected_nodes.push(node.get_zoomed().in_node.unwrap());            
+            connected_nodes.push(node.get_zoomed().out_node.unwrap());            
+            connected_nodes.sort();
+            connected_nodes.dedup();
+            
+            // node is already zoomed, just update nice pairs of new incident edges
+            let iter = comp_npcs(
+                node,
+                &connected_nodes,
+                &node.get_zoomed().npc,
+                &node.get_zoomed().connected_nodes,
+            )
+            .into_iter()
+            .map(move |npc| {
+                let mut path_clone = path.clone();
+                let mut zoomed_node = path_clone[node_idx].get_zoomed_mut();
+                zoomed_node.npc = npc;
+                zoomed_node.connected_nodes = connected_nodes.clone();
 
-        let in_node_iter: Box<dyn Iterator<Item = Node>> = if node_idx < path_len - 1 {
-            // enumerate all ins
-            Box::new(comp.nodes().into_iter().filter(|n| *n != comp.fixed_node()))
-        } else {
-            Box::new(vec![comp.fixed_node()].into_iter())
-        };
-
-        let iter = in_node_iter.flat_map(move |in_node| {
-            let mut nodes = nodes_with_outgoing.clone();
-            nodes.push(in_node);
-            nodes.sort();
-            nodes.dedup();
-
-            let in_out = if node_idx < path_len - 1
-                && (comp.is_complex()
-                    || comp.is_c3()
-                    || comp.is_c4()
-                    || (comp.is_c5() && !node.used()))
-            {
-                NicePairConfig {
-                    nice_pairs: vec![(comp.fixed_node(), in_node)],
+                AugmentedPathInstance {
+                    path: path_clone,
+                    non_path_matching_edges: instance.non_path_matching_edges.clone(),
+                    fixed_edge: instance.fixed_edge.clone(),
                 }
+            });
+            Box::new(iter)
+        } else {
+            // this will be out
+            connected_nodes.push(comp.fixed_node());
+
+            let in_node_iter: Box<dyn Iterator<Item = Node>> = if node_idx < path_len - 1 {
+                // enumerate all ins
+                Box::new(comp.nodes().into_iter().filter(|n| *n != comp.fixed_node()))
             } else {
-                NicePairConfig::empty()
+                Box::new(vec![comp.fixed_node()].into_iter())
             };
 
-            comp_npcs(node, &nodes, &in_out)
-                .into_iter()
-                .map(|npc| {
-                    let mut path_clone = path.clone();
-                    path_clone[node_idx] = SuperNode::Zoomed(ZoomedNode {
-                        comp: comp.clone(),
-                        npc,
-                        in_node: Some(in_node),
-                        out_node: if node_idx < path_len - 1 {
-                            Some(comp.fixed_node())
-                        } else {
-                            None
+            let iter = in_node_iter.flat_map(move |in_node| {
+                let mut nodes = connected_nodes.clone();
+                nodes.push(in_node);
+                nodes.sort();
+                nodes.dedup();
+
+                let npcs = if node_idx < path_len - 1
+                    && (comp.is_complex()
+                        || comp.is_c3()
+                        || comp.is_c4()
+                        || (comp.is_c5() && !node.used()))
+                {
+                    comp_npcs(
+                        node,
+                        &nodes,
+                        &NicePairConfig {
+                            nice_pairs: vec![(comp.fixed_node(), in_node)],
                         },
-                        used: node.get_abstract().used,
-                    });
+                        &vec![comp.fixed_node(), in_node],
+                    )
+                } else {
+                    comp_npcs(node, &nodes, &NicePairConfig::empty(), &vec![])
+                };
 
-                    AugmentedPathInstance {
-                        path: path_clone,
-                        non_path_matching_edges: instance.non_path_matching_edges.clone(),
-                        fixed_edge: instance.fixed_edge.clone(),
-                    }
-                })
-                .collect_vec()
-        });
+                npcs.into_iter()
+                    .map(|npc| {
+                        let mut path_clone = path.clone();
+                        path_clone[node_idx] = SuperNode::Zoomed(ZoomedNode {
+                            comp: comp.clone(),
+                            npc,
+                            in_node: Some(in_node),
+                            out_node: if node_idx < path_len - 1 {
+                                Some(comp.fixed_node())
+                            } else {
+                                None
+                            },
+                            connected_nodes: nodes.clone(),
+                            used: node.get_abstract().used,
+                        });
 
-        Box::new(iter)
+                        AugmentedPathInstance {
+                            path: path_clone,
+                            non_path_matching_edges: instance.non_path_matching_edges.clone(),
+                            fixed_edge: instance.fixed_edge.clone(),
+                        }
+                    })
+                    .collect_vec()
+            });
+            Box::new(iter)
+        }
     }
 }
 
@@ -166,8 +199,9 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for ExpandEnum {
 
 fn comp_npcs(
     node: &SuperNode,
-    nodes: &Vec<Node>,
+    nodes: &[Node],
     consistent_npc: &NicePairConfig,
+    consistent_nodes: &[Node],
 ) -> Vec<NicePairConfig> {
     let comp = node.get_comp();
 
@@ -188,7 +222,7 @@ fn comp_npcs(
                     npc.nice_pairs.append(&mut comp.edges());
                     npc
                 })
-                .filter(|npc| npc.is_consistent_with(&consistent_npc))
+                .filter(|npc| npc.is_consistent_with(&consistent_npc, &consistent_nodes))
                 .sorted()
                 .dedup()
                 .collect_vec()

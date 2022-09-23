@@ -33,7 +33,7 @@ impl Statistics for CycleMergeTactic {
 }
 
 impl Tactic<PseudoCycleInstance> for CycleMergeTactic {
-    fn action(&mut self, data: &PseudoCycleInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: &PseudoCycleInstance, context: &ProofContext) -> ProofNode {
         self.num_calls += 1;
 
         let cycle_value = data.pseudo_cycle.value(context.credit_inv.clone());

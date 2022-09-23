@@ -177,7 +177,7 @@ fn merge(
 }
 
 impl Tactic<AugmentedPathInstance> for LocalMergeTactic {
-    fn action(&mut self, data: &AugmentedPathInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: &AugmentedPathInstance, context: &ProofContext) -> ProofNode {
         self.num_calls += 1;
 
         let res = data.path
@@ -221,7 +221,7 @@ impl Tactic<SelectedHitInstance> for LocalMergeTactic {
         Tactic::<AugmentedPathInstance>::precondition(self, &data.instance, context)
     }
 
-    fn action(&mut self, data: &SelectedHitInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: &SelectedHitInstance, context: &ProofContext) -> ProofNode {
         Tactic::<AugmentedPathInstance>::action(self, &data.instance, context)
     }
 }

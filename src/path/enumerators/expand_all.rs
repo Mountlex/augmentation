@@ -13,15 +13,21 @@ pub struct ExpandAllEnumerator<'a> {
     instance: &'a AugmentedPathInstance,
 }
 
+impl <'a> ExpandAllEnumerator<'a> {
+    pub fn new(instance: &'a AugmentedPathInstance) -> Self {
+        Self { instance }
+    }
+}
+
 impl<'a> Enumerator<AugmentedPathInstance> for ExpandAllEnumerator<'a> {
     fn iter(
         &mut self,
-        context: &mut crate::path::proof::ProofContext,
+        context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let mut cases = vec![self.instance.clone()];
 
-        for (i, node) in self.instance.path.nodes.iter().enumerate() {
-            if !node.is_zoomed() {
+        for (i, _node) in self.instance.path.nodes.iter().enumerate() {
+            //if !node.is_zoomed() {
                 cases = cases
                     .into_iter()
                     .flat_map(|instance| {
@@ -37,7 +43,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandAllEnumerator<'a> {
                             .collect_vec()
                     })
                     .collect_vec()
-            }
+            //}
         }
 
         assert!(cases

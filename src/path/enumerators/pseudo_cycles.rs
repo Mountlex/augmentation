@@ -13,7 +13,7 @@ pub struct PseudoCyclesEnumerator<'a> {
 impl<'a> Enumerator<PseudoCycleInstance> for PseudoCyclesEnumerator<'a> {
     fn iter(
         &mut self,
-        context: &mut ProofContext,
+        context: &ProofContext,
     ) -> Box<dyn Iterator<Item = PseudoCycleInstance> + '_> {
         let path_len = context.path_len;
         let matching_edges_iter = self

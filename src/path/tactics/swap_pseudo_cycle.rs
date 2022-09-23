@@ -49,7 +49,7 @@ impl Tactic<SelectedHitInstance> for CycleMergeViaSwap {
     fn action(
         &mut self,
         data: &SelectedHitInstance,
-        context: &mut crate::path::proof::ProofContext,
+        context: &crate::path::proof::ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 

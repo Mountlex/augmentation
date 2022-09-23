@@ -30,7 +30,7 @@ impl Statistics for LongerPathViaSwap {
 }
 
 impl Tactic<SelectedHitInstance> for LongerPathViaSwap {
-    fn action(&mut self, data: &SelectedHitInstance, context: &mut ProofContext) -> ProofNode {
+    fn action(&mut self, data: &SelectedHitInstance, context: &ProofContext) -> ProofNode {
         self.num_calls += 1;
 
         let matched = data

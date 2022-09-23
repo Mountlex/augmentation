@@ -14,7 +14,7 @@ pub struct ComponentHitEnumerator<'a> {
 impl<'a> Enumerator<SelectedHitInstance> for ComponentHitEnumerator<'a> {
     fn iter(
         &mut self,
-        _context: &mut ProofContext,
+        _context: &ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
         let mut matching_edges = self.input.non_path_matching_edges.clone();
         matching_edges.sort_by_key(|m| m.hit());

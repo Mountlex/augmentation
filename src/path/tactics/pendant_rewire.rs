@@ -37,7 +37,7 @@ impl Tactic<SelectedHitInstance> for PendantRewireTactic {
     fn action(
         &mut self,
         _data: &SelectedHitInstance,
-        _context: &mut crate::path::proof::ProofContext,
+        _context: &crate::path::proof::ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
