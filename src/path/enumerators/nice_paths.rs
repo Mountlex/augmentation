@@ -1,10 +1,10 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::{merge_components_to_base, Component, Graph},
+    comps::{merge_components_to_base, Component, Graph, CompType},
     path::{
         proof::{Enumerator, EnumeratorTactic, PathNode, ProofContext},
-        AbstractNode, AugmentedPathInstance, PathInstance, SuperNode,
+        AbstractNode, AugmentedPathInstance, PathInstance, SuperNode, utils::relabels_nodes_sequentially,
     },
 };
 
@@ -39,9 +39,8 @@ impl<'a> Enumerator<AugmentedPathInstance> for PathEnumerator<'a> {
             move |(c1, c2, c3)| {
                 let path = vec![c1, c2, c3, self.input.last_comp.clone()];
 
-                let path_comps = path.iter().map(|n| n.get_comp().clone()).collect_vec();
-                let (_path_graph, path_updated) =
-                    merge_components_to_base(Graph::new(), path_comps);
+                let mut path_updated = path.iter().map(|n| n.get_comp().clone()).collect_vec();
+                relabels_nodes_sequentially(&mut path_updated);
 
                 let path = path
                     .into_iter()
@@ -56,14 +55,14 @@ impl<'a> Enumerator<AugmentedPathInstance> for PathEnumerator<'a> {
                     .into_iter()
                     .enumerate()
                     .map(|(i, c)| -> SuperNode {
-                        let nice_pair = match c.get_comp() {
-                            Component::Cycle(cycle) if cycle.edge_count() <= 4 => true,
-                            Component::Cycle(cycle)
-                                if cycle.edge_count() == 5 && i == path_len - 2 && !c.is_used() =>
+                        let nice_pair = match c.get_comp().comp_type() {
+                            CompType::Cycle(num) if num <= 4 => true,
+                            CompType::Cycle(num)
+                                if num == 5 && i == path_len - 2 && !c.is_used() =>
                             {
                                 true
                             }
-                            Component::Complex(_, _, _) => true,
+                            CompType::Complex => true,
                             _ => false,
                         };
 

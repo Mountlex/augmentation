@@ -106,7 +106,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandEnumerator<'a> {
 
             let in_node_iter: Box<dyn Iterator<Item = Node>> = if node_idx < path_len - 1 {
                 // enumerate all ins
-                Box::new(comp.nodes().into_iter().filter(|n| *n != comp.fixed_node()))
+                Box::new(comp.nodes().into_iter().filter(|n| *n != &comp.fixed_node()).cloned())
             } else {
                 Box::new(vec![comp.fixed_node()].into_iter())
             };
@@ -211,29 +211,8 @@ fn comp_npcs(
     let comp = node.get_comp();
 
     match comp {
-        Component::Cycle(_) => {
-            nodes
-                .iter()
-                .cloned()
-                .tuple_combinations::<(_, _)>()
-                .powerset()
-                .map(|config| NicePairConfig { nice_pairs: config })
-                // .filter(|npc| {
-                //     // if config misses a nice pair although it is a pair of adjacent vertices, remove it
-                //     adj_pairs.iter().all(|(u, v)| npc.is_nice_pair(*u, *v))
-                // })
-                .map(|mut npc| {
-                    // adjacent vertices are always nice pairs!
-                    npc.nice_pairs.append(&mut comp.edges());
-                    npc
-                })
-                .filter(|npc| npc.is_consistent_with(&consistent_npc, &consistent_nodes))
-                .sorted()
-                .dedup()
-                .collect_vec()
-        }
         Component::Large(_) => vec![NicePairConfig::empty()],
-        Component::Complex(_, black, _) => vec![NicePairConfig {
+        Component::ComplexTree(_, black) => vec![NicePairConfig {
             nice_pairs: nodes
                 .iter()
                 .cloned()
@@ -241,5 +220,35 @@ fn comp_npcs(
                 .filter(|(v1, v2)| v1 != v2 || !black.contains(&v2))
                 .collect_vec(),
         }],
+        Component::ComplexPath(_, black) => vec![NicePairConfig {
+            nice_pairs: nodes
+                .iter()
+                .cloned()
+                .tuple_combinations::<(_, _)>()
+                .filter(|(v1, v2)| v1 != v2 || !black.contains(&v2))
+                .collect_vec(),
+        }],
+        _ => {
+            // cycle case
+            nodes
+            .iter()
+            .cloned()
+            .tuple_combinations::<(_, _)>()
+            .powerset()
+            .map(|config| NicePairConfig { nice_pairs: config })
+            // .filter(|npc| {
+            //     // if config misses a nice pair although it is a pair of adjacent vertices, remove it
+            //     adj_pairs.iter().all(|(u, v)| npc.is_nice_pair(*u, *v))
+            // })
+            .map(|mut npc| {
+                // adjacent vertices are always nice pairs!
+                npc.nice_pairs.append(&mut comp.edges());
+                npc
+            })
+            .filter(|npc| npc.is_consistent_with(&consistent_npc, &consistent_nodes))
+            .sorted()
+            .dedup()
+            .collect_vec()
+        }
     }
 }

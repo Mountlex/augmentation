@@ -68,11 +68,11 @@ impl Tactic<AugmentedPathInstance> for ContractabilityTactic {
                     .combinations(2)
                     .filter(|m| !last.npc.is_nice_pair(*m[0], *m[1]))
                     .any(|m| {
-                        hamiltonian_paths(*m[0], *m[1], &last_comp.nodes())
+                        hamiltonian_paths(*m[0], *m[1], last_comp.nodes())
                             .iter()
                             .any(|path| {
                                 path.windows(2).all(|e| {
-                                    last_comp.is_adjacent(e[0], e[1])
+                                    last_comp.is_adjacent(&e[0], &e[1])
                                         || (*free_edge[0] == e[0] && *free_edge[1] == e[1])
                                         || (*free_edge[1] == e[0] && *free_edge[0] == e[1])
                                 })

@@ -8,7 +8,7 @@ use std::fmt::Write;
 
 use crate::{
     bridges::{is_complex, ComplexCheckResult},
-    comps::{Component, ComponentType, CreditInvariant, EdgeType, Graph, Node},
+    comps::{ComponentG, ComponentType, CreditInvariant, EdgeType, Graph, Node},
     edges_of_type, merge_components_to_base,
     proof_tree::ProofNode,
     Credit,
@@ -40,7 +40,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
         std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
 
         // Enumerate every graph combination and prove merge
-        let combinations: Vec<(Component, Component)> = iproduct!(
+        let combinations: Vec<(ComponentG, ComponentG)> = iproduct!(
             self.leaf_comps.iter().flat_map(|c| c.components()),
             self.comps.iter().flat_map(|c| c.components())
         )
@@ -93,8 +93,8 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
     fn prove_local_merge(
         &self,
         left_graph: Graph,
-        left_comps: Vec<&Component>,
-        right_comp: Component,
+        left_comps: Vec<&ComponentG>,
+        right_comp: ComponentG,
         parallel: bool,
         current_depth: usize,
         p_node: &mut ProofNode,
@@ -157,7 +157,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
     fn find_prove_for_matching(
         &self,
         graph_with_matching: &Graph,
-        graph_components: &Vec<&Component>,
+        graph_components: &Vec<&ComponentG>,
         current_depth: usize,
         matching_node: &mut ProofNode,
     ) -> bool {
@@ -199,7 +199,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
     fn prove_via_enumerating_neighbors(
         &self,
         graph: &Graph,
-        graph_components: &Vec<&Component>,
+        graph_components: &Vec<&ComponentG>,
         current_depth: usize,
         proof_node: &mut ProofNode,
     ) -> bool {
@@ -219,7 +219,7 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
         for next in self.comps.iter().flat_map(|c| c.components()) {
             if graph_components.len() == 2 {
                 match (graph_components[0], graph_components[1], &next) {
-                    (Component::Cycle(g0), Component::Cycle(g1), Component::Cycle(g2))
+                    (ComponentG::Cycle(g0), ComponentG::Cycle(g1), ComponentG::Cycle(g2))
                         if g0.edge_count() == 5 && g1.edge_count() == 4 && g2.edge_count() == 5 =>
                     {
                         continue
@@ -247,12 +247,12 @@ impl<C: CreditInvariant + Sync> TreeCaseProof<C> {
 
     fn prove_via_contractable_arguments(
         &self,
-        comp: &Component,
+        comp: &ComponentG,
         graph: &Graph,
-        graph_components: &Vec<&Component>,
+        graph_components: &Vec<&ComponentG>,
         proof_node: &mut ProofNode,
     ) -> bool {
-        if matches!(comp, Component::Cycle(g) if g.node_count() == 6) {
+        if matches!(comp, ComponentG::Cycle(g) if g.node_count() == 6) {
             // comp is H
             let mut necessary_edges = 0;
             let mut inner_vertices = vec![];
@@ -324,7 +324,7 @@ fn add_matching_to_graph(graph: &Graph, matching: &Vec<(Node, Node)>) -> Graph {
     graph_with_matching
 }
 
-fn compute_possible_matching(left: &Component, right: &Component) -> Vec<Vec<(Node, Node)>> {
+fn compute_possible_matching(left: &ComponentG, right: &ComponentG) -> Vec<Vec<(Node, Node)>> {
     // Enumerate all possible matchings (adversarial)
     let right_iter: Vec<Vec<u32>> = right.matching_permutations(3);
     left.matching_sets()
@@ -343,7 +343,7 @@ fn compute_possible_matching(left: &Component, right: &Component) -> Vec<Vec<(No
 
 pub fn prove_via_direct_merge<C: CreditInvariant>(
     graph: &Graph,
-    graph_components: Vec<&Component>,
+    graph_components: Vec<&ComponentG>,
     credit_inv: C,
     proof_node: &mut ProofNode,
 ) -> bool {
@@ -360,7 +360,7 @@ pub fn prove_via_direct_merge<C: CreditInvariant>(
         credit_inv.clone(),
         graph_components
             .iter()
-            .any(|c| matches!(c, Component::Complex(_, _, _))),
+            .any(|c| matches!(c, ComponentG::Complex(_, _, _))),
     );
 
     match result {

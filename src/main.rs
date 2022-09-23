@@ -8,12 +8,12 @@ use itertools::Itertools;
 use num_rational::Rational64;
 use path::prove_nice_path_progress;
 
-use crate::{comps::*, local_merge::TreeCaseProof};
+use crate::{comps::*};
 
 mod bridges;
 mod comps;
 mod contract;
-mod local_merge;
+//mod local_merge;
 mod path;
 mod proof_tree;
 mod types;
@@ -76,54 +76,50 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn prove_local(local: Local) {
-    let inv = DefaultCredits::new(Rational64::new(local.c_numer, local.c_demon));
-    let leaf_comps = vec![
-        ComponentType::Cycle(4),
-        ComponentType::Cycle(5),
-        ComponentType::Cycle(6),
-        ComponentType::Large,
-        ComponentType::Complex,
-    ];
-    let comps = vec![
-        ComponentType::Cycle(3),
-        ComponentType::Cycle(4),
-        ComponentType::Cycle(5),
-        ComponentType::Cycle(6),
-        ComponentType::Large,
-        ComponentType::Complex,
-    ];
+    // let inv = DefaultCredits::new(Rational64::new(local.c_numer, local.c_demon));
+    // let leaf_comps = vec![
+    //     ComponentType::Cycle(4),
+    //     ComponentType::Cycle(5),
+    //     ComponentType::Cycle(6),
+    //     ComponentType::Large,
+    //     ComponentType::Complex,
+    // ];
+    // let comps = vec![
+    //     ComponentType::Cycle(3),
+    //     ComponentType::Cycle(4),
+    //     ComponentType::Cycle(5),
+    //     ComponentType::Cycle(6),
+    //     ComponentType::Large,
+    //     ComponentType::Complex,
+    // ];
 
-    println!("========== Proof for c = {} ==========", inv.c);
-    let proof1 = TreeCaseProof::new(leaf_comps, comps.clone(), inv.clone(), local.depth);
-    proof1.prove(local.parallel, local.output_dir);
+    // println!("========== Proof for c = {} ==========", inv.c);
+    // let proof1 = TreeCaseProof::new(leaf_comps, comps.clone(), inv.clone(), local.depth);
+    // proof1.prove(local.parallel, local.output_dir);
 }
 
 fn prove_path(path: Path) {
     let inv = DefaultCredits::new(Rational64::new(path.c_numer, path.c_demon));
 
     let comps = vec![
-        ComponentType::Cycle(3),
-        ComponentType::Cycle(4),
-        ComponentType::Cycle(5),
-        ComponentType::Cycle(6),
-        ComponentType::Large,
-        ComponentType::Complex,
+        c3(),
+        c4(),
+        c5(),
+        c6(),
+        large(),
+        complex_path(),
+        complex_tree(),
     ];
 
     let last_comps = vec![
-        ComponentType::Large,
-        ComponentType::Cycle(6),
-        ComponentType::Cycle(4),
-        ComponentType::Cycle(3),
-        ComponentType::Cycle(5),
-        //ComponentType::Complex,
+        c3(),
+        c4(),
+        c5(),
+        c6(),
+        large(),
+        //complex_path(),
+        //complex_tree(),
     ];
-
-    let comps = comps.into_iter().flat_map(|c| c.components()).collect_vec();
-    let last_comps = last_comps
-        .into_iter()
-        .flat_map(|c| c.components())
-        .collect_vec();
 
     prove_nice_path_progress(
         comps,

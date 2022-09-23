@@ -87,10 +87,10 @@ fn merge(
                     let l2 = buy[1].0;
                     let r2 = buy[1].1;
 
-                    if !left_comp.is_adjacent(l1, l2) && left.npc.is_nice_pair(l1, l2) {
+                    if !left_comp.is_adjacent(&l1, &l2) && left.npc.is_nice_pair(l1, l2) {
                         total_plus_sell += Credit::from_integer(1)
                     }
-                    if !right_comp.is_adjacent(r1, r2) && right.npc.is_nice_pair(r1, r2) {
+                    if !right_comp.is_adjacent(&r1, &r2) && right.npc.is_nice_pair(r1, r2) {
                         total_plus_sell += Credit::from_integer(1)
                     }
                 }

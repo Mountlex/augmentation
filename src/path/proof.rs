@@ -21,7 +21,6 @@ use super::enumerators::comp_hits::ComponentHitEnum;
 use super::enumerators::matching_hits::MatchingHitEnum;
 use super::enumerators::matching_nodes::MatchingNodesEnum;
 use super::enumerators::nice_paths::{PathEnum, PathEnumeratorInput};
-use super::tactics::complex_merge::LocalComplexMerge;
 use super::tactics::contract::ContractabilityTactic;
 use super::tactics::cycle_merge::CycleMergeTactic;
 use super::tactics::local_merge::LocalMergeTactic;
@@ -488,19 +487,16 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                         ),
                         any(
                             ComponentHitEnum,
-                            or(
-                                LocalComplexMerge::new(),
+                            all(
+                                MatchingNodesEnum,
                                 all(
-                                    MatchingNodesEnum,
-                                    all(
-                                        ExpandEnum,
-                                        or5(
-                                            PendantRewireTactic::new(),
-                                            LocalMergeTactic::new(),
-                                            any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                            LongerPathViaSwap::new(),
-                                            CycleMergeViaSwap::new(),
-                                        ),
+                                    ExpandEnum,
+                                    or5(
+                                        PendantRewireTactic::new(),
+                                        LocalMergeTactic::new(),
+                                        any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                                        LongerPathViaSwap::new(),
+                                        CycleMergeViaSwap::new(),
                                     ),
                                 ),
                             ),

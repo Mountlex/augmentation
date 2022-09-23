@@ -12,7 +12,7 @@ use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 
 use crate::{
-    comps::{Component, CreditInvariant, Node},
+    comps::{Component, CreditInvariant, Node, CompType},
     path::utils::complex_cycle_value_base,
     types::Edge,
     Credit,
@@ -178,15 +178,15 @@ impl AbstractNode {
     }
 
     fn value<C: CreditInvariant>(&self, credit_inv: C, lower_complex: bool) -> Credit {
-        match self.comp {
-            Component::Cycle(_) if !self.used => {
+        match self.comp.comp_type() {
+            CompType::Cycle(_) if !self.used => {
                 if self.nice_pair {
                     credit_inv.credits(&self.comp)
                 } else {
                     credit_inv.credits(&self.comp) - Credit::from_integer(1)
                 }
             }
-            Component::Cycle(_) if self.used => {
+            CompType::Cycle(_) if self.used => {
                 assert!(self.comp.is_c5());
                 if self.in_not_out {
                     credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5)
@@ -195,8 +195,8 @@ impl AbstractNode {
                     credit_inv.credits(&self.comp) - Credit::from_integer(1)
                 }
             }
-            Component::Large(_) => credit_inv.credits(&self.comp) - Credit::from_integer(1),
-            Component::Complex(_, _, _) => {
+            CompType::Large => credit_inv.credits(&self.comp) - Credit::from_integer(1),
+            CompType::Complex => {
                 let complex = if lower_complex {
                     credit_inv.complex_comp()
                 } else {
@@ -243,15 +243,15 @@ impl ZoomedNode {
             .npc
             .is_nice_pair(self.in_node.unwrap(), self.out_node.unwrap());
 
-        match self.comp {
-            Component::Cycle(_) if !self.used => {
+        match self.comp.comp_type() {
+            CompType::Cycle(_) if !self.used => {
                 if nice_pair {
                     credit_inv.credits(&self.comp)
                 } else {
                     credit_inv.credits(&self.comp) - Credit::from_integer(1)
                 }
             }
-            Component::Cycle(_) if self.used => {
+            CompType::Cycle(_) if self.used => {
                 assert!(self.comp.is_c5());
                 if self.in_node != self.out_node {
                     credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5)
@@ -260,8 +260,8 @@ impl ZoomedNode {
                     credit_inv.credits(&self.comp) - Credit::from_integer(1)
                 }
             }
-            Component::Large(_) => credit_inv.credits(&self.comp) - Credit::from_integer(1),
-            Component::Complex(_, _, _) => {
+            CompType::Large => credit_inv.credits(&self.comp) - Credit::from_integer(1),
+            CompType::Complex => {
                 let complex = if lower_complex {
                     credit_inv.complex_comp()
                 } else {
@@ -271,7 +271,7 @@ impl ZoomedNode {
                     complex
                         + complex_cycle_value_base(
                             credit_inv.clone(),
-                            self.comp.graph(),
+                            &self.comp.graph(),
                             self.in_node.unwrap(),
                             self.out_node.unwrap(),
                         )
@@ -279,7 +279,7 @@ impl ZoomedNode {
                     complex
                         + complex_cycle_value_base(
                             credit_inv.clone(),
-                            self.comp.graph(),
+                            &self.comp.graph(),
                             self.in_node.unwrap(),
                             self.out_node.unwrap(),
                         )

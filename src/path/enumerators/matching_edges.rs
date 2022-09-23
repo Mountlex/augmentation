@@ -24,8 +24,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
 
         let path = &self.instance.path;
 
-        let mut left_nodes = path[0].get_comp().nodes();
-        left_nodes.append(&mut path[1].get_comp().nodes());
+        let mut left_nodes = vec![path[0].get_comp().nodes(),path[1].get_comp().nodes()].concat();
         left_nodes.drain_filter(|node| *node == path[1].get_comp().fixed_node());
 
         let last_nodes = path.last_comp().nodes();
@@ -42,19 +41,18 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
             let prelast_in = path[2].get_zoomed().in_node.unwrap();
             let iter = path[2]
                 .get_comp()
-                .graph()
-                .nodes()
-                .filter(move |n| n != &prelast_in)
-                .permutations(2 - num_crossing)
+                .matching_permutations(2 - num_crossing)
+                .into_iter()
+                .filter(move |right_matched| !right_matched.contains(&prelast_in))
                 .flat_map(move |right_matched| {
                     left_nodes
                         .iter()
-                        .permutations(2 - num_crossing)
+                        .combinations(2 - num_crossing)
                         .filter(|left_matched| {
                             left_matched.iter().any(|&l| {
                                 !path[1]
                                     .get_comp()
-                                    .is_adjacent(path[1].get_comp().fixed_node(), *l)
+                                    .is_adjacent(&path[1].get_comp().fixed_node(), l)
                             })
                         })
                         .map(|left_matched| {
