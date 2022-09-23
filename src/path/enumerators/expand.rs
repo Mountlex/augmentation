@@ -198,12 +198,14 @@ fn comp_npcs(
                     } else {
                         true
                     }
-                })
+                })          
                 .map(|mut npc| {
                     // adjacent vertices are always nice pairs!
                     npc.nice_pairs.append(&mut comp.edges());
                     npc
                 })
+                .sorted()
+                .dedup()
                 .collect_vec()
         }
         Component::Large(_) => vec![NicePairConfig::empty()],

@@ -48,6 +48,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
                     left_nodes
                         .iter()
                         .permutations(2 - num_crossing)
+                        .filter(|left_matched| left_matched.iter().any(|&l| !path[1].get_comp().is_adjacent(path[1].get_comp().fixed_node(), *l)))
                         .map(|left_matched| {
                             let mut new_instance = self.instance.clone();
                             for (left, right) in left_matched.into_iter().zip(right_matched.iter())

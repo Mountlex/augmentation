@@ -70,7 +70,7 @@ impl Tactic<AugmentedPathInstance> for DoubleCycleMergeTactic {
                 cycle_nodes[3].get_zoomed_mut().out_node = cycle_nodes[3].get_zoomed().in_node;
                 cycle_nodes[3].get_zoomed_mut().in_node = Some(right_cycle_edge.0);
 
-                // NICE PAIRS DONT FIT!
+                
 
                 let cycle = PseudoCycle { nodes: cycle_nodes };
 

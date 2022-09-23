@@ -389,7 +389,10 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                                     any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                     all(
                                                         FindMatchingEdgesEnum,
-                                                        DoubleCycleMergeTactic::new(),
+                                                        or(
+                                                            DoubleCycleMergeTactic::new(),
+                                                            LocalMergeTactic::new(),
+                                                        ),
                                                     ),
                                                 ),
                                             ),

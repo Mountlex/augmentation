@@ -279,7 +279,7 @@ impl Component {
 
     pub fn is_adjacent(&self, v1: Node, v2: Node) -> bool {
         assert!(self.graph().contains_node(v1));
-        assert!(self.graph().contains_node(v2));
+        //assert!(self.graph().contains_node(v2));
         match self {
             Component::Cycle(graph) => graph.neighbors(v1).contains(&v2),
             Component::Complex(complex, black, _) => complex.graph.neighbors(v1).contains(&v2),
