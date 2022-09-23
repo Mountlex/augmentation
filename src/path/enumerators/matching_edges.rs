@@ -37,7 +37,6 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
             .filter(|edge| edge.incident(&left_nodes) && edge.incident(&last_nodes))
             .count();
         
-        let context = context.clone();
         if num_crossing <= 1 {
             let prelast_in = path[2].get_zoomed().in_node.unwrap();
             let iter = path[2]
@@ -50,14 +49,14 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
                         .iter()
                         .permutations(2 - num_crossing)
                         .filter(|left_matched| left_matched.iter().any(|&l| !path[1].get_comp().is_adjacent(path[1].get_comp().fixed_node(), *l)))
-                        .flat_map(|left_matched| {
+                        .map(|left_matched| {
 
                             let mut new_instance = self.instance.clone();
                             for (left, right) in left_matched.into_iter().zip(right_matched.iter())
                             {
                                 new_instance.fixed_edge.push(Edge(*left, *right));
                             }
-                            ExpandAllEnumerator::new(&new_instance).iter(&context).collect_vec()
+                            new_instance
                         })
                         .collect_vec()
                 });
