@@ -45,7 +45,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandAllEnumerator<'a> {
             .all(|case| case.path.nodes.iter().all(|node| node.is_zoomed())));
         assert!(cases
             .iter()
-            .all(|case| case.non_path_matching_edges.is_empty()));
+            .all(|case| case.non_path_matching_edges.len() == case.outside_hits().len()));
 
         Box::new(cases.into_iter())
     }
