@@ -82,21 +82,17 @@ impl NicePairConfig {
         NicePairConfig { nice_pairs: vec![] }
     }
 
-    pub fn merge(self, other: NicePairConfig) -> NicePairConfig {
-        NicePairConfig {
-            nice_pairs: vec![self.nice_pairs, other.nice_pairs].concat(),
-        }
-    }
-
-    pub fn add_nice_pair(&mut self, u: Node, v: Node) {
-        self.nice_pairs.push((u, v))
-    }
+   
 
     pub fn is_nice_pair(&self, u: Node, v: Node) -> bool {
         self.nice_pairs
             .iter()
             .find(|(a, b)| (*a == u && *b == v) || (*a == v && *b == u))
             .is_some()
+    }
+
+    pub fn is_consistent_with(&self, consistent_npc: &NicePairConfig) -> bool {
+        consistent_npc.nice_pairs.iter().all(|(u,v)| self.is_nice_pair(*u, *v))
     }
 }
 

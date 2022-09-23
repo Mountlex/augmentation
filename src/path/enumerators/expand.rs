@@ -84,13 +84,20 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandEnumerator<'a> {
             nodes.sort();
             nodes.dedup();
 
-            let in_out = if node_idx < path_len - 1 {
-                Some((comp.fixed_node(), in_node))
+            let in_out = if node_idx < path_len - 1
+                && (comp.is_complex()
+                    || comp.is_c3()
+                    || comp.is_c4()
+                    || (comp.is_c5() && !node.used()))
+            {
+                NicePairConfig {
+                    nice_pairs: vec![(comp.fixed_node(), in_node)],
+                }
             } else {
-                None
+                NicePairConfig::empty()
             };
 
-            comp_npcs(node, &nodes, in_out)
+            comp_npcs(node, &nodes, &in_out)
                 .into_iter()
                 .map(|npc| {
                     let mut path_clone = path.clone();
@@ -160,14 +167,15 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for ExpandEnum {
 fn comp_npcs(
     node: &SuperNode,
     nodes: &Vec<Node>,
-    in_out: Option<(Node, Node)>,
+    consistent_npc: &NicePairConfig,
 ) -> Vec<NicePairConfig> {
-    let used = node.used();
     let comp = node.get_comp();
 
     match comp {
         Component::Cycle(_) => {
-            comp.nodes().into_iter()
+            nodes
+                .iter()
+                .cloned()
                 .tuple_combinations::<(_, _)>()
                 .powerset()
                 .map(|config| NicePairConfig { nice_pairs: config })
@@ -175,24 +183,14 @@ fn comp_npcs(
                 //     // if config misses a nice pair although it is a pair of adjacent vertices, remove it
                 //     adj_pairs.iter().all(|(u, v)| npc.is_nice_pair(*u, *v))
                 // })
-                .filter(|npc| {
-                    if in_out.is_some()
-                        && (comp.is_complex()
-                            || comp.is_c3()
-                            || comp.is_c4()
-                            || (comp.is_c5() && used))
-                    {
-                        let u = in_out.unwrap().0;
-                        let v = in_out.unwrap().1;
-                        npc.is_nice_pair(u, v)
-                    } else {
-                        true
-                    }
-                })          
-                .filter(|npc| {
+                .map(|mut npc| {
                     // adjacent vertices are always nice pairs!
-                    comp.edges().into_iter().all(|(u,v)| npc.is_nice_pair(u, v))
+                    npc.nice_pairs.append(&mut comp.edges());
+                    npc
                 })
+                .filter(|npc| npc.is_consistent_with(&consistent_npc))
+                .sorted()
+                .dedup()
                 .collect_vec()
         }
         Component::Large(_) => vec![NicePairConfig::empty()],

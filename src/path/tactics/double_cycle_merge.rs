@@ -62,9 +62,9 @@ impl Tactic<AugmentedPathInstance> for DoubleCycleMergeTactic {
 
                 cycle_nodes[0].get_zoomed_mut().in_node = cycle_nodes[0].get_zoomed().out_node;
                 cycle_nodes[0].get_zoomed_mut().out_node = Some(left_cycle_edge.0);
-
+                
                 cycle_nodes[1].get_zoomed_mut().in_node = Some(left_cycle_edge.1);
-
+                
                 cycle_nodes[2].get_zoomed_mut().out_node = Some(right_cycle_edge.1);
 
                 cycle_nodes[3].get_zoomed_mut().out_node = cycle_nodes[3].get_zoomed().in_node;
