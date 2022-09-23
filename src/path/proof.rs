@@ -377,25 +377,25 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                     MatchingNodesEnum,
                                     all(
                                         ExpandEnum,
-                                        or5(
+                                        or6(
                                             PendantRewireTactic::new(),
                                             LocalMergeTactic::new(),
                                             any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                             LongerPathViaSwap::new(),
                                             CycleMergeViaSwap::new(),
-                                            // all(
-                                            //     ExpandAllEnum,
-                                            //     or(
-                                            //         any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                            //         all(
-                                            //             FindMatchingEdgesEnum,
-                                            //             or(
-                                            //                 DoubleCycleMergeTactic::new(),
-                                            //                 LocalMergeTactic::new(),
-                                            //             ),
-                                            //         ),
-                                            //    ),
-                                            //),
+                                            all(
+                                                ExpandAllEnum,
+                                                or(
+                                                    any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                                                    all(
+                                                        FindMatchingEdgesEnum,
+                                                        or(
+                                                            DoubleCycleMergeTactic::new(),
+                                                            LocalMergeTactic::new(),
+                                                        ),
+                                                    ),
+                                               ),
+                                            ),
                                         ),
                                     ),
                                 ),

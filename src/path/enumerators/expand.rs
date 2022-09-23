@@ -193,8 +193,6 @@ fn comp_npcs(
                     // adjacent vertices are always nice pairs!
                     comp.edges().into_iter().all(|(u,v)| npc.is_nice_pair(u, v))
                 })
-                //.sorted()
-                //.dedup()
                 .collect_vec()
         }
         Component::Large(_) => vec![NicePairConfig::empty()],
