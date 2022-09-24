@@ -78,8 +78,7 @@ impl Tactic<AugmentedPathInstance> for DoubleCycleMergeTactic {
                     self.num_proofs += 1;
                     return ProofNode::new_leaf_success(
                         format!(
-                            "Merged double pseudo cycle {} with value {}!",
-                            cycle, cycle_value
+                            "Merged double pseudo"
                         ),
                         cycle_value == Credit::from_integer(2),
                     );

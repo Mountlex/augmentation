@@ -2,10 +2,9 @@ use itertools::Itertools;
 
 use crate::path::{
     proof::{Enumerator, EnumeratorTactic},
-    AugmentedPathInstance, SelectedHitInstance,
+    AugmentedPathInstance, SelectedHitInstance, enumerators::{expand::expand_iter, matching_nodes::matching_nodes_iter},
 };
 
-use super::{expand::ExpandEnumerator, matching_nodes::MatchingNodesEnumerator};
 
 #[derive(Clone)]
 pub struct ExpandAllEnum;
@@ -19,36 +18,33 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandAllEnumerator<'a> {
         &mut self,
         context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
-        let mut cases = vec![self.instance.clone()];
+        let mut cases: Box<dyn Iterator<Item = AugmentedPathInstance>> = Box::new(vec![self.instance.clone()].into_iter());
+        let path_len = context.path_len;
 
         for (i, _node) in self.instance.path.nodes.iter().enumerate() {
             //if !node.is_zoomed() {
-            cases = cases
+            let context = context.clone();
+            cases = Box::new(cases
                 .into_iter()
-                .flat_map(|instance| {
-                    MatchingNodesEnumerator::new(&instance, i)
-                        .iter(context)
-                        .flat_map(|instance| {
-                            Enumerator::<AugmentedPathInstance>::iter(
-                                &mut ExpandEnumerator::new(&instance, i),
-                                context,
-                            )
-                            .collect_vec()
+                .flat_map(move |instance| {
+                    let i = i;
+                    let context = context.clone();
+                    matching_nodes_iter(instance, i, path_len)
+                        .flat_map(move |instance| {
+                            expand_iter(instance, i, context.clone())
                         })
-                        .collect_vec()
-                })
-                .collect_vec()
+                }));
             //}
         }
 
-        assert!(cases
-            .iter()
+        let vec_cases = cases.collect_vec();
+
+        assert!(vec_cases.iter()
             .all(|case| case.path.nodes.iter().all(|node| node.is_zoomed())));
-        assert!(cases
-            .iter()
+        assert!(vec_cases.iter()
             .all(|case| case.non_path_matching_edges.len() == case.outside_hits().len()));
 
-        Box::new(cases.into_iter())
+        Box::new(vec_cases.into_iter())
     }
 }
 
@@ -64,7 +60,7 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for ExpandAl
     }
 
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
-        format!("Expanded nice path {}", item.path)
+        format!("Fully expanded nice path")
     }
 }
 
@@ -82,10 +78,10 @@ impl EnumeratorTactic<SelectedHitInstance, AugmentedPathInstance> for ExpandAllE
     }
 
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
-        format!("Expanded nice path {}", item.path)
+        format!("Fully expanded nice path")
     }
 
     fn precondition(&self, data: &SelectedHitInstance, context: &crate::path::proof::ProofContext) -> bool {
-        data.hit_comp_idx == context.path_len - 2
+        !data.instance.outside_hits().is_empty() || data.hit_comp_idx == context.path_len - 2
     }
 }

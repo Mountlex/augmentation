@@ -67,50 +67,53 @@ impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
     }
 }
 
+pub fn matching_nodes_iter(instance: AugmentedPathInstance, hit_comp_idx: usize, path_len: usize) -> Box<dyn Iterator<Item = AugmentedPathInstance>> {
+    let left_comp = instance.path[hit_comp_idx].get_comp().clone();
+    let hit_comp_idx = hit_comp_idx;
+
+    if hit_comp_idx == path_len - 2 {
+        let matching_edges = instance.matching_edges_hit(hit_comp_idx);
+
+        let iter = left_comp
+            .matching_permutations(matching_edges.len())
+            .into_iter()
+            .filter(move |left_matched| {
+                left_matched
+                    .iter()
+                    .all(|matched| *matched != left_comp.fixed_node())
+            })
+            .map(move |left_matched| {
+                let mut instance = instance.clone();
+                for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
+                    instance.fix_matching_edge(right.source(), hit_comp_idx, left);
+                }
+                instance
+            });
+
+        return Box::new(iter);
+    } else {
+        let matching_edges = instance.matching_edges_hit(hit_comp_idx);
+
+        let iter = left_comp
+            .matching_permutations(matching_edges.len())
+            .into_iter()
+            .map(move |left_matched| {
+                let mut instance = instance.clone();
+                for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
+                    instance.fix_matching_edge(right.source(), hit_comp_idx, left);
+                }
+                instance
+            });
+
+        return Box::new(iter);
+    }
+}
+
 impl<'a> Enumerator<AugmentedPathInstance> for MatchingNodesEnumerator<'a> {
     fn iter(
         &mut self,
         context: &ProofContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
-        let left_comp = self.instance.path[self.hit_comp_idx].get_comp();
-        let path_len = context.path_len;
-        let hit_comp_idx = self.hit_comp_idx;
-
-        if self.hit_comp_idx == path_len - 2 {
-            let matching_edges = self.instance.matching_edges_hit(hit_comp_idx);
-
-            let iter = left_comp
-                .matching_permutations(matching_edges.len())
-                .into_iter()
-                .filter(|left_matched| {
-                    left_matched
-                        .iter()
-                        .all(|matched| *matched != left_comp.fixed_node())
-                })
-                .map(move |left_matched| {
-                    let mut instance = self.instance.clone();
-                    for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
-                        instance.fix_matching_edge(right.source(), hit_comp_idx, left);
-                    }
-                    instance
-                });
-
-            return Box::new(iter);
-        } else {
-            let matching_edges = self.instance.matching_edges_hit(hit_comp_idx);
-
-            let iter = left_comp
-                .matching_permutations(matching_edges.len())
-                .into_iter()
-                .map(move |left_matched| {
-                    let mut instance = self.instance.clone();
-                    for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
-                        instance.fix_matching_edge(right.source(), hit_comp_idx, left);
-                    }
-                    instance
-                });
-
-            return Box::new(iter);
-        }
+        matching_nodes_iter(self.instance.clone(), self.hit_comp_idx, context.path_len)
     }
 }
