@@ -107,8 +107,8 @@ fn prove_path(path: Path) {
         c5(),
         c6(),
         large(),
-        complex_path(),
-        complex_tree(),
+        //complex_path(),
+        //complex_tree(),
     ];
 
     let last_comps = vec![
