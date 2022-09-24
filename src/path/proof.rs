@@ -43,6 +43,10 @@ pub trait EnumeratorTactic<I, O> {
     fn msg(&self, data_in: &I) -> String;
     fn get_enumerator<'a>(&'a self, data: &'a I) -> Self::Enumer<'a>;
     fn item_msg(&self, item: &O) -> String;
+    fn precondition(&self, data: &I, context: &ProofContext) -> bool {
+        true
+    }
+
 }
 
 pub trait Enumerator<O> {
@@ -340,8 +344,8 @@ where
         proof
     }
 
-    fn precondition(&self, _data: &I, _contextt: &ProofContext) -> bool {
-        true
+    fn precondition(&self, data: &I, context: &ProofContext) -> bool {
+        self.enum_tactic.precondition(data, context)
     }
 }
 
@@ -394,8 +398,8 @@ where
         proof
     }
 
-    fn precondition(&self, _data: &I, _contextt: &ProofContext) -> bool {
-        true
+    fn precondition(&self, data: &I, context: &ProofContext) -> bool {
+        self.enum_tactic.precondition(data, context)
     }
 }
 
@@ -477,7 +481,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                 all_sc(
                     sc,
                     ExpandLastEnum,
-                    or7(
+                    or6(
                         CountTactic::new("AugmentedPathInstances".into()),
                         LongerPathTactic::new(),
                         ContractabilityTactic::new(),
@@ -491,26 +495,26 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                 MatchingNodesEnum,
                                 all(
                                     ExpandEnum,
-                                    or5(
+                                    or6(
                                         PendantRewireTactic::new(),
                                         LocalMergeTactic::new(),
                                         any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                         LongerPathViaSwap::new(),
                                         CycleMergeViaSwap::new(),
-                                    ),
-                                ),
-                            ),
-                        ),
-                        all(
-                            ExpandAllEnum,
-                            or3(
-                                CountTactic::new("Fully expanded AugmentedPathInstances".into()),
-                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                all(
-                                    FindMatchingEdgesEnum,
-                                    all(
-                                        ExpandAllEnum,
-                                        or(DoubleCycleMergeTactic::new(), LocalMergeTactic::new()),
+                                        all(
+                                            ExpandAllEnum,
+                                            or3(
+                                                CountTactic::new("Fully expanded AugmentedPathInstances".into()),
+                                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                                                all(
+                                                    FindMatchingEdgesEnum,
+                                                    all(
+                                                        ExpandAllEnum,
+                                                        or(DoubleCycleMergeTactic::new(), LocalMergeTactic::new()),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
                                     ),
                                 ),
                             ),

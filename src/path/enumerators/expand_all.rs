@@ -84,4 +84,8 @@ impl EnumeratorTactic<SelectedHitInstance, AugmentedPathInstance> for ExpandAllE
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
         format!("Expanded nice path {}", item.path)
     }
+
+    fn precondition(&self, data: &SelectedHitInstance, context: &crate::path::proof::ProofContext) -> bool {
+        data.hit_comp_idx == context.path_len - 2
+    }
 }
