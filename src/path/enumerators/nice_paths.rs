@@ -1,10 +1,11 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::{merge_components_to_base, Component, Graph, CompType},
+    comps::{merge_components_to_base, CompType, Component, Graph},
     path::{
         proof::{Enumerator, EnumeratorTactic, PathNode, ProofContext},
-        AbstractNode, AugmentedPathInstance, PathInstance, SuperNode, utils::relabels_nodes_sequentially,
+        utils::relabels_nodes_sequentially,
+        AbstractNode, AugmentedPathInstance, PathInstance, SuperNode,
     },
 };
 

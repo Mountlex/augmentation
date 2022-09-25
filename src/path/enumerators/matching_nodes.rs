@@ -67,7 +67,11 @@ impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
     }
 }
 
-pub fn matching_nodes_iter(instance: AugmentedPathInstance, hit_comp_idx: usize, path_len: usize) -> Box<dyn Iterator<Item = AugmentedPathInstance>> {
+pub fn matching_nodes_iter(
+    instance: AugmentedPathInstance,
+    hit_comp_idx: usize,
+    path_len: usize,
+) -> Box<dyn Iterator<Item = AugmentedPathInstance>> {
     let left_comp = instance.path[hit_comp_idx].get_comp().clone();
     let hit_comp_idx = hit_comp_idx;
 

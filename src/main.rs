@@ -8,7 +8,7 @@ use itertools::Itertools;
 use num_rational::Rational64;
 use path::prove_nice_path_progress;
 
-use crate::{comps::*};
+use crate::comps::*;
 
 mod bridges;
 mod comps;
@@ -107,14 +107,14 @@ fn prove_path(path: Path) {
         c5(),
         c6(),
         large(),
-        //complex_path(),
-        //complex_tree(),
+        complex_path(),
+        complex_tree(),
     ];
 
     let last_comps = vec![
-        //c3(),
+        c3(),
         c4(),
-        //c5(),
+        c5(),
         c6(),
         large(),
         //complex_path(),
@@ -128,7 +128,7 @@ fn prove_path(path: Path) {
         path.output_dir,
         path.output_depth,
         path.sc,
-        path.parallel
+        path.parallel,
     )
 }
 

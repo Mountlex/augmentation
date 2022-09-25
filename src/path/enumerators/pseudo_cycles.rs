@@ -17,11 +17,20 @@ impl<'a> Enumerator<PseudoCycleInstance> for PseudoCyclesEnumerator<'a> {
         context: &ProofContext,
     ) -> Box<dyn Iterator<Item = PseudoCycleInstance> + '_> {
         let path_len = context.path_len;
+        let path = &self.input.path;
+
         let matching_edges_iter = self
             .input
             .non_path_matching_edges
             .iter()
-            .filter(move |m_edge| matches!(m_edge.hit(), PathHit::Path(r) if r <= path_len - 3))
+            .filter(move |m_edge| {
+                if let Some(i) = m_edge.hits_path() {
+                    let k = path.index_of_super_node(m_edge.source());
+                    i.max(k) - i.min(k) >= 2
+                } else {
+                    false
+                }
+            })
             .map(|cycle_edge| {
                 let mut pseudo_nodes = self
                     .input
@@ -54,9 +63,10 @@ impl<'a> Enumerator<PseudoCycleInstance> for PseudoCyclesEnumerator<'a> {
             .input
             .fixed_edge
             .iter()
-            .filter(|m_edge| {
-                self.input.path.index_of_super_node(m_edge.0) <= 1
-                    && self.input.path.index_of_super_node(m_edge.1) == 3
+            .filter(move |m_edge| {
+                let i = path.index_of_super_node(m_edge.0);
+                let j = path.index_of_super_node(m_edge.1);
+                i.max(j) - i.min(j) >= 2
             })
             .map(move |cycle_edge| {
                 let mut pseudo_nodes = self
@@ -93,7 +103,7 @@ impl EnumeratorTactic<AugmentedPathInstance, PseudoCycleInstance> for PseudoCycl
     }
 
     fn item_msg(&self, item: &PseudoCycleInstance) -> String {
-        format!("Pseudo cycle {}", item.pseudo_cycle)
+        format!("Pseudo cycle via cycle edge {}", item.cycle_edge)
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a AugmentedPathInstance) -> Self::Enumer<'a> {
@@ -109,7 +119,7 @@ impl EnumeratorTactic<SelectedHitInstance, PseudoCycleInstance> for PseudoCycles
     }
 
     fn item_msg(&self, item: &PseudoCycleInstance) -> String {
-        format!("Pseudo cycle {}", item.pseudo_cycle)
+        format!("Pseudo cycle via cycle edge {}", item.cycle_edge)
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a SelectedHitInstance) -> Self::Enumer<'a> {

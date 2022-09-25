@@ -46,7 +46,6 @@ pub trait EnumeratorTactic<I, O> {
     fn precondition(&self, data: &I, context: &ProofContext) -> bool {
         true
     }
-
 }
 
 pub trait Enumerator<O> {
@@ -504,13 +503,29 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                         all(
                                             ExpandAllEnum,
                                             or3(
-                                                CountTactic::new("Fully expanded AugmentedPathInstances".into()),
+                                                CountTactic::new(
+                                                    "Fully expanded AugmentedPathInstances".into(),
+                                                ),
                                                 any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                 all(
                                                     FindMatchingEdgesEnum,
                                                     all(
                                                         ExpandAllEnum,
-                                                        or(DoubleCycleMergeTactic::new(), LocalMergeTactic::new()),
+                                                        or3(
+                                                            DoubleCycleMergeTactic::new(),
+                                                            LocalMergeTactic::new(),
+                                                            all(
+                                                                FindMatchingEdgesEnum,
+                                                                all(
+                                                                    ExpandAllEnum,
+                                                                    or(
+                                                                        DoubleCycleMergeTactic::new(
+                                                                        ),
+                                                                        LocalMergeTactic::new(),
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                        ),
                                                     ),
                                                 ),
                                             ),

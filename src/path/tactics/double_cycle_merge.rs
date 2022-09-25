@@ -48,7 +48,6 @@ impl Tactic<AugmentedPathInstance> for DoubleCycleMergeTactic {
         context: &crate::path::proof::ProofContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
-
         let left_cycle_edges = data.fixed_edges_between(0, 2);
         let right_cycle_edges = data.fixed_edges_between(1, 3);
 
@@ -77,9 +76,7 @@ impl Tactic<AugmentedPathInstance> for DoubleCycleMergeTactic {
                 if cycle_value >= Credit::from_integer(2) {
                     self.num_proofs += 1;
                     return ProofNode::new_leaf_success(
-                        format!(
-                            "Merged double pseudo"
-                        ),
+                        format!("Merged double pseudo"),
                         cycle_value == Credit::from_integer(2),
                     );
                 }

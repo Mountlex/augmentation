@@ -9,10 +9,11 @@ use std::{
 };
 
 use itertools::Itertools;
+use petgraph::algo::Cycle;
 pub use proof::prove_nice_path_progress;
 
 use crate::{
-    comps::{Component, CreditInvariant, Node, CompType},
+    comps::{CompType, Component, CreditInvariant, Node},
     path::utils::complex_cycle_value_base,
     types::Edge,
     Credit,
@@ -369,6 +370,15 @@ pub struct PseudoCycleInstance {
 pub enum CycleEdge {
     Fixed(Edge),
     Matching(MatchingEdge),
+}
+
+impl Display for CycleEdge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CycleEdge::Fixed(e) => write!(f, "{}", e),
+            CycleEdge::Matching(e) => write!(f, "{}", e),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

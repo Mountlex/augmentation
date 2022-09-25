@@ -31,18 +31,20 @@ pub fn relabels_nodes_sequentially(comps: &mut [Component]) {
             Component::C3(nodes) => offset += relabel_slice(nodes, offset),
             Component::Large(nodes) => offset += relabel_slice(nodes, offset),
             Component::ComplexPath(c, blacks) => {
-                c.graph = Graph::from_edges(c.graph
-                    .all_edges()
-                    .map(|(w1, w2, t)| 
-                        (w1 + offset, w2 + offset, *t)));
+                c.graph = Graph::from_edges(
+                    c.graph
+                        .all_edges()
+                        .map(|(w1, w2, t)| (w1 + offset, w2 + offset, *t)),
+                );
                 blacks.iter_mut().for_each(|n| *n += offset);
                 offset += c.graph.node_count() as u32;
             }
             Component::ComplexTree(c, blacks) => {
-                c.graph = Graph::from_edges(c.graph
-                    .all_edges()
-                    .map(|(w1, w2, t)| 
-                        (w1 + offset, w2 + offset, *t)));
+                c.graph = Graph::from_edges(
+                    c.graph
+                        .all_edges()
+                        .map(|(w1, w2, t)| (w1 + offset, w2 + offset, *t)),
+                );
                 blacks.iter_mut().for_each(|n| *n += offset);
                 offset += c.graph.node_count() as u32;
             }

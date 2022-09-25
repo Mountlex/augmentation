@@ -18,12 +18,21 @@ pub enum EdgeType {
 pub type Node = u32;
 pub type Graph = petgraph::graphmap::UnGraphMap<Node, EdgeType>;
 
-pub fn c3() -> Component { Component::C3([0,1,2])}
-pub fn c4() -> Component { Component::C4([0,1,2,3])}
-pub fn c5() -> Component { Component::C5([0,1,2,3,4])}
-pub fn c6() -> Component { Component::C6([0,1,2,3,4,5])}
-pub fn large() -> Component { Component::Large([0,1,2])}
-
+pub fn c3() -> Component {
+    Component::C3([0, 1, 2])
+}
+pub fn c4() -> Component {
+    Component::C4([0, 1, 2, 3])
+}
+pub fn c5() -> Component {
+    Component::C5([0, 1, 2, 3, 4])
+}
+pub fn c6() -> Component {
+    Component::C6([0, 1, 2, 3, 4, 5])
+}
+pub fn large() -> Component {
+    Component::Large([0, 1, 2])
+}
 
 pub fn three_cycle() -> ComponentG {
     ComponentG::Cycle(Graph::from_edges(vec![
@@ -140,7 +149,6 @@ pub fn complex_tree_component() -> ComponentG {
     )
 }
 
-
 pub fn complex_path() -> Component {
     Component::ComplexPath(
         Complex {
@@ -209,7 +217,6 @@ pub fn complex_tree() -> Component {
     )
 }
 
-
 #[derive(Clone, Debug)]
 pub enum ComponentType {
     Cycle(u8),
@@ -251,7 +258,7 @@ pub enum ComponentG {
 pub enum CompType {
     Cycle(usize),
     Large,
-    Complex
+    Complex,
 }
 
 #[derive(Clone, Debug)]
@@ -262,7 +269,7 @@ pub enum Component {
     C3([Node; 3]),
     Large([Node; 3]),
     ComplexPath(Complex, [Node; 6]),
-    ComplexTree(Complex, [Node; 7])
+    ComplexTree(Complex, [Node; 7]),
 }
 
 impl Component {
@@ -306,15 +313,19 @@ impl Component {
         match self {
             Component::C6(nodes) => nodes_to_edges(nodes.as_slice()),
             Component::C5(nodes) => nodes_to_edges(nodes.as_slice()),
-            Component::C4(nodes) =>  nodes_to_edges(nodes.as_slice()),
-            Component::C3(nodes) =>  nodes_to_edges(nodes.as_slice()),
-            Component::Large(_nodes) =>  vec![],
-            Component::ComplexPath(complex, _) => complex.graph.all_edges()
-            .map(|(u, v, _)| (u, v))
-            .collect_vec(),
-            Component::ComplexTree(complex, _) => complex.graph.all_edges()
-            .map(|(u, v, _)| (u, v))
-            .collect_vec(),
+            Component::C4(nodes) => nodes_to_edges(nodes.as_slice()),
+            Component::C3(nodes) => nodes_to_edges(nodes.as_slice()),
+            Component::Large(_nodes) => vec![],
+            Component::ComplexPath(complex, _) => complex
+                .graph
+                .all_edges()
+                .map(|(u, v, _)| (u, v))
+                .collect_vec(),
+            Component::ComplexTree(complex, _) => complex
+                .graph
+                .all_edges()
+                .map(|(u, v, _)| (u, v))
+                .collect_vec(),
         }
     }
 
@@ -358,14 +369,20 @@ impl Component {
 
     pub fn graph(&self) -> Graph {
         match self {
-            Component::C6(_) |
-            Component::C5(_) |
-            Component::C4(_) |
-            Component::C3(_) => Graph::from_edges(self.edges().into_iter().map(
-                |(u,v)| (u,v, EdgeType::Sellable)
-            ).collect_vec()),
-            Component::Large(nodes) => Graph::from_edges(nodes_to_edges(nodes).into_iter().map(
-                |(u,v)| (u,v, EdgeType::Fixed)).collect_vec()),
+            Component::C6(_) | Component::C5(_) | Component::C4(_) | Component::C3(_) => {
+                Graph::from_edges(
+                    self.edges()
+                        .into_iter()
+                        .map(|(u, v)| (u, v, EdgeType::Sellable))
+                        .collect_vec(),
+                )
+            }
+            Component::Large(nodes) => Graph::from_edges(
+                nodes_to_edges(nodes)
+                    .into_iter()
+                    .map(|(u, v)| (u, v, EdgeType::Fixed))
+                    .collect_vec(),
+            ),
             Component::ComplexPath(c, _) => c.graph.clone(),
             Component::ComplexTree(c, _) => c.graph.clone(),
         }
@@ -388,21 +405,39 @@ impl Component {
             Component::Large(nodes) => vec![nodes.to_vec().into_iter().take(size).collect()],
             Component::ComplexTree(_, nodes) => nodes.iter().cloned().permutations(size).collect(),
             Component::ComplexPath(_, nodes) => nodes.iter().cloned().permutations(size).collect(),
-            _ => self.nodes().to_vec().into_iter().permutations(size).collect(),
+            _ => self
+                .nodes()
+                .to_vec()
+                .into_iter()
+                .permutations(size)
+                .collect(),
+        }
+    }
+
+    pub fn matching_nodes(&self) -> &[Node] {
+        match self {
+            Component::Large(nodes) => nodes,
+            Component::ComplexTree(_, nodes) => nodes,
+            Component::ComplexPath(_, nodes) => nodes,
+            _ => self.nodes(),
         }
     }
 }
 
-
 fn is_adjacent_in_cycle(nodes: &[Node], v1: &Node, v2: &Node) -> bool {
     // Assumes that nodes are numbered sequentially from nodes[0],...,nodes[k]
 
-    v1.max(v2) - v1.min(v2) == 1 || (nodes.first() == Some(v1) && nodes.last() == Some(v2)) || (nodes.first() == Some(v2) && nodes.last() == Some(v1))
-
+    v1.max(v2) - v1.min(v2) == 1
+        || (nodes.first() == Some(v1) && nodes.last() == Some(v2))
+        || (nodes.first() == Some(v2) && nodes.last() == Some(v1))
 }
 
 fn nodes_to_edges(nodes: &[Node]) -> Vec<(Node, Node)> {
-    vec![nodes, &[nodes[0]]].concat().windows(2).map(|w| (w[0], w[1])).collect_vec()
+    vec![nodes, &[nodes[0]]]
+        .concat()
+        .windows(2)
+        .map(|w| (w[0], w[1]))
+        .collect_vec()
 }
 
 impl Display for Component {
@@ -642,7 +677,6 @@ pub trait CreditInvariant: Clone + Display {
 
     fn two_ec_credit(&self, num_edges: usize) -> Credit;
 
-    
     fn complex(&self, complex: &Complex) -> Credit {
         self.complex_comp()
             + Credit::from_integer(complex.num_blocks as i64) * self.complex_block()
