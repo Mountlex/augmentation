@@ -55,7 +55,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for MatchingHitEnumerator<'a> {
                         let mut matching_edges = m_endpoints
                             .iter()
                             .zip(hits.into_iter())
-                            .map(|(source, hit)| MatchingEdge(*source, hit))
+                            .map(|(source, hit)| MatchingEdge::new(path_len - 1,*source, hit))
                             .collect_vec();
 
                         let mut instance_clone = instance_clone.clone();

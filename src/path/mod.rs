@@ -20,7 +20,11 @@ use crate::{
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct MatchingEdge(pub Node, pub PathHit);
+pub struct MatchingEdge {
+    source_path: usize,
+    source: Node,
+    hit: PathHit,
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PathHit {
@@ -29,31 +33,43 @@ pub enum PathHit {
 }
 
 impl MatchingEdge {
+    fn new(source_path: usize, source: Node, hit: PathHit) -> Self {
+        Self {
+            source_path,
+            source,
+            hit,
+        }
+    }
+
+    pub fn source_path(&self) -> usize {
+        self.source_path
+    }
+
     pub fn source(&self) -> Node {
-        self.0.clone()
+        self.source.clone()
     }
 
     pub fn hit(&self) -> PathHit {
-        self.1.clone()
+        self.hit.clone()
     }
 
     pub fn hits_path(&self) -> Option<usize> {
-        match self.1 {
+        match self.hit {
             PathHit::Path(i) => Some(i),
             PathHit::Outside => None,
         }
     }
 
     pub fn hits_outside(&self) -> bool {
-        matches!(self.1, PathHit::Outside)
+        matches!(self.hit, PathHit::Outside)
     }
 }
 
 impl Display for MatchingEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.1 {
-            PathHit::Path(j) => write!(f, "({}--path[{}])", self.0, j),
-            PathHit::Outside => write!(f, "({}--outside)", self.0),
+        match self.hit {
+            PathHit::Path(j) => write!(f, "({}--path[{}])", self.source, j),
+            PathHit::Outside => write!(f, "({}--outside)", self.source),
         }
     }
 }
@@ -237,6 +253,27 @@ pub struct ZoomedNode {
 impl ZoomedNode {
     fn get_comp(&self) -> &Component {
         &self.comp
+    }
+
+    pub fn valid_in_out(&self, new_in: Node, new_out: Node, prelast: bool) -> bool {
+        let c = self.get_comp();
+        if c.is_c3() || c.is_c4() || c.is_complex() {
+            self.npc.is_nice_pair(new_in, new_out)
+        } else if c.is_c5() && prelast && self.used {
+            new_in != new_out
+        } else if c.is_c5() && prelast && !self.used {
+            self.npc.is_nice_pair(new_in, new_out)
+        } else {
+            true
+        }
+    }
+
+    pub fn valid_in(&self, new_in: Node, prelast: bool) -> bool {
+        self.valid_in_out(new_in, self.out_node.unwrap(), prelast)
+    }
+
+    pub fn valid_out(&self, new_out: Node, prelast: bool) -> bool {
+        self.valid_in_out(self.in_node.unwrap(), new_out, prelast)
     }
 
     fn value<C: CreditInvariant>(&self, credit_inv: C, lower_complex: bool) -> Credit {

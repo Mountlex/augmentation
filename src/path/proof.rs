@@ -25,7 +25,6 @@ use super::tactics::contract::ContractabilityTactic;
 use super::tactics::cycle_merge::CycleMergeTactic;
 use super::tactics::local_merge::LocalMergeTactic;
 use super::tactics::longer_path::LongerPathTactic;
-use super::tactics::longer_path_swap::LongerPathViaSwap;
 use super::AugmentedPathInstance;
 
 #[derive(Clone)]
@@ -498,7 +497,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                         PendantRewireTactic::new(),
                                         LocalMergeTactic::new(),
                                         any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                        LongerPathViaSwap::new(),
+                                        LongerPathTactic::new(),
                                         CycleMergeViaSwap::new(),
                                         all(
                                             ExpandAllEnum,
