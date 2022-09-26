@@ -48,7 +48,7 @@ pub trait EnumeratorTactic<I, O> {
 }
 
 pub trait Enumerator<O> {
-    fn iter(&mut self, context: &ProofContext) -> Box<dyn Iterator<Item = O> + '_>;
+    fn iter(&self, context: &ProofContext) -> Box<dyn Iterator<Item = O> + '_>;
 }
 
 pub trait Tactic<I> {

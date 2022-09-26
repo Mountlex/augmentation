@@ -60,6 +60,14 @@ impl MatchingEdge {
         }
     }
 
+    pub fn is_cycle_edge(&self) -> Option<(usize, usize)> {
+        let j = self.source_path;
+        match self.hit {
+            PathHit::Path(i) if i.max(j) - i.min(j) >= 2 => Some((i, j)),
+            _ => None,
+        }
+    }
+
     pub fn hits_outside(&self) -> bool {
         matches!(self.hit, PathHit::Outside)
     }

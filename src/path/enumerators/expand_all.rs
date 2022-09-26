@@ -15,7 +15,7 @@ pub struct ExpandAllEnumerator<'a> {
 
 impl<'a> Enumerator<AugmentedPathInstance> for ExpandAllEnumerator<'a> {
     fn iter(
-        &mut self,
+        &self,
         context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let mut cases: Box<dyn Iterator<Item = AugmentedPathInstance>> =

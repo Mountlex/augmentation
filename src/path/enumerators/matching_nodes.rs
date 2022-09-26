@@ -52,7 +52,7 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for MatchingNode
 
 impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
     fn iter(
-        &mut self,
+        &self,
         context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
         let hit_comp_idx = self.hit_comp_idx;
@@ -114,10 +114,7 @@ pub fn matching_nodes_iter(
 }
 
 impl<'a> Enumerator<AugmentedPathInstance> for MatchingNodesEnumerator<'a> {
-    fn iter(
-        &mut self,
-        context: &ProofContext,
-    ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+    fn iter(&self, context: &ProofContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         matching_nodes_iter(self.instance.clone(), self.hit_comp_idx, context.path_len)
     }
 }

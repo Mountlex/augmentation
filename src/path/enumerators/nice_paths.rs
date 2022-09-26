@@ -29,10 +29,7 @@ pub struct PathEnumerator<'a> {
 }
 
 impl<'a> Enumerator<AugmentedPathInstance> for PathEnumerator<'a> {
-    fn iter(
-        &mut self,
-        context: &ProofContext,
-    ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+    fn iter(&self, context: &ProofContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let comps = &self.input.comps;
         let path_len = context.path_len;
 

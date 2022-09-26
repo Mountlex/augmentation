@@ -29,7 +29,7 @@ impl<'a> ExpandEnumerator<'a> {
 
 impl<'a> Enumerator<SelectedHitInstance> for ExpandEnumerator<'a> {
     fn iter(
-        &mut self,
+        &self,
         context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
         let hit_comp_idx = self.hit_comp_idx;
@@ -176,10 +176,7 @@ pub fn expand_iter(
 }
 
 impl<'a> Enumerator<AugmentedPathInstance> for ExpandEnumerator<'a> {
-    fn iter(
-        &mut self,
-        context: &ProofContext,
-    ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+    fn iter(&self, context: &ProofContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         expand_iter(self.instance.clone(), self.hit_comp_idx, context.clone())
     }
 }

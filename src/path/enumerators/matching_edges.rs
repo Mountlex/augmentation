@@ -17,7 +17,7 @@ pub struct FindMatchingEdgesEnumerator<'a> {
 
 impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
     fn iter(
-        &mut self,
+        &self,
         context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         assert!(self.instance.non_path_matching_edges.len() == self.instance.outside_hits().len());
