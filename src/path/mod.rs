@@ -456,7 +456,34 @@ impl AugmentedPathInstance {
             .collect_vec()
     }
 
-    pub fn all_edge_endpoints(&self, node_idx: usize) -> Vec<Node> {
+    pub fn outside_edges_on(&self, node_idx: usize) -> Vec<Node> {
+        self.non_path_matching_edges
+            .iter()
+            .filter(|e| e.hits_outside() && e.source_path() == node_idx)
+            .map(|e| e.source())
+            .collect_vec()
+    }
+
+    pub fn fixed_edges_on(&self, node_idx: usize) -> Vec<Node> {
+        let comp_nodes = self.path[node_idx].get_comp().nodes();
+        let mut edge_endpoints = self.fixed_edge
+            .iter()
+            .filter(|e| e.incident(comp_nodes))
+            .map(|e| if comp_nodes.contains(&e.0) { e.0 } else { e.1 })
+            .collect_vec();
+
+            if let SuperNode::Zoomed(zoomed) = &self.path[node_idx] {
+                if let Some(node) = zoomed.in_node {
+                    edge_endpoints.push(node)
+                }
+                if let Some(node) = zoomed.out_node {
+                    edge_endpoints.push(node)
+                }
+            }
+        edge_endpoints
+    }
+
+    fn all_edge_endpoints(&self, node_idx: usize) -> Vec<Node> {
         let mut edge_endpoints = self
             .non_path_matching_edges
             .iter()

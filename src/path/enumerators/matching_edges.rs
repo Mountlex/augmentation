@@ -62,13 +62,17 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
             .into_iter()
             .filter(|n| !left_used_nodes.contains(n))
             .collect_vec();
+        
+        let prelast_matching_endpoints = self.instance.fixed_edges_on(2).into_iter().chain(self.instance.outside_edges_on(2).into_iter()).sorted().dedup().collect_vec();
+        
         let free_prelast = prelast_nodes
             .into_iter()
-            .filter(|n| !prelast_used_nodes.contains(n) && *n != &prelast_in)
+            .filter(|n| !prelast_matching_endpoints.contains(n))
             .collect_vec();
 
-        if left_last_crossing + self.instance.outside_hits_from(3).len() <= 1
-            && left_prelast_edges.len() + self.instance.outside_hits_from(2).len() <= 1
+
+        if (left_last_crossing + self.instance.outside_hits_from(3).len() <= 1
+            && left_prelast_edges.len() + self.instance.outside_hits_from(2).len() <= 1) || prelast_matching_endpoints.len() < 3
         {
             let iter = free_prelast.into_iter().flat_map(move |right_matched| {
                 let left_used_nodes = left_used_nodes.clone();
