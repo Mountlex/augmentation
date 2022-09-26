@@ -79,11 +79,4 @@ impl EnumeratorTactic<SelectedHitInstance, AugmentedPathInstance> for ExpandAllE
         format!("Fully expanded nice path")
     }
 
-    fn precondition(
-        &self,
-        data: &SelectedHitInstance,
-        context: &crate::path::proof::ProofContext,
-    ) -> bool {
-        !data.instance.outside_hits().is_empty() || data.hit_comp_idx == context.path_len - 2
-    }
 }

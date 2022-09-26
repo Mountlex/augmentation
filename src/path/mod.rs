@@ -402,6 +402,7 @@ impl Display for PathInstance {
 pub struct SelectedHitInstance {
     pub instance: AugmentedPathInstance,
     pub hit_comp_idx: usize,
+    pub last_hit: bool,
 }
 
 #[derive(Clone, Debug)]

@@ -12,6 +12,7 @@ use crate::path::tactics::cycle_rearrange::CycleRearrangeTactic;
 use crate::path::tactics::double_cycle_merge::DoubleCycleMergeTactic;
 use crate::path::tactics::pendant_rewire::PendantRewireTactic;
 use crate::path::tactics::swap_pseudo_cycle::CycleMergeViaSwap;
+use crate::path::SelectedHitInstance;
 use crate::{
     comps::{Component, CreditInvariant, DefaultCredits},
     proof_tree::ProofNode,
@@ -59,6 +60,57 @@ pub trait Tactic<I> {
 
 pub trait Statistics {
     fn print_stats(&self);
+}
+
+#[derive(Clone)]
+pub struct If<I, A, F>
+where
+    I: Clone,
+    A: Clone,
+    F: Clone + Fn(&I) -> bool,
+{
+    tactic: A,
+    cond: F,
+    _phantom_data: PhantomData<I>,
+}
+
+impl<I, A, F> Statistics for If<I, A, F>
+where
+    A: Statistics + Clone,
+    I: Clone,
+    F: Clone + Fn(&I) -> bool,
+{
+    fn print_stats(&self) {
+        self.tactic.print_stats()
+    }
+}
+
+impl<I, A, F> Tactic<I> for If<I, A, F>
+where
+    A: Statistics + Clone + Tactic<I>,
+    I: Clone,
+    F: Clone + Fn(&I) -> bool,
+{
+    fn precondition(&self, data: &I, _context: &ProofContext) -> bool {
+        (self.cond)(data)
+    }
+
+    fn action(&mut self, data: &I, context: &ProofContext) -> ProofNode {
+        self.tactic.action(data, context)
+    }
+}
+
+pub fn ifcond<I, A, F>(cond: F, tactic: A) -> If<I, A, F>
+where
+    I: Clone,
+    A: Clone,
+    F: Clone + Fn(&I) -> bool,
+{
+    If {
+        tactic,
+        cond,
+        _phantom_data: PhantomData,
+    }
 }
 
 #[derive(Clone)]
@@ -294,7 +346,7 @@ where
     fn action(&mut self, data_in: &I, context: &ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_all(self.enum_tactic.msg(&data_in));
 
-        let mut enumerator = self.enum_tactic.get_enumerator(data_in);
+        let enumerator = self.enum_tactic.get_enumerator(data_in);
 
         if self.parallel {
             let proof_nodes: Vec<ProofNode> = enumerator
@@ -379,7 +431,7 @@ where
     fn action(&mut self, data_in: &I, context: &ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_any(self.enum_tactic.msg(&data_in));
 
-        let mut enumerator = self.enum_tactic.get_enumerator(data_in);
+        let enumerator = self.enum_tactic.get_enumerator(data_in);
         enumerator.iter(context).any(|d| {
             if !self.item_tactic.precondition(&d, context) {
                 false
@@ -479,7 +531,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                 all_sc(
                     sc,
                     ExpandLastEnum,
-                    or7(
+                    or6(
                         CountTactic::new("AugmentedPathInstances".into()),
                         LongerPathTactic::new(),
                         ContractabilityTactic::new(),
@@ -499,6 +551,8 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                         any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                         LongerPathTactic::new(),
                                         CycleMergeViaSwap::new(),
+                                        ifcond(
+                                            |instance: &SelectedHitInstance| instance.last_hit,
                                         all(
                                             ExpandAllEnum,
                                             or3(
@@ -522,8 +576,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                                                         DoubleCycleMergeTactic::new(
                                                                         ),
                                                                         LocalMergeTactic::new(),
-                                                            LongerPathTactic::new(),
-
+                                                                        LongerPathTactic::new(),
                                                                     ),
                                                                 ),
                                                             ),
@@ -533,41 +586,42 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                             ),
                                         ),
                                     ),
-                                ),
-                            ),
-                        ),
-                        all(
-                            ExpandAllEnum,
-                            or3(
-                                CountTactic::new(
-                                    "Fully expanded AugmentedPathInstances".into(),
-                                ),
-                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                all(
-                                    FindMatchingEdgesEnum,
-                                    all(
-                                        ExpandAllEnum,
-                                        or4(
-                                            DoubleCycleMergeTactic::new(),
-                                            LongerPathTactic::new(),
-                                            LocalMergeTactic::new(),
-                                            all(
-                                                FindMatchingEdgesEnum,
-                                                all(
-                                                    ExpandAllEnum,
-                                                    or3(
-                                                        DoubleCycleMergeTactic::new(
-                                                        ),
-                                                        LongerPathTactic::new(),
-                                                        LocalMergeTactic::new(),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
                                     ),
                                 ),
                             ),
                         ),
+                        // all(
+                        //     ExpandAllEnum,
+                        //     or3(
+                        //         CountTactic::new(
+                        //             "Fully expanded AugmentedPathInstances".into(),
+                        //         ),
+                        //         any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                        //         all(
+                        //             FindMatchingEdgesEnum,
+                        //             all(
+                        //                 ExpandAllEnum,
+                        //                 or4(
+                        //                     DoubleCycleMergeTactic::new(),
+                        //                     LongerPathTactic::new(),
+                        //                     LocalMergeTactic::new(),
+                        //                     all(
+                        //                         FindMatchingEdgesEnum,
+                        //                         all(
+                        //                             ExpandAllEnum,
+                        //                             or3(
+                        //                                 DoubleCycleMergeTactic::new(
+                        //                                 ),
+                        //                                 LongerPathTactic::new(),
+                        //                                 LocalMergeTactic::new(),
+                        //                             ),
+                        //                         ),
+                        //                     ),
+                        //                 ),
+                        //             ),
+                        //         ),
+                        //     ),
+                        // ),
                         TacticsExhausted::new(),
                     ),
                 ),

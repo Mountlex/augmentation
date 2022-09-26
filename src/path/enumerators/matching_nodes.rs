@@ -11,13 +11,15 @@ pub struct MatchingNodesEnum;
 pub struct MatchingNodesEnumerator<'a> {
     pub instance: &'a AugmentedPathInstance,
     pub hit_comp_idx: usize,
+    pub last_hit: bool,
 }
 
 impl<'a> MatchingNodesEnumerator<'a> {
-    pub fn new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize) -> Self {
+    pub fn new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize, last_hit: bool) -> Self {
         Self {
             instance,
             hit_comp_idx,
+            last_hit
         }
     }
 }
@@ -46,6 +48,7 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for MatchingNode
         MatchingNodesEnumerator {
             instance: &data.instance,
             hit_comp_idx: data.hit_comp_idx,
+            last_hit: data.last_hit,
         }
     }
 }
@@ -56,10 +59,12 @@ impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
         context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
         let hit_comp_idx = self.hit_comp_idx;
+        let last_hit = self.last_hit;
         let iter = Enumerator::<AugmentedPathInstance>::iter(self, context).map(move |aug| {
             SelectedHitInstance {
                 instance: aug,
                 hit_comp_idx,
+                last_hit
             }
         });
 

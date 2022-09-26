@@ -16,17 +16,20 @@ impl<'a> Enumerator<SelectedHitInstance> for ComponentHitEnumerator<'a> {
     fn iter(&self, _context: &ProofContext) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
         let mut matching_edges = self.input.non_path_matching_edges.clone();
         matching_edges.sort_by_key(|m| m.hit());
+        let mut num_path_matching_edges = matching_edges.len() - self.input.outside_hits().len();
         let iter = matching_edges
             .clone()
             .into_iter()
             .filter(|m_edge| m_edge.hits_path().is_some())
             .map(|m_edge| m_edge.hit())
             .dedup_with_count()
-            .flat_map(move |(_num_edges, hit_comp)| {
+            .flat_map(move |(num_edges, hit_comp)| {
+                num_path_matching_edges -= num_edges;
                 if let PathHit::Path(hit_comp_idx) = hit_comp {
                     Some(SelectedHitInstance {
                         instance: self.input.clone(),
                         hit_comp_idx,
+                        last_hit: num_path_matching_edges == 0
                     })
                 } else {
                     None
