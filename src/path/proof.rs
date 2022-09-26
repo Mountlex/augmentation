@@ -510,17 +510,20 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                                     FindMatchingEdgesEnum,
                                                     all(
                                                         ExpandAllEnum,
-                                                        or3(
+                                                        or4(
                                                             DoubleCycleMergeTactic::new(),
                                                             LocalMergeTactic::new(),
+                                                            LongerPathTactic::new(),
                                                             all(
                                                                 FindMatchingEdgesEnum,
                                                                 all(
                                                                     ExpandAllEnum,
-                                                                    or(
+                                                                    or3(
                                                                         DoubleCycleMergeTactic::new(
                                                                         ),
                                                                         LocalMergeTactic::new(),
+                                                            LongerPathTactic::new(),
+
                                                                     ),
                                                                 ),
                                                             ),
@@ -544,16 +547,18 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                     FindMatchingEdgesEnum,
                                     all(
                                         ExpandAllEnum,
-                                        or3(
+                                        or4(
                                             DoubleCycleMergeTactic::new(),
+                                            LongerPathTactic::new(),
                                             LocalMergeTactic::new(),
                                             all(
                                                 FindMatchingEdgesEnum,
                                                 all(
                                                     ExpandAllEnum,
-                                                    or(
+                                                    or3(
                                                         DoubleCycleMergeTactic::new(
                                                         ),
+                                                        LongerPathTactic::new(),
                                                         LocalMergeTactic::new(),
                                                     ),
                                                 ),

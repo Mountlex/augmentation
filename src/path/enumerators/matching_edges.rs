@@ -1,9 +1,10 @@
 use itertools::Itertools;
 
 use crate::{
+    comps::Node,
     path::{
         proof::{Enumerator, EnumeratorTactic},
-        AugmentedPathInstance,
+        AugmentedPathInstance, MatchingEdge, PathHit,
     },
     types::Edge,
 };
@@ -13,6 +14,11 @@ pub struct FindMatchingEdgesEnum;
 
 pub struct FindMatchingEdgesEnumerator<'a> {
     instance: &'a AugmentedPathInstance,
+}
+
+enum Hit {
+    Outside,
+    Node(Node),
 }
 
 impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
@@ -33,7 +39,6 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
 
         let prelast_nodes = path[context.path_len - 2].get_comp().matching_nodes();
         let last_nodes = path.last_comp().matching_nodes();
-        //let first_comp = path[0].get_comp().clone();
 
         let left_last_crossing = self
             .instance
@@ -62,7 +67,9 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
             .filter(|n| !prelast_used_nodes.contains(n) && *n != &prelast_in)
             .collect_vec();
 
-        if left_last_crossing <= 1 && left_prelast_edges.len() <= 1 {
+        if left_last_crossing + self.instance.outside_hits_from(3).len() <= 1
+            && left_prelast_edges.len() + self.instance.outside_hits_from(2).len() <= 1
+        {
             let iter = free_prelast.into_iter().flat_map(move |right_matched| {
                 let left_used_nodes = left_used_nodes.clone();
                 free_left
@@ -76,12 +83,19 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
                             .all(|u| c.is_adjacent(u, &c.fixed_node()))
                             && c.is_adjacent(left, &c.fixed_node()))
                     })
-                    .map(|left_matched| {
+                    .map(|left| Hit::Node(left))
+                    .chain(std::iter::once(Hit::Outside))
+                    .map(|left| {
                         let mut new_instance = self.instance.clone();
 
-                        new_instance
-                            .fixed_edge
-                            .push(Edge(left_matched, *right_matched));
+                        match left {
+                            Hit::Outside => new_instance
+                                .non_path_matching_edges
+                                .push(MatchingEdge::new(2, *right_matched, PathHit::Outside)),
+                            Hit::Node(left) => {
+                                new_instance.fixed_edge.push(Edge(left, *right_matched))
+                            }
+                        }
 
                         new_instance
                     })
@@ -106,8 +120,9 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for FindMatc
 
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
         format!(
-            "Enumerate more matching edges [{}]",
-            item.fixed_edge.iter().join(", ")
+            "Enumerate more edges: [{}] and [{}]",
+            item.fixed_edge.iter().join(", "),
+            item.non_path_matching_edges.iter().join(", "),
         )
     }
 }

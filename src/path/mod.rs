@@ -33,7 +33,7 @@ pub enum PathHit {
 }
 
 impl MatchingEdge {
-    fn new(source_path: usize, source: Node, hit: PathHit) -> Self {
+    pub fn new(source_path: usize, source: Node, hit: PathHit) -> Self {
         Self {
             source_path,
             source,
@@ -443,6 +443,14 @@ impl AugmentedPathInstance {
         self.non_path_matching_edges
             .iter()
             .filter(|e| e.hits_outside())
+            .cloned()
+            .collect_vec()
+    }
+
+    pub fn outside_hits_from(&self, node_idx: usize) -> Vec<MatchingEdge> {
+        self.non_path_matching_edges
+            .iter()
+            .filter(|e| e.hits_outside() && e.source_path() == node_idx)
             .cloned()
             .collect_vec()
     }
