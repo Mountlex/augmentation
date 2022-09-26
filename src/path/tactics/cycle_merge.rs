@@ -47,8 +47,9 @@ impl Tactic<PseudoCycleInstance> for CycleMergeTactic {
         } else {
             ProofNode::new_leaf(
                 format!(
-                    "Failed cycle merge {} with value {}",
-                    data.pseudo_cycle, cycle_value
+                    "Failed cycle merge with value {}",
+                    //data.pseudo_cycle, 
+                    cycle_value
                 ),
                 false,
             )
