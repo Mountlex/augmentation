@@ -51,9 +51,9 @@ fn merge(
 
     if left_comp.is_complex() || right_comp.is_complex() {
 
-        return ProofNode::new_leaf(
-            "No complex local merge".into(), false
-        );
+        // return ProofNode::new_leaf(
+        //     "No complex local merge".into(), false
+        // );
         
         let graph_with_matching = get_local_merge_graph(
             &left_comp,
