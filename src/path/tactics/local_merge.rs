@@ -44,16 +44,23 @@ fn merge(
     let left_comp = left.get_comp();
     let right_comp = right.get_comp();
 
-    let graph_with_matching = get_local_merge_graph(
-        &left_comp,
-        &right_comp,
-        &edges_between.iter().map(|e| (e.0, e.1)).collect_vec(),
-    );
+    
 
     let total_comp_credit =
         context.credit_inv.credits(&left_comp) + context.credit_inv.credits(&right_comp);
 
     if left_comp.is_complex() || right_comp.is_complex() {
+
+        return ProofNode::new_leaf(
+            "No complex local merge".into(), false
+        );
+        
+        let graph_with_matching = get_local_merge_graph(
+            &left_comp,
+            &right_comp,
+            &edges_between.iter().map(|e| (e.0, e.1)).collect_vec(),
+        );
+
         for sell in edges_of_type(&graph_with_matching, EdgeType::Sellable)
             .into_iter()
             .powerset()
