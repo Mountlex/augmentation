@@ -18,13 +18,15 @@ use crate::{
 pub struct LocalMergeTactic {
     num_calls: usize,
     num_proofs: usize,
+    do_complex: bool,
 }
 
 impl LocalMergeTactic {
-    pub fn new() -> Self {
+    pub fn new(do_complex: bool) -> Self {
         Self {
             num_calls: 0,
             num_proofs: 0,
+            do_complex
         }
     }
 }
@@ -40,6 +42,7 @@ fn merge(
     right: &ZoomedNode,
     edges_between: &[Edge],
     context: &ProofContext,
+    do_complex: bool
 ) -> ProofNode {
     let left_comp = left.get_comp();
     let right_comp = right.get_comp();
@@ -51,9 +54,13 @@ fn merge(
 
     if left_comp.is_complex() || right_comp.is_complex() {
 
-        // return ProofNode::new_leaf(
-        //     "No complex local merge".into(), false
-        // );
+        if !do_complex {
+    return ProofNode::new_leaf(
+                "No complex local merge".into(), false
+            );
+        }
+
+        
         
         let graph_with_matching = get_local_merge_graph(
             &left_comp,
@@ -200,7 +207,7 @@ impl Tactic<AugmentedPathInstance> for LocalMergeTactic {
                     let right = right.get_zoomed();
                     let edges_between = data.fixed_edges_between(left_idx, right_idx);
                     if !edges_between.is_empty() {
-                        let mut res = merge(left, right, &edges_between, &context);
+                        let mut res = merge(left, right, &edges_between, &context, self.do_complex);
                         if res.eval().success() {
                             self.num_proofs += 1;
                             return Some(res);

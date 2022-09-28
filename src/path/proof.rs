@@ -547,7 +547,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                     ExpandEnum,
                                     or6(
                                         PendantRewireTactic::new(),
-                                        LocalMergeTactic::new(),
+                                        LocalMergeTactic::new(true),
                                         any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                         LongerPathTactic::new(),
                                         CycleMergeViaSwap::new(),
@@ -566,7 +566,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                                         ExpandAllEnum,
                                                         or5(
                                                             DoubleCycleMergeTactic::new(),
-                                                            LocalMergeTactic::new(),
+                                                            LocalMergeTactic::new(true),
                                                             LongerPathTactic::new(),
                                                             any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                             all(
@@ -576,7 +576,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                                                     or5(
                                                                         DoubleCycleMergeTactic::new(
                                                                         ),
-                                                                        LocalMergeTactic::new(),
+                                                                        LocalMergeTactic::new(false),
                                                                         LongerPathTactic::new(),
                                                                         any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                                         all(
@@ -586,7 +586,7 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                                                                 or4(
                                                                                     DoubleCycleMergeTactic::new(
                                                                                     ),
-                                                                                    LocalMergeTactic::new(),
+                                                                                    LocalMergeTactic::new(false),
                                                                                     LongerPathTactic::new(),
                                                                                     any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                                                 ),
