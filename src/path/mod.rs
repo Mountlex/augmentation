@@ -338,14 +338,14 @@ impl ZoomedNode {
 
 impl Display for ZoomedNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[ {}: ", self.comp)?;
+        write!(f, "[ {}: ", self.comp.short_name())?;
         if let Some(n) = self.in_node {
             write!(f, "in={}, ", n)?;
         }
         if let Some(n) = self.out_node {
             write!(f, "out={}, ", n)?;
         }
-        write!(f, "npc={}, used={} ]", self.npc, self.used)
+        write!(f, "used={} ]", self.used)
     }
 }
 

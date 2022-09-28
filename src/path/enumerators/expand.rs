@@ -221,7 +221,7 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for ExpandEnum {
     }
 
     fn item_msg(&self, item: &SelectedHitInstance) -> String {
-        format!("Expanded node {}", item.hit_comp_idx)
+        format!("Expanded node {}", item.instance.path[item.hit_comp_idx])
     }
 }
 

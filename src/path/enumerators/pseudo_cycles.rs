@@ -28,8 +28,13 @@ impl<'a> Enumerator<PseudoCycleInstance> for PseudoCyclesEnumerator<'a> {
             .filter(|m_edge| m_edge.is_cycle_edge().is_some())
             .flat_map(move |cycle_edge| {
                 let (i, j) = cycle_edge.is_cycle_edge().unwrap();
-                let mut pseudo_nodes = self.input.path.nodes.split_at(i).1.to_vec();
-
+                let mut pseudo_nodes = self
+                    .input
+                    .path
+                    .nodes
+                    .as_slice()[i..=j]
+                    .to_vec();
+                    
                 pseudo_nodes.last_mut().unwrap().get_zoomed_mut().out_node =
                     Some(cycle_edge.source());
                 pseudo_nodes
@@ -85,8 +90,7 @@ impl<'a> Enumerator<PseudoCycleInstance> for PseudoCyclesEnumerator<'a> {
                     .input
                     .path
                     .nodes
-                    .split_at(self.input.path.index_of_super_node(cycle_edge.0))
-                    .1
+                    .as_slice()[i..=j]
                     .to_vec();
 
                 pseudo_nodes.last_mut().unwrap().get_zoomed_mut().out_node = Some(cycle_edge.1);
