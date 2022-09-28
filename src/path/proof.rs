@@ -2,7 +2,7 @@ use std::fmt::Write;
 use std::{marker::PhantomData, path::PathBuf};
 
 use itertools::Itertools;
-use rayon::prelude::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
+use rayon::prelude::{IntoParallelRefIterator, ParallelBridge, ParallelIterator, IntoParallelIterator};
 
 use crate::path::enumerators::expand::{ExpandEnum, ExpandLastEnum};
 use crate::path::enumerators::expand_all::ExpandAllEnum;
@@ -65,9 +65,7 @@ pub trait Statistics {
 #[derive(Clone)]
 pub struct If<I, A, F>
 where
-    I: Clone,
-    A: Clone,
-    F: Clone + Fn(&I) -> bool,
+    F: Fn(&I) -> bool,
 {
     tactic: A,
     cond: F,
@@ -76,9 +74,8 @@ where
 
 impl<I, A, F> Statistics for If<I, A, F>
 where
-    A: Statistics + Clone,
-    I: Clone,
-    F: Clone + Fn(&I) -> bool,
+    A: Statistics,
+    F: Fn(&I) -> bool,
 {
     fn print_stats(&self) {
         self.tactic.print_stats()
@@ -87,9 +84,8 @@ where
 
 impl<I, A, F> Tactic<I> for If<I, A, F>
 where
-    A: Statistics + Clone + Tactic<I>,
-    I: Clone,
-    F: Clone + Fn(&I) -> bool,
+    A: Statistics + Tactic<I>,
+    F: Fn(&I) -> bool,
 {
     fn precondition(&self, data: &I, _context: &ProofContext) -> bool {
         (self.cond)(data)
@@ -102,9 +98,7 @@ where
 
 pub fn ifcond<I, A, F>(cond: F, tactic: A) -> If<I, A, F>
 where
-    I: Clone,
-    A: Clone,
-    F: Clone + Fn(&I) -> bool,
+    F: Fn(&I) -> bool,
 {
     If {
         tactic,
@@ -115,10 +109,6 @@ where
 
 #[derive(Clone)]
 pub struct Or<I, A1, A2>
-where
-    I: Clone,
-    A1: Clone,
-    A2: Clone,
 {
     tactic1: A1,
     tactic2: A2,
@@ -129,9 +119,6 @@ impl<I, A1, A2> Statistics for Or<I, A1, A2>
 where
     A1: Statistics,
     A2: Statistics,
-    I: Clone,
-    A1: Clone,
-    A2: Clone,
 {
     fn print_stats(&self) {
         self.tactic1.print_stats();
@@ -140,10 +127,6 @@ where
 }
 
 pub fn or<I, A1, A2>(tactic1: A1, tactic2: A2) -> Or<I, A1, A2>
-where
-    I: Clone,
-    A1: Clone,
-    A2: Clone,
 {
     Or {
         tactic1,
@@ -153,11 +136,6 @@ where
 }
 
 pub fn or3<I, A1, A2, A3>(tactic1: A1, tactic2: A2, tactic3: A3) -> Or<I, A1, Or<I, A2, A3>>
-where
-    I: Clone,
-    A1: Clone,
-    A2: Clone,
-    A3: Clone,
 {
     or(tactic1, or(tactic2, tactic3))
 }
@@ -168,12 +146,6 @@ pub fn or4<I, A1, A2, A3, A4>(
     tactic3: A3,
     tactic4: A4,
 ) -> Or<I, A1, Or<I, A2, Or<I, A3, A4>>>
-where
-    I: Clone,
-    A1: Clone,
-    A2: Clone,
-    A3: Clone,
-    A4: Clone,
 {
     or3(tactic1, tactic2, or(tactic3, tactic4))
 }
@@ -185,13 +157,6 @@ pub fn or5<I, A1, A2, A3, A4, A5>(
     tactic4: A4,
     tactic5: A5,
 ) -> Or<I, A1, Or<I, A2, Or<I, A3, Or<I, A4, A5>>>>
-where
-    I: Clone,
-    A1: Clone,
-    A2: Clone,
-    A3: Clone,
-    A4: Clone,
-    A5: Clone,
 {
     or4(tactic1, tactic2, tactic3, or(tactic4, tactic5))
 }
@@ -204,14 +169,6 @@ pub fn or6<I, A1, A2, A3, A4, A5, A6>(
     tactic5: A5,
     tactic6: A6,
 ) -> Or<I, A1, Or<I, A2, Or<I, A3, Or<I, A4, Or<I, A5, A6>>>>>
-where
-    I: Clone,
-    A1: Clone,
-    A2: Clone,
-    A3: Clone,
-    A4: Clone,
-    A5: Clone,
-    A6: Clone,
 {
     or5(tactic1, tactic2, tactic3, tactic4, or(tactic5, tactic6))
 }
@@ -225,15 +182,6 @@ pub fn or7<I, A1, A2, A3, A4, A5, A6, A7>(
     tactic6: A6,
     tactic7: A7,
 ) -> Or<I, A1, Or<I, A2, Or<I, A3, Or<I, A4, Or<I, A5, Or<I, A6, A7>>>>>>
-where
-    I: Clone,
-    A1: Clone,
-    A2: Clone,
-    A3: Clone,
-    A4: Clone,
-    A5: Clone,
-    A6: Clone,
-    A7: Clone,
 {
     or6(
         tactic1,
@@ -247,9 +195,8 @@ where
 
 impl<I, A1, A2> Tactic<I> for Or<I, A1, A2>
 where
-    A1: Tactic<I> + Clone,
-    A2: Tactic<I> + Clone,
-    I: Clone,
+    A1: Tactic<I>,
+    A2: Tactic<I>,
 {
     fn action(&mut self, data: &I, context: &ProofContext) -> ProofNode {
         if self.tactic1.precondition(data, context) {
@@ -273,9 +220,6 @@ where
 
 #[derive(Clone)]
 pub struct All<O, E, A>
-where
-    O: Clone,
-    A: Clone,
 {
     enum_tactic: E,
     item_tactic: A,
@@ -285,9 +229,7 @@ where
 }
 
 pub fn all<O, E, A>(enum_tactic: E, item_tactic: A) -> All<O, E, A>
-where
-    O: Clone,
-    A: Clone,
+
 {
     All {
         enum_tactic,
@@ -299,9 +241,6 @@ where
 }
 
 pub fn all_sc<O, E, A>(sc: bool, enum_tactic: E, item_tactic: A) -> All<O, E, A>
-where
-    O: Clone,
-    A: Clone,
 {
     All {
         enum_tactic,
@@ -312,25 +251,10 @@ where
     }
 }
 
-pub fn all_sc_par<O, E, A>(par: bool, sc: bool, enum_tactic: E, item_tactic: A) -> All<O, E, A>
-where
-    O: Clone,
-    A: Clone,
-{
-    All {
-        enum_tactic,
-        item_tactic,
-        short_circuiting: sc,
-        parallel: par,
-        _phantom_data: PhantomData,
-    }
-}
 
 impl<O, E, A> Statistics for All<O, E, A>
 where
     A: Statistics,
-    O: Clone,
-    A: Clone,
 {
     fn print_stats(&self) {
         self.item_tactic.print_stats();
@@ -339,40 +263,39 @@ where
 
 impl<E, A, I, O> Tactic<I> for All<O, E, A>
 where
-    E: EnumeratorTactic<I, O> + Sync,
-    A: Tactic<O> + Send + Sync + Clone,
-    O: Send + Clone,
+    E: EnumeratorTactic<I, O>,
+    A: Tactic<O>
 {
     fn action(&mut self, data_in: &I, context: &ProofContext) -> ProofNode {
         let mut proof = ProofNode::new_all(self.enum_tactic.msg(&data_in));
 
         let enumerator = self.enum_tactic.get_enumerator(data_in);
 
-        if self.parallel {
-            let proof_nodes: Vec<ProofNode> = enumerator
-                .iter(context)
-                .collect_vec()
-                .into_iter()
-                .par_bridge()
-                .map(|d| {
-                    if !self.item_tactic.precondition(&d, context) {
-                        ProofNode::new_leaf("wrong precondition".into(), false)
-                    } else {
-                        let item_msg = self.enum_tactic.item_msg(&d);
-                        let mut proof_item = self.item_tactic.clone().action(&d, context);
-                        proof_item = ProofNode::new_info(item_msg, proof_item);
-                        let outcome = proof_item.eval();
-                        proof_item
-                    }
-                })
-                .collect();
+        // if self.parallel {
+        //     let proof_nodes: Vec<ProofNode> = enumerator
+        //         .iter(context)
+        //         .collect_vec()
+        //         .into_iter()
+        //         .par_bridge()
+        //         .map(|d| {
+        //             if !self.item_tactic.precondition(&d, context) {
+        //                 ProofNode::new_leaf("wrong precondition".into(), false)
+        //             } else {
+        //                 let item_msg = self.enum_tactic.item_msg(&d);
+        //                 let mut proof_item = self.item_tactic.clone().action(&d, context);
+        //                 proof_item = ProofNode::new_info(item_msg, proof_item);
+        //                 let outcome = proof_item.eval();
+        //                 proof_item
+        //             }
+        //         })
+        //         .collect();
 
-            for proof_node in proof_nodes {
-                proof.add_child(proof_node);
-            }
+        //     for proof_node in proof_nodes {
+        //         proof.add_child(proof_node);
+        //     }
 
-            proof.eval();
-        } else {
+        //     proof.eval();
+        // } else {
             for d in enumerator.iter(context) {
                 let res = if !self.item_tactic.precondition(&d, context) {
                     false
@@ -389,7 +312,7 @@ where
                     break;
                 }
             }
-        }
+        //}
 
         proof
     }
@@ -478,7 +401,7 @@ impl PathNode {
     }
 }
 
-pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
+pub fn prove_nice_path_progress<C: CreditInvariant + Send + Sync>(
     comps: Vec<Component>,
     last_comps: Vec<Component>,
     credit_inv: C,
@@ -489,9 +412,6 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
 ) {
     std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
 
-    let c = credit_inv.complex_black(2);
-
-    let path_length = 4;
 
     let nodes = comps
         .into_iter()
@@ -515,82 +435,144 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
         })
         .collect_vec();
 
-    last_nodes.iter().for_each(|last_comp| {
-        let mut context = ProofContext {
-            credit_inv: DefaultCredits::new(c),
-            path_len: path_length,
-        };
+    if parallel {
+        last_nodes.into_par_iter().for_each(|last_node| prove_last_node(nodes.clone(), last_node, credit_inv.clone(), &output_dir, output_depth, sc))
+    } else {
+        last_nodes.into_iter().for_each(|last_node| prove_last_node(nodes.clone(), last_node, credit_inv.clone(), &output_dir, output_depth, sc))
+    };
+}
 
-        let mut proof_tactic = all_sc_par(
-            parallel,
+
+fn prove_last_node<C: CreditInvariant>(nodes: Vec<PathNode>,
+    last_node: PathNode,
+    credit_inv: C,
+    output_dir: &PathBuf,
+    output_depth: usize,
+    sc: bool,
+    ) {
+    let path_length = 4;
+    let c = credit_inv.complex_black(2);
+
+
+    let mut context = ProofContext {
+        credit_inv: DefaultCredits::new(c),
+        path_len: path_length,
+    };
+
+    let mut proof_tactic = all_sc(
+        sc,
+        PathEnum,
+        get_path_tactic(sc, path_length)
+    );
+
+    let mut proof = proof_tactic.action(
+        &PathEnumeratorInput::new(last_node.clone(), nodes.clone()),
+        &mut context,
+    );
+
+    let outcome = proof.eval();
+
+    println!(
+        "Results for nice paths ending with {}",
+        last_node.short_name()
+    );
+    proof_tactic.print_stats();
+
+    let filename = if outcome.success() {
+        println!(
+            "✔️ Proved nice path progress ending in {}",
+            last_node.short_name()
+        );
+        output_dir.join(format!("proof_{}.txt", last_node.short_name()))
+    } else {
+        println!(
+            "❌ Disproved nice path progress ending in {}",
+            last_node.short_name()
+        );
+        output_dir.join(format!("wrong_proof_{}.txt", last_node.short_name()))
+    };
+
+    println!();
+    println!();
+
+    let mut buf = String::new();
+    writeln!(
+        &mut buf,
+        "============= Proof with {} ===============",
+        credit_inv
+    )
+    .expect("Unable to write file");
+    proof
+        .print_tree(&mut buf, output_depth)
+        .expect("Unable to format tree");
+    std::fs::write(filename, buf).expect("Unable to write file");
+}
+
+fn get_path_tactic(sc: bool, path_len: usize) -> impl Tactic<AugmentedPathInstance> + Statistics  {
+    all_sc(
+        sc,
+        MatchingHitEnum::for_comp(path_len - 1),
+        all_sc(
             sc,
-            PathEnum,
-            all_sc(
-                sc,
-                MatchingHitEnum::for_comp(path_length - 1),
-                all_sc(
-                    sc,
-                    ExpandLastEnum,
-                    or6(
-                        CountTactic::new("AugmentedPathInstances".into()),
-                        LongerPathTactic::new(),
-                        ContractabilityTactic::new(),
-                        any(
-                            PseudoCyclesEnum,
-                            or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
-                        ),
-                        any(
-                            ComponentHitEnum,
-                            all(
-                                MatchingNodesEnum,
+            ExpandLastEnum,
+            or6(
+                CountTactic::new("AugmentedPathInstances".into()),
+                LongerPathTactic::new(),
+                ContractabilityTactic::new(),
+                any(
+                    PseudoCyclesEnum,
+                    or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
+                ),
+                any(
+                    ComponentHitEnum,
+                    all(
+                        MatchingNodesEnum,
+                        all(
+                            ExpandEnum,
+                            or6(
+                                PendantRewireTactic::new(),
+                                LocalMergeTactic::new(true),
+                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                                LongerPathTactic::new(),
+                                CycleMergeViaSwap::new(),
+                                ifcond(
+                                    |instance: &SelectedHitInstance| instance.last_hit,
                                 all(
-                                    ExpandEnum,
-                                    or6(
-                                        PendantRewireTactic::new(),
-                                        LocalMergeTactic::new(true),
+                                    ExpandAllEnum,
+                                    or3(
+                                        CountTactic::new(
+                                            "Fully expanded AugmentedPathInstances".into(),
+                                        ),
                                         any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                        LongerPathTactic::new(),
-                                        CycleMergeViaSwap::new(),
-                                        ifcond(
-                                            |instance: &SelectedHitInstance| instance.last_hit,
                                         all(
-                                            ExpandAllEnum,
-                                            or3(
-                                                CountTactic::new(
-                                                    "Fully expanded AugmentedPathInstances".into(),
-                                                ),
-                                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                                all(
-                                                    FindMatchingEdgesEnum,
+                                            FindMatchingEdgesEnum,
+                                            all(
+                                                ExpandAllEnum,
+                                                or5(
+                                                    DoubleCycleMergeTactic::new(),
+                                                    LocalMergeTactic::new(true),
+                                                    LongerPathTactic::new(),
+                                                    any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                     all(
-                                                        ExpandAllEnum,
-                                                        or5(
-                                                            DoubleCycleMergeTactic::new(),
-                                                            LocalMergeTactic::new(true),
-                                                            LongerPathTactic::new(),
-                                                            any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                                            all(
-                                                                FindMatchingEdgesEnum,
+                                                        FindMatchingEdgesEnum,
+                                                        all(
+                                                            ExpandAllEnum,
+                                                            or5(
+                                                                DoubleCycleMergeTactic::new(
+                                                                ),
+                                                                LocalMergeTactic::new(false),
+                                                                LongerPathTactic::new(),
+                                                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                                 all(
-                                                                    ExpandAllEnum,
-                                                                    or5(
-                                                                        DoubleCycleMergeTactic::new(
-                                                                        ),
-                                                                        LocalMergeTactic::new(false),
-                                                                        LongerPathTactic::new(),
-                                                                        any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                                                        all(
-                                                                            FindMatchingEdgesEnum,
-                                                                            all(
-                                                                                ExpandAllEnum,
-                                                                                or4(
-                                                                                    DoubleCycleMergeTactic::new(
-                                                                                    ),
-                                                                                    LocalMergeTactic::new(false),
-                                                                                    LongerPathTactic::new(),
-                                                                                    any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                                                                ),
+                                                                    FindMatchingEdgesEnum,
+                                                                    all(
+                                                                        ExpandAllEnum,
+                                                                        or4(
+                                                                            DoubleCycleMergeTactic::new(
                                                                             ),
+                                                                            LocalMergeTactic::new(false),
+                                                                            LongerPathTactic::new(),
+                                                                            any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                                         ),
                                                                     ),
                                                                 ),
@@ -601,91 +583,18 @@ pub fn prove_nice_path_progress<C: CreditInvariant + Sync + Send>(
                                             ),
                                         ),
                                     ),
-                                    ),
                                 ),
                             ),
+                            ),
                         ),
-                        // all(
-                        //     ExpandAllEnum,
-                        //     or3(
-                        //         CountTactic::new(
-                        //             "Fully expanded AugmentedPathInstances".into(),
-                        //         ),
-                        //         any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                        //         all(
-                        //             FindMatchingEdgesEnum,
-                        //             all(
-                        //                 ExpandAllEnum,
-                        //                 or4(
-                        //                     DoubleCycleMergeTactic::new(),
-                        //                     LongerPathTactic::new(),
-                        //                     LocalMergeTactic::new(),
-                        //                     all(
-                        //                         FindMatchingEdgesEnum,
-                        //                         all(
-                        //                             ExpandAllEnum,
-                        //                             or3(
-                        //                                 DoubleCycleMergeTactic::new(
-                        //                                 ),
-                        //                                 LongerPathTactic::new(),
-                        //                                 LocalMergeTactic::new(),
-                        //                             ),
-                        //                         ),
-                        //                     ),
-                        //                 ),
-                        //             ),
-                        //         ),
-                        //     ),
-                        // ),
-                        TacticsExhausted::new(),
                     ),
                 ),
+                TacticsExhausted::new(),
             ),
-        );
-
-        let mut proof = proof_tactic.action(
-            &PathEnumeratorInput::new(last_comp.clone(), nodes.clone()),
-            &mut context,
-        );
-
-        let outcome = proof.eval();
-
-        println!(
-            "Results for nice paths ending with {}",
-            last_comp.short_name()
-        );
-        proof_tactic.print_stats();
-
-        let filename = if outcome.success() {
-            println!(
-                "✔️ Proved nice path progress ending in {}",
-                last_comp.short_name()
-            );
-            output_dir.join(format!("proof_{}.txt", last_comp.short_name()))
-        } else {
-            println!(
-                "❌ Disproved nice path progress ending in {}",
-                last_comp.short_name()
-            );
-            output_dir.join(format!("wrong_proof_{}.txt", last_comp.short_name()))
-        };
-
-        println!();
-        println!();
-
-        let mut buf = String::new();
-        writeln!(
-            &mut buf,
-            "============= Proof with {} ===============",
-            credit_inv
         )
-        .expect("Unable to write file");
-        proof
-            .print_tree(&mut buf, output_depth)
-            .expect("Unable to format tree");
-        std::fs::write(filename, buf).expect("Unable to write file");
-    });
+    )
 }
+
 
 #[derive(Clone)]
 struct TacticsExhausted {
