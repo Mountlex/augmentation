@@ -43,9 +43,9 @@ impl Tactic<AugmentedPathInstance> for ContractabilityTactic {
         let last = data.path.nodes.last().unwrap().get_zoomed();
         let last_comp = last.get_comp();
 
-        if last_comp.is_complex() || last_comp.is_large() || last_comp.is_c6() {
+        if last_comp.is_complex() || last_comp.is_large() || last_comp.is_c3() {
             return ProofNode::new_leaf(
-                "Contractability check not applied: component is C6, Large or Complex".into(),
+                "Contractability check not applied: component is C3, Large or Complex".into(),
                 false,
             );
         }

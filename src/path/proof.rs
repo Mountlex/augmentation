@@ -466,7 +466,7 @@ fn prove_last_node<C: CreditInvariant>(nodes: Vec<PathNode>,
     );
 
     let mut proof = proof_tactic.action(
-        &PathEnumeratorInput::new(last_node.clone(), nodes.clone()),
+        &PathEnumeratorInput::new(last_node.clone(), nodes),
         &mut context,
     );
 
@@ -550,7 +550,7 @@ fn get_path_tactic(sc: bool, path_len: usize) -> impl Tactic<AugmentedPathInstan
                                                 ExpandAllEnum,
                                                 or5(
                                                     DoubleCycleMergeTactic::new(),
-                                                    LocalMergeTactic::new(true),
+                                                    LocalMergeTactic::new(false),
                                                     LongerPathTactic::new(),
                                                     any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                     all(

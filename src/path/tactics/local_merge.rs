@@ -26,7 +26,7 @@ impl LocalMergeTactic {
         Self {
             num_calls: 0,
             num_proofs: 0,
-            do_complex
+            do_complex,
         }
     }
 }
@@ -42,26 +42,19 @@ fn merge(
     right: &ZoomedNode,
     edges_between: &[Edge],
     context: &ProofContext,
-    do_complex: bool
+    do_complex: bool,
 ) -> ProofNode {
     let left_comp = left.get_comp();
     let right_comp = right.get_comp();
-
-    
 
     let total_comp_credit =
         context.credit_inv.credits(&left_comp) + context.credit_inv.credits(&right_comp);
 
     if left_comp.is_complex() || right_comp.is_complex() {
-
         if !do_complex {
-    return ProofNode::new_leaf(
-                "No complex local merge".into(), false
-            );
+            return ProofNode::new_leaf("No complex local merge".into(), false);
         }
 
-        
-        
         let graph_with_matching = get_local_merge_graph(
             &left_comp,
             &right_comp,
