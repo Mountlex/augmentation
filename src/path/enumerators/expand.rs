@@ -24,7 +24,7 @@ impl<'a> ExpandEnumerator<'a> {
         Self {
             instance,
             hit_comp_idx,
-            last_hit
+            last_hit,
         }
     }
 }
@@ -40,7 +40,7 @@ impl<'a> Enumerator<SelectedHitInstance> for ExpandEnumerator<'a> {
             SelectedHitInstance {
                 instance: aug,
                 hit_comp_idx,
-                last_hit
+                last_hit,
             }
         });
 
@@ -58,36 +58,16 @@ pub fn expand_iter(
     let node = path[node_idx].clone();
     let comp = node.get_comp().clone();
 
-    let mut updated_conn_nodes = comp
-        .nodes()
-        .iter()
-        .filter(|&n| {
-            instance.fixed_edge.iter().any(|e| *n == e.0 || *n == e.1)
-                || instance
-                    .non_path_matching_edges
-                    .iter()
-                    .any(|e| e.source() == *n)
-        })
-        .cloned()
-        .collect_vec();
+    let mut updated_nodes_with_edges = instance.nodes_with_edges(node_idx);
 
     if node.is_zoomed() {
-        if let Some(in_node) = node.get_zoomed().in_node {
-            updated_conn_nodes.push(in_node);
-        }
-        if let Some(out_node) = node.get_zoomed().out_node {
-            updated_conn_nodes.push(out_node);
-        }
-        updated_conn_nodes.sort();
-        updated_conn_nodes.dedup();
-
         let comp_conn_nodes = &node.get_zoomed().connected_nodes;
 
-        if comp_conn_nodes != &updated_conn_nodes {
+        if comp_conn_nodes != &updated_nodes_with_edges {
             // node is already zoomed, just update nice pairs of new incident edges
             let iter = comp_npcs(
                 &node,
-                &updated_conn_nodes,
+                &updated_nodes_with_edges,
                 &node.get_zoomed().npc,
                 &comp_conn_nodes,
             )
@@ -96,7 +76,7 @@ pub fn expand_iter(
                 let mut path_clone = path.clone();
                 let mut zoomed_node = path_clone[node_idx].get_zoomed_mut();
                 zoomed_node.npc = npc;
-                zoomed_node.connected_nodes = updated_conn_nodes.clone();
+                zoomed_node.connected_nodes = updated_nodes_with_edges.clone();
 
                 AugmentedPathInstance {
                     path: path_clone,
@@ -110,14 +90,14 @@ pub fn expand_iter(
         }
     } else {
         // this will be out
-        updated_conn_nodes.push(comp.fixed_node());
+        updated_nodes_with_edges.push(comp.fixed_node());
 
         let in_node_iter = if node_idx < path_len - 1 {
             // enumerate all ins
             let comp_clone = comp.clone();
             Box::new(
                 comp_clone
-                    .nodes()
+                    .possible_in_out_nodes()
                     .into_iter()
                     .filter(|n| **n != comp_clone.fixed_node())
                     .cloned()
@@ -128,7 +108,7 @@ pub fn expand_iter(
         };
 
         let iter = in_node_iter.into_iter().flat_map(move |in_node| {
-            let mut nodes = updated_conn_nodes.clone();
+            let mut nodes = updated_nodes_with_edges.clone();
             nodes.push(in_node);
             nodes.sort();
             nodes.dedup();
@@ -216,7 +196,7 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for ExpandEnum {
         ExpandEnumerator {
             instance: &data.instance,
             hit_comp_idx: data.hit_comp_idx,
-            last_hit: data.last_hit
+            last_hit: data.last_hit,
         }
     }
 

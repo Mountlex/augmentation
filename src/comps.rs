@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Display};
 use itertools::Itertools;
 use num_rational::Rational64;
 
-use crate::Credit;
+use crate::{types::Edge, Credit};
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub enum EdgeType {
@@ -31,7 +31,7 @@ pub fn c6() -> Component {
     Component::C6([0, 1, 2, 3, 4, 5])
 }
 pub fn large() -> Component {
-    Component::Large([0, 1, 2])
+    Component::Large(0)
 }
 
 pub fn three_cycle() -> ComponentG {
@@ -267,7 +267,7 @@ pub enum Component {
     C5([Node; 5]),
     C4([Node; 4]),
     C3([Node; 3]),
-    Large([Node; 3]),
+    Large(Node),
     ComplexPath(Complex, [Node; 6]),
     ComplexTree(Complex, [Node; 7]),
 }
@@ -303,9 +303,36 @@ impl Component {
             Component::C5(nodes) => nodes,
             Component::C4(nodes) => nodes,
             Component::C3(nodes) => nodes,
-            Component::Large(nodes) => nodes,
+            Component::Large(_) => panic!("large has no known nodes"),
             Component::ComplexPath(_, nodes) => nodes,
             Component::ComplexTree(_, nodes) => nodes,
+        }
+    }
+
+    pub fn possible_in_out_nodes(&self) -> &[Node] {
+        match self {
+            Component::C6(nodes) => nodes,
+            Component::C5(nodes) => nodes,
+            Component::C4(nodes) => nodes,
+            Component::C3(nodes) => nodes,
+            Component::Large(n) => std::slice::from_ref(n),
+            Component::ComplexPath(_, nodes) => nodes,
+            Component::ComplexTree(_, nodes) => nodes,
+        }
+    }
+
+    pub fn is_incident(&self, edge: &Edge) -> bool {
+        self.incident(edge).is_some()
+    }
+    pub fn incident(&self, edge: &Edge) -> Option<Node> {
+        if let Component::Large(n) = self {
+            if edge.node_incident(n) {
+                Some(*n)
+            } else {
+                None
+            }
+        } else {
+            self.nodes().iter().find(|n| edge.node_incident(n)).cloned()
         }
     }
 
@@ -347,7 +374,7 @@ impl Component {
             Component::C5(nodes) => nodes[0],
             Component::C4(nodes) => nodes[0],
             Component::C3(nodes) => nodes[0],
-            Component::Large(nodes) => nodes[0],
+            Component::Large(node) => *node,
             Component::ComplexPath(_, blacks) => blacks[3],
             Component::ComplexTree(_, blacks) => blacks[3],
         }
@@ -361,7 +388,7 @@ impl Component {
             Component::C5(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
             Component::C4(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
             Component::C3(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
-            Component::Large(_nodes) => false,
+            Component::Large(_) => false,
             Component::ComplexPath(complex, _) => complex.graph.neighbors(*v1).contains(&v2),
             Component::ComplexTree(complex, _) => complex.graph.neighbors(*v1).contains(&v2),
         }
@@ -377,12 +404,11 @@ impl Component {
                         .collect_vec(),
                 )
             }
-            Component::Large(nodes) => Graph::from_edges(
-                nodes_to_edges(nodes)
-                    .into_iter()
-                    .map(|(u, v)| (u, v, EdgeType::Fixed))
-                    .collect_vec(),
-            ),
+            Component::Large(n) => {
+                let mut g = Graph::new();
+                g.add_node(*n);
+                g
+            }
             Component::ComplexPath(c, _) => c.graph.clone(),
             Component::ComplexTree(c, _) => c.graph.clone(),
         }
@@ -402,7 +428,7 @@ impl Component {
 
     pub fn matching_permutations(&self, size: usize) -> Vec<Vec<Node>> {
         match self {
-            Component::Large(nodes) => vec![nodes.to_vec().into_iter().take(size).collect()],
+            Component::Large(n) => vec![vec![*n; size]],
             Component::ComplexTree(_, nodes) => nodes.iter().cloned().permutations(size).collect(),
             Component::ComplexPath(_, nodes) => nodes.iter().cloned().permutations(size).collect(),
             _ => self
@@ -416,10 +442,18 @@ impl Component {
 
     pub fn matching_nodes(&self) -> &[Node] {
         match self {
-            Component::Large(nodes) => nodes,
+            Component::Large(nodes) => panic!("Large has no matching nodes"),
             Component::ComplexTree(_, nodes) => nodes,
             Component::ComplexPath(_, nodes) => nodes,
             _ => self.nodes(),
+        }
+    }
+
+    pub fn contains(&self, node: &Node) -> bool {
+        if let Component::Large(n) = self {
+            n == node
+        } else {
+            self.nodes().contains(node)
         }
     }
 }
@@ -447,7 +481,7 @@ impl Display for Component {
             Component::C5(nodes) => write!(f, "C5 [{}]", nodes.into_iter().join("-")),
             Component::C4(nodes) => write!(f, "C4 [{}]", nodes.into_iter().join("-")),
             Component::C3(nodes) => write!(f, "C3 [{}]", nodes.into_iter().join("-")),
-            Component::Large(_) => write!(f, "Large"),
+            Component::Large(n) => write!(f, "Large [{}]", n),
             Component::ComplexPath(_, _) => write!(f, "Complex Path"),
             Component::ComplexTree(_, _) => write!(f, "Complex Tree"),
         }

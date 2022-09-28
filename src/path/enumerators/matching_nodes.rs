@@ -19,7 +19,7 @@ impl<'a> MatchingNodesEnumerator<'a> {
         Self {
             instance,
             hit_comp_idx,
-            last_hit
+            last_hit,
         }
     }
 }
@@ -64,7 +64,7 @@ impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
             SelectedHitInstance {
                 instance: aug,
                 hit_comp_idx,
-                last_hit
+                last_hit,
             }
         });
 

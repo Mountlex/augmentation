@@ -229,23 +229,23 @@ impl ProofNode {
             ProofNode::Leaf(_) => {}
             ProofNode::Info(node) => {
                 let c = &node.child;
-                if !(c.outcome().success()  && depth >= max_depth_true) {
+                if !(c.outcome().success() && depth >= max_depth_true) {
                     c.print_tree_rec(writer, new_depth, max_depth_true)?;
                 }
             }
             ProofNode::Or(node) => {
                 let c1 = &node.child1;
-                if !(c1.outcome().success()  && depth >= max_depth_true) {
+                if !(c1.outcome().success() && depth >= max_depth_true) {
                     c1.print_tree_rec(writer, new_depth, max_depth_true)?;
                 }
                 let c2 = &node.child2;
-                if !(c2.outcome().success()  && depth >= max_depth_true) {
+                if !(c2.outcome().success() && depth >= max_depth_true) {
                     c2.print_tree_rec(writer, new_depth, max_depth_true)?;
                 }
             }
             ProofNode::All(node) | ProofNode::Any(node) => {
                 for c in &node.childs {
-                    if !(c.outcome().success()  && depth >= max_depth_true) {
+                    if !(c.outcome().success() && depth >= max_depth_true) {
                         c.print_tree_rec(writer, new_depth, max_depth_true)?;
                     }
                 }

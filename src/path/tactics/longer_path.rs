@@ -45,7 +45,7 @@ impl Tactic<AugmentedPathInstance> for LongerPathTactic {
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
-        let outside_hits = data.outside_hits();
+        let outside_hits = data.all_outside_hits();
 
         for outside_hit in outside_hits {
             let source_path_node = &data.path[outside_hit.source_path()];
@@ -117,6 +117,6 @@ impl Tactic<AugmentedPathInstance> for LongerPathTactic {
     }
 
     fn precondition(&self, data: &AugmentedPathInstance, _context: &ProofContext) -> bool {
-        !data.outside_hits().is_empty()
+        !data.all_outside_hits().is_empty()
     }
 }

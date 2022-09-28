@@ -26,7 +26,9 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
         &self,
         context: &crate::path::proof::ProofContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
-        assert!(self.instance.non_path_matching_edges.len() == self.instance.outside_hits().len());
+        assert!(
+            self.instance.non_path_matching_edges.len() == self.instance.all_outside_hits().len()
+        );
 
         let path = &self.instance.path;
 
@@ -38,20 +40,20 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
         left_nodes.drain_filter(|node| *node == path[1].get_comp().fixed_node());
 
         let prelast_nodes = path[context.path_len - 2].get_comp().matching_nodes();
-        let last_nodes = path.last_comp().matching_nodes();
+        let last_nodes = path.last_comp().possible_in_out_nodes();
 
         let left_last_crossing = self
             .instance
             .fixed_edge
             .iter()
-            .filter(|edge| edge.incident(&left_nodes) && edge.incident(&last_nodes))
+            .filter(|edge| edge.nodes_incident(&left_nodes) && edge.nodes_incident(&last_nodes))
             .count();
 
         let left_prelast_edges = self
             .instance
             .fixed_edge
             .iter()
-            .filter(|edge| edge.incident(&left_nodes) && edge.incident(&prelast_nodes))
+            .filter(|edge| edge.nodes_incident(&left_nodes) && edge.nodes_incident(&prelast_nodes))
             .collect_vec();
 
         let left_used_nodes = left_prelast_edges.iter().map(|e| e.0).collect_vec();
@@ -62,17 +64,24 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
             .into_iter()
             .filter(|n| !left_used_nodes.contains(n))
             .collect_vec();
-        
-        let prelast_matching_endpoints = self.instance.fixed_edges_on(2).into_iter().chain(self.instance.outside_edges_on(2).into_iter()).sorted().dedup().collect_vec();
-        
+
+        let prelast_matching_endpoints = self
+            .instance
+            .nodes_with_fixed_edges(2)
+            .into_iter()
+            .chain(self.instance.outside_edges_on(2).into_iter())
+            .sorted()
+            .dedup()
+            .collect_vec();
+
         let free_prelast = prelast_nodes
             .into_iter()
             .filter(|n| !prelast_matching_endpoints.contains(n))
             .collect_vec();
 
-
         if (left_last_crossing + self.instance.outside_hits_from(3).len() <= 1
-            && left_prelast_edges.len() + self.instance.outside_hits_from(2).len() <= 1) || prelast_matching_endpoints.len() < 3
+            && left_prelast_edges.len() + self.instance.outside_hits_from(2).len() <= 1)
+            || prelast_matching_endpoints.len() < 3
         {
             let iter = free_prelast.into_iter().flat_map(move |right_matched| {
                 let left_used_nodes = left_used_nodes.clone();
@@ -128,5 +137,15 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for FindMatc
             item.fixed_edge.iter().join(", "),
             item.non_path_matching_edges.iter().join(", "),
         )
+    }
+
+    fn precondition(
+        &self,
+        data: &AugmentedPathInstance,
+        context: &crate::path::proof::ProofContext,
+    ) -> bool {
+        !data.path[0].get_comp().is_large()
+            && !data.path[1].get_comp().is_large()
+            && !data.path[2].get_comp().is_large()
     }
 }

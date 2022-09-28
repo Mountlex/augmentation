@@ -29,7 +29,10 @@ pub fn relabels_nodes_sequentially(comps: &mut [Component]) {
             Component::C5(nodes) => offset += relabel_slice(nodes, offset),
             Component::C4(nodes) => offset += relabel_slice(nodes, offset),
             Component::C3(nodes) => offset += relabel_slice(nodes, offset),
-            Component::Large(nodes) => offset += relabel_slice(nodes, offset),
+            Component::Large(n) => {
+                *n = offset;
+                offset += 1;
+            }
             Component::ComplexPath(c, blacks) => {
                 c.graph = Graph::from_edges(
                     c.graph

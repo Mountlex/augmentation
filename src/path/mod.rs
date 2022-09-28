@@ -363,7 +363,7 @@ impl PathInstance {
         self.nodes
             .iter()
             .enumerate()
-            .find(|(_i, super_node)| super_node.get_comp().nodes().contains(&node))
+            .find(|(_i, super_node)| super_node.get_comp().contains(&node))
             .unwrap()
             .0
     }
@@ -440,7 +440,7 @@ pub struct AugmentedPathInstance {
 }
 
 impl AugmentedPathInstance {
-    pub fn outside_hits(&self) -> Vec<MatchingEdge> {
+    pub fn all_outside_hits(&self) -> Vec<MatchingEdge> {
         self.non_path_matching_edges
             .iter()
             .filter(|e| e.hits_outside())
@@ -464,31 +464,42 @@ impl AugmentedPathInstance {
             .collect_vec()
     }
 
-    pub fn fixed_edges_on(&self, node_idx: usize) -> Vec<Node> {
-        let comp_nodes = self.path[node_idx].get_comp().nodes();
-        let mut edge_endpoints = self.fixed_edge
-            .iter()
-            .filter(|e| e.incident(comp_nodes))
-            .map(|e| if comp_nodes.contains(&e.0) { e.0 } else { e.1 })
-            .collect_vec();
+    // Returns a list of nodes of node_idx which can have _one_ additional matching edge
+    pub fn unmatched_nodes(&self, node_idx: usize) -> Vec<Node> {
+        let comp = self.path[node_idx].get_comp();
 
-            if let SuperNode::Zoomed(zoomed) = &self.path[node_idx] {
-                if let Some(node) = zoomed.in_node {
-                    edge_endpoints.push(node)
-                }
-                if let Some(node) = zoomed.out_node {
-                    edge_endpoints.push(node)
-                }
-            }
-        edge_endpoints
-    }
-
-    fn all_edge_endpoints(&self, node_idx: usize) -> Vec<Node> {
-        let mut edge_endpoints = self
+        if let Component::Large(n) = comp {
+            return vec![*n];
+        }
+        let fixed_incident = self.fixed_incident_edges(node_idx);
+        let matching_sources = self
             .non_path_matching_edges
             .iter()
-            .map(|n| n.source())
-            .chain(self.fixed_edge.iter().flat_map(|e| vec![e.0, e.1]))
+            .filter(|e| e.source_path() == node_idx)
+            .map(|e| e.source())
+            .collect_vec();
+
+        comp.matching_nodes()
+            .into_iter()
+            .filter(|n| {
+                !(matching_sources.contains(n)
+                    || fixed_incident.iter().any(|e| {
+                        e.node_incident(n)
+                            && !fixed_incident
+                                .iter()
+                                .any(|e2| !e2.node_incident(n) && e.edge_incident(e2))
+                    }))
+            })
+            .cloned()
+            .collect_vec()
+    }
+
+    pub fn nodes_with_fixed_edges(&self, node_idx: usize) -> Vec<Node> {
+        let comp = self.path[node_idx].get_comp();
+        let mut edge_endpoints = self
+            .fixed_edge
+            .iter()
+            .flat_map(|e| comp.incident(e))
             .collect_vec();
 
         if let SuperNode::Zoomed(zoomed) = &self.path[node_idx] {
@@ -499,14 +510,31 @@ impl AugmentedPathInstance {
                 edge_endpoints.push(node)
             }
         }
-
-        edge_endpoints.sort();
-        edge_endpoints.dedup();
         edge_endpoints
     }
 
-    pub fn free_nodes(&self, node_idx: usize) -> Vec<Node> {
-        let edge_endpoints = self.all_edge_endpoints(node_idx);
+    pub fn nodes_with_matching_edges(&self, node_idx: usize) -> Vec<Node> {
+        self.non_path_matching_edges
+            .iter()
+            .filter(|e| e.source_path() == node_idx)
+            .map(|e| e.source())
+            .collect_vec()
+    }
+
+    pub fn nodes_with_edges(&self, node_idx: usize) -> Vec<Node> {
+        let mut nodes = vec![
+            self.nodes_with_matching_edges(node_idx),
+            self.nodes_with_fixed_edges(node_idx),
+        ]
+        .concat();
+        nodes.sort();
+        nodes.dedup();
+        nodes
+    }
+
+
+    pub fn nodes_without_edges(&self, node_idx: usize) -> Vec<Node> {
+        let edge_endpoints = self.nodes_with_edges(node_idx);
 
         self.path[node_idx]
             .get_comp()
@@ -525,16 +553,31 @@ impl AugmentedPathInstance {
     }
 
     pub fn fix_matching_edge(&mut self, source: Node, hit_idx: usize, new_target: Node) {
-        let matching_edge = self
-            .non_path_matching_edges
-            .drain_filter(|e| e.source() == source && e.hits_path() == Some(hit_idx))
-            .collect_vec()[0];
+        self.non_path_matching_edges
+            .drain_filter(|e| e.source() == source && e.hits_path() == Some(hit_idx));
+
+        self.fixed_edge.push(Edge(new_target, source));
+    }
+
+    pub fn fixed_incident_edges(&self, idx: usize) -> Vec<Edge> {
+        let comp = self.path[idx].get_comp();
 
         self.fixed_edge
-            .push(Edge(new_target, matching_edge.source()));
+            .iter()
+            .filter(|e| comp.is_incident(e))
+            .cloned()
+            .chain(
+                vec![self.path_edge(idx), self.path_edge(idx + 1)]
+                    .into_iter()
+                    .flatten(),
+            )
+            .collect_vec()
     }
 
     pub fn path_edge(&self, idx: usize) -> Option<Edge> {
+        if idx >= self.path.nodes.len() {
+            return None;
+        }
         if self.path[idx - 1].is_zoomed() && self.path[idx].is_zoomed() {
             Some(Edge(
                 self.path[idx - 1].get_zoomed().out_node.unwrap(),
@@ -558,15 +601,12 @@ impl AugmentedPathInstance {
     }
 
     pub fn fixed_edges_between(&self, left: usize, right: usize) -> Vec<Edge> {
-        let left_nodes = self.path[left].get_comp().nodes();
-        let right_nodes = self.path[right].get_comp().nodes();
+        let left_comp = self.path[left].get_comp();
+        let right_comp = self.path[right].get_comp();
         let mut edges = self
             .fixed_edge
             .iter()
-            .filter(|&edge| {
-                (left_nodes.contains(&edge.0) && right_nodes.contains(&edge.1))
-                    || (left_nodes.contains(&edge.1) && right_nodes.contains(&edge.0))
-            })
+            .filter(|&edge| left_comp.is_incident(edge) && right_comp.is_incident(edge))
             .cloned()
             .collect_vec();
 

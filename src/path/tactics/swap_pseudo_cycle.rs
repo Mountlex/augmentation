@@ -59,7 +59,7 @@ impl Tactic<SelectedHitInstance> for CycleMergeViaSwap {
             .fixed_edges_between(context.path_len - 2, context.path_len - 1);
 
         let m_path = data.instance.path_edge(context.path_len - 1).unwrap();
-        let m_other = matched.iter().find(|e| m_path.1 != e.1).unwrap().clone();
+        let m_other = matched.iter().find(|e| m_path != **e).unwrap().clone();
 
         let mut new_instance = data.clone();
         new_instance

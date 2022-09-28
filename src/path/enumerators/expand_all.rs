@@ -78,5 +78,4 @@ impl EnumeratorTactic<SelectedHitInstance, AugmentedPathInstance> for ExpandAllE
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
         format!("Fully expanded nice path")
     }
-
 }

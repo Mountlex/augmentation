@@ -50,8 +50,8 @@ impl Tactic<AugmentedPathInstance> for ContractabilityTactic {
             );
         }
 
-        let free_nodes = data.free_nodes(context.path_len - 1);
-        let used_nodes = data.all_edge_endpoints(context.path_len - 1);
+        let free_nodes = data.nodes_without_edges(context.path_len - 1);
+        let used_nodes = data.nodes_with_edges(context.path_len - 1);
 
         let num_edges_between_free_nodes = last_comp
             .graph()
