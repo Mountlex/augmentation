@@ -113,7 +113,7 @@ fn prove_path(path: Path) {
     ];
 
     let last_comps = vec![
-        //c3(),
+        c3(),
         c4(),
         c5(),
         c6(),
