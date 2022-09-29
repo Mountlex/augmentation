@@ -241,6 +241,7 @@ fn comp_npcs(
                 .iter()
                 .cloned()
                 .tuple_combinations::<(_, _)>()
+                .filter(|(u,v)| !comp.is_adjacent(u, v))
                 .powerset()
                 .map(|config| NicePairConfig { nice_pairs: config })
                 // .filter(|npc| {
@@ -253,8 +254,8 @@ fn comp_npcs(
                     npc
                 })
                 .filter(|npc| npc.is_consistent_with(&consistent_npc, &consistent_nodes))
-                .sorted()
-                .dedup()
+                //.sorted()
+                //.dedup()
                 .collect_vec()
         }
     }
