@@ -380,6 +380,18 @@ impl Component {
         }
     }
 
+    pub fn num_edges(&self) -> usize {
+        match self {
+            Component::C6(_) => 6,
+            Component::C5(_) => 5,
+            Component::C4(_) => 4,
+            Component::C3(_) => 3,
+            Component::Large(_) => 8,
+            Component::ComplexPath(_, _) => 8,
+            Component::ComplexTree(_, _) => 8,
+        }
+    }
+
     pub fn is_adjacent(&self, v1: &Node, v2: &Node) -> bool {
         //assert!(self.graph().contains_node(v1));
         //assert!(self.graph().contains_node(v2));

@@ -125,22 +125,14 @@ fn merge(
                         }
                     }
                     ComplexCheckResult::NoBridges => {
-                        if left_comp.is_c3() && right_comp.is_c3() {
-                            if total_plus_sell - buy_credits >= context.credit_inv.two_ec_credit(6)
-                            {
-                                return ProofNode::new_leaf_success(
-                                    "Local merge to c6".into(),
-                                    total_plus_sell - buy_credits
-                                        == context.credit_inv.two_ec_credit(6),
-                                );
-                            }
-                        } else {
-                            if total_plus_sell - buy_credits >= context.credit_inv.large() {
-                                return ProofNode::new_leaf_success(
-                                    "Local merge to large".into(),
-                                    total_plus_sell - buy_credits == context.credit_inv.large(),
-                                );
-                            }
+                        let req_credits = context
+                            .credit_inv
+                            .two_ec_credit(left_comp.num_edges() + right_comp.num_edges());
+                        if total_plus_sell - buy_credits >= req_credits {
+                            return ProofNode::new_leaf_success(
+                                "Local merge".into(),
+                                total_plus_sell - buy_credits == req_credits,
+                            );
                         }
                     }
                     ComplexCheckResult::BlackLeaf => continue,
@@ -164,20 +156,11 @@ fn merge(
                 credits += Credit::from_integer(1)
             }
 
-            if left_comp.is_c3() && right_comp.is_c3() {
-                if credits >= context.credit_inv.two_ec_credit(6) {
-                    return ProofNode::new_leaf_success(
-                        "Local merge to c6".into(),
-                        credits == context.credit_inv.two_ec_credit(6),
-                    );
-                }
-            } else {
-                if credits >= context.credit_inv.large() {
-                    return ProofNode::new_leaf_success(
-                        "Local merge to large".into(),
-                        credits == context.credit_inv.large(),
-                    );
-                }
+            let req_credits = context
+                .credit_inv
+                .two_ec_credit(left_comp.num_edges() + right_comp.num_edges());
+            if credits >= req_credits {
+                return ProofNode::new_leaf_success("Local merge".into(), credits == req_credits);
             }
         }
     }

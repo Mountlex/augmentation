@@ -275,7 +275,7 @@ impl ZoomedNode {
         }
     }
 
-    pub fn valid_in(&self, new_in: Node, prelast: bool) -> bool {
+    pub fn _valid_in(&self, new_in: Node, prelast: bool) -> bool {
         self.valid_in_out(new_in, self.out_node.unwrap(), prelast)
     }
 

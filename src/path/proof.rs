@@ -1,9 +1,9 @@
 use std::fmt::Write;
-use std::{marker::PhantomData, path::PathBuf};
+use std::path::PathBuf;
 
 use itertools::Itertools;
 use rayon::prelude::{
-    IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator,
+    IntoParallelIterator, ParallelIterator,
 };
 
 use crate::path::enumerators::expand::{ExpandEnum, ExpandLastEnum};
