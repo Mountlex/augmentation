@@ -20,10 +20,7 @@ enum Hit {
 }
 
 impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnumerator<'a> {
-    fn iter(
-        &self,
-        context: &PathContext,
-    ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+    fn iter(&self, context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         assert!(
             self.instance.non_path_matching_edges.len() == self.instance.all_outside_hits().len()
         );
@@ -40,12 +37,14 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
         let prelast_nodes = path[context.path_len - 2].get_comp().matching_nodes();
         let last_nodes = path.last_comp().possible_in_out_nodes();
 
-        let left_last_crossing = self
+        let left_last_edges = self
             .instance
             .fixed_edge
             .iter()
             .filter(|edge| edge.nodes_incident(&left_nodes) && edge.nodes_incident(&last_nodes))
-            .count();
+            .collect_vec();
+        
+        let num_left_last_crossing = left_last_edges.len();
 
         let left_prelast_edges = self
             .instance
@@ -54,7 +53,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
             .filter(|edge| edge.nodes_incident(&left_nodes) && edge.nodes_incident(&prelast_nodes))
             .collect_vec();
 
-        let left_used_nodes = left_prelast_edges.iter().map(|e| e.0).collect_vec();
+        let left_used_nodes = left_prelast_edges.iter().map(|e| e.0).chain(left_last_edges.iter().map(|e| e.0)).collect_vec();
 
         let free_left = left_nodes
             .into_iter()
@@ -75,39 +74,42 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
             .filter(|n| !prelast_matching_endpoints.contains(n))
             .collect_vec();
 
-        if (left_last_crossing + self.instance.outside_hits_from(3).len() <= 1
+        if (num_left_last_crossing + self.instance.outside_hits_from(3).len() <= 1
             && left_prelast_edges.len() + self.instance.outside_hits_from(2).len() <= 1)
             || prelast_matching_endpoints.len() < 3
         {
             let iter = free_prelast.into_iter().flat_map(move |right_matched| {
                 let left_used_nodes = left_used_nodes.clone();
-                free_left
-                    .clone()
-                    .into_iter()
-                    .filter(move |left| {
-                        let c = path[1].get_comp();
+                let mut left_iter: Box<dyn Iterator<Item = Hit>> = Box::new(
+                    free_left
+                        .clone()
+                        .into_iter()
+                        .filter(move |left| {
+                            let c = path[1].get_comp();
 
-                        !(left_used_nodes
-                            .iter()
-                            .all(|u| c.is_adjacent(u, &c.fixed_node()))
-                            && c.is_adjacent(left, &c.fixed_node()))
-                    })
-                    .map(|left| Hit::Node(left))
-                    .chain(std::iter::once(Hit::Outside))
-                    .map(|left| {
-                        let mut new_instance = self.instance.clone();
+                            !(left_used_nodes
+                                .iter()
+                                .all(|u| c.is_adjacent(u, &c.fixed_node()))
+                                && c.is_adjacent(left, &c.fixed_node()))
+                        })
+                        .map(|left| Hit::Node(left)),
+                );
+                if prelast_matching_endpoints.len() < 3 {
+                    left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Outside)));
+                };
 
-                        match left {
-                            Hit::Outside => new_instance
-                                .non_path_matching_edges
-                                .push(MatchingEdge::new(2, *right_matched, PathHit::Outside)),
-                            Hit::Node(left) => {
-                                new_instance.fixed_edge.push(Edge(left, *right_matched))
-                            }
-                        }
+                left_iter.map(|left| {
+                    let mut new_instance = self.instance.clone();
 
-                        new_instance
-                    })
+                    match left {
+                        Hit::Outside => new_instance
+                            .non_path_matching_edges
+                            .push(MatchingEdge::new(2, *right_matched, PathHit::Outside)),
+                        Hit::Node(left) => new_instance.fixed_edge.push(Edge(left, *right_matched)),
+                    }
+
+                    new_instance
+                })
             });
             Box::new(iter)
         } else {
@@ -137,11 +139,7 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
         )
     }
 
-    fn precondition(
-        &self,
-        data: &AugmentedPathInstance,
-        _context: &PathContext,
-    ) -> bool {
+    fn precondition(&self, data: &AugmentedPathInstance, _context: &PathContext) -> bool {
         !data.path[0].get_comp().is_large()
             && !data.path[1].get_comp().is_large()
             && !data.path[2].get_comp().is_large()

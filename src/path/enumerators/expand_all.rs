@@ -59,8 +59,8 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
         ExpandAllEnumerator { instance: data }
     }
 
-    fn item_msg(&self, _item: &AugmentedPathInstance) -> String {
-        format!("Fully expanded nice path")
+    fn item_msg(&self, item: &AugmentedPathInstance) -> String {
+        format!("Nice path {}", item.path)
     }
 }
 
@@ -77,7 +77,7 @@ impl EnumeratorTactic<SelectedHitInstance, AugmentedPathInstance, PathContext> f
         }
     }
 
-    fn item_msg(&self, _item: &AugmentedPathInstance) -> String {
-        format!("Fully expanded nice path")
+    fn item_msg(&self, item: &AugmentedPathInstance) -> String {
+        format!("Nice path {}", item.path)
     }
 }
