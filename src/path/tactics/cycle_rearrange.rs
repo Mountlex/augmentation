@@ -1,8 +1,6 @@
 use crate::{
-    path::{
-        proof::{ProofContext, Statistics, Tactic},
-        PseudoCycleInstance,
-    },
+    path::{proof::PathContext, PseudoCycleInstance},
+    proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
 };
 
@@ -27,8 +25,8 @@ impl Statistics for CycleRearrangeTactic {
     }
 }
 
-impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
-    fn action(&mut self, data: &PseudoCycleInstance, _context: &ProofContext) -> ProofNode {
+impl Tactic<PseudoCycleInstance, PathContext> for CycleRearrangeTactic {
+    fn action(&mut self, data: &PseudoCycleInstance, _context: &PathContext) -> ProofNode {
         self.num_calls += 1;
 
         //let hit = data.cycle_edge.hits_path().unwrap();
@@ -99,7 +97,7 @@ impl Tactic<PseudoCycleInstance> for CycleRearrangeTactic {
         return ProofNode::new_leaf(format!("Cannot rearrange cycle"), false);
     }
 
-    fn precondition(&self, _data: &PseudoCycleInstance, _context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &PseudoCycleInstance, _context: &PathContext) -> bool {
         true
     }
 }

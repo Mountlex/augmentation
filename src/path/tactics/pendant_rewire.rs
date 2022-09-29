@@ -1,8 +1,6 @@
 use crate::{
-    path::{
-        proof::{Statistics, Tactic},
-        SelectedHitInstance,
-    },
+    path::{proof::PathContext, SelectedHitInstance},
+    proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
 };
 
@@ -21,11 +19,11 @@ impl PendantRewireTactic {
     }
 }
 
-impl Tactic<SelectedHitInstance> for PendantRewireTactic {
+impl Tactic<SelectedHitInstance, PathContext> for PendantRewireTactic {
     fn precondition(
         &self,
         data: &SelectedHitInstance,
-        context: &crate::path::proof::ProofContext,
+        context: &crate::path::proof::PathContext,
     ) -> bool {
         data.hit_comp_idx == context.path_len - 2
             && data
@@ -38,7 +36,7 @@ impl Tactic<SelectedHitInstance> for PendantRewireTactic {
     fn action(
         &mut self,
         _data: &SelectedHitInstance,
-        _context: &crate::path::proof::ProofContext,
+        _context: &crate::path::proof::PathContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 

@@ -2,10 +2,8 @@ use itertools::Itertools;
 
 use crate::{
     comps::Node,
-    path::{
-        proof::{Enumerator, EnumeratorTactic},
-        AugmentedPathInstance, MatchingEdge, PathHit,
-    },
+    path::{proof::PathContext, AugmentedPathInstance, MatchingEdge, PathHit},
+    proof_logic::{Enumerator, EnumeratorTactic},
     types::Edge,
 };
 
@@ -21,10 +19,10 @@ enum Hit {
     Node(Node),
 }
 
-impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
+impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnumerator<'a> {
     fn iter(
         &self,
-        context: &crate::path::proof::ProofContext,
+        context: &PathContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         assert!(
             self.instance.non_path_matching_edges.len() == self.instance.all_outside_hits().len()
@@ -57,9 +55,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
             .collect_vec();
 
         let left_used_nodes = left_prelast_edges.iter().map(|e| e.0).collect_vec();
-        let prelast_used_nodes = left_prelast_edges.iter().map(|e| e.1).collect_vec();
 
-        let prelast_in = path[2].get_zoomed().in_node.unwrap();
         let free_left = left_nodes
             .into_iter()
             .filter(|n| !left_used_nodes.contains(n))
@@ -120,7 +116,9 @@ impl<'a> Enumerator<AugmentedPathInstance> for FindMatchingEdgesEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for FindMatchingEdgesEnum {
+impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
+    for FindMatchingEdgesEnum
+{
     type Enumer<'a> = FindMatchingEdgesEnumerator<'a>;
 
     fn msg(&self, _data: &AugmentedPathInstance) -> String {
@@ -142,7 +140,7 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for FindMatc
     fn precondition(
         &self,
         data: &AugmentedPathInstance,
-        context: &crate::path::proof::ProofContext,
+        _context: &PathContext,
     ) -> bool {
         !data.path[0].get_comp().is_large()
             && !data.path[1].get_comp().is_large()

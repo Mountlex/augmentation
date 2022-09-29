@@ -1,8 +1,8 @@
 use itertools::Itertools;
 
-use crate::path::{
-    proof::{Enumerator, EnumeratorTactic, ProofContext},
-    AugmentedPathInstance, SelectedHitInstance,
+use crate::{
+    path::{proof::PathContext, AugmentedPathInstance, SelectedHitInstance},
+    proof_logic::{Enumerator, EnumeratorTactic},
 };
 
 #[derive(Clone)]
@@ -15,7 +15,7 @@ pub struct MatchingNodesEnumerator<'a> {
 }
 
 impl<'a> MatchingNodesEnumerator<'a> {
-    pub fn new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize, last_hit: bool) -> Self {
+    pub fn _new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize, last_hit: bool) -> Self {
         Self {
             instance,
             hit_comp_idx,
@@ -24,7 +24,7 @@ impl<'a> MatchingNodesEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for MatchingNodesEnum {
+impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance, PathContext> for MatchingNodesEnum {
     type Enumer<'a> = MatchingNodesEnumerator<'a>;
     fn msg(&self, data_in: &SelectedHitInstance) -> String {
         format!(
@@ -53,20 +53,21 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for MatchingNode
     }
 }
 
-impl<'a> Enumerator<SelectedHitInstance> for MatchingNodesEnumerator<'a> {
+impl<'a> Enumerator<SelectedHitInstance, PathContext> for MatchingNodesEnumerator<'a> {
     fn iter(
         &self,
-        context: &crate::path::proof::ProofContext,
+        context: &crate::path::proof::PathContext,
     ) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
         let hit_comp_idx = self.hit_comp_idx;
         let last_hit = self.last_hit;
-        let iter = Enumerator::<AugmentedPathInstance>::iter(self, context).map(move |aug| {
-            SelectedHitInstance {
-                instance: aug,
-                hit_comp_idx,
-                last_hit,
-            }
-        });
+        let iter =
+            Enumerator::<AugmentedPathInstance, PathContext>::iter(self, context).map(move |aug| {
+                SelectedHitInstance {
+                    instance: aug,
+                    hit_comp_idx,
+                    last_hit,
+                }
+            });
 
         Box::new(iter)
     }
@@ -118,8 +119,8 @@ pub fn matching_nodes_iter(
     }
 }
 
-impl<'a> Enumerator<AugmentedPathInstance> for MatchingNodesEnumerator<'a> {
-    fn iter(&self, context: &ProofContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+impl<'a> Enumerator<AugmentedPathInstance, PathContext> for MatchingNodesEnumerator<'a> {
+    fn iter(&self, context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         matching_nodes_iter(self.instance.clone(), self.hit_comp_idx, context.path_len)
     }
 }

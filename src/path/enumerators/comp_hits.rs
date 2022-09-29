@@ -1,8 +1,8 @@
 use itertools::Itertools;
 
-use crate::path::{
-    proof::{Enumerator, EnumeratorTactic, ProofContext},
-    AugmentedPathInstance, PathHit, SelectedHitInstance,
+use crate::{
+    path::{proof::PathContext, AugmentedPathInstance, PathHit, SelectedHitInstance},
+    proof_logic::{Enumerator, EnumeratorTactic},
 };
 
 #[derive(Clone)]
@@ -12,8 +12,8 @@ pub struct ComponentHitEnumerator<'a> {
     input: &'a AugmentedPathInstance,
 }
 
-impl<'a> Enumerator<SelectedHitInstance> for ComponentHitEnumerator<'a> {
-    fn iter(&self, _context: &ProofContext) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
+impl<'a> Enumerator<SelectedHitInstance, PathContext> for ComponentHitEnumerator<'a> {
+    fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
         let mut matching_edges = self.input.non_path_matching_edges.clone();
         matching_edges.sort_by_key(|m| m.hit());
         let mut num_path_matching_edges =
@@ -41,7 +41,9 @@ impl<'a> Enumerator<SelectedHitInstance> for ComponentHitEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, SelectedHitInstance> for ComponentHitEnum {
+impl EnumeratorTactic<AugmentedPathInstance, SelectedHitInstance, PathContext>
+    for ComponentHitEnum
+{
     type Enumer<'a> = ComponentHitEnumerator<'a> where Self: 'a;
 
     fn msg(&self, _data_in: &AugmentedPathInstance) -> String {

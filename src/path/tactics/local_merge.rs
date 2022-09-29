@@ -3,12 +3,12 @@ use petgraph::{algo::connected_components, visit::EdgeFiltered};
 
 use crate::{
     bridges::{is_complex, ComplexCheckResult},
-    comps::{edges_of_type, CreditInvariant, EdgeType},
+    comps::{edges_of_type, EdgeType},
     path::{
-        proof::{ProofContext, Statistics, Tactic},
-        utils::get_local_merge_graph,
-        AugmentedPathInstance, SelectedHitInstance, ZoomedNode,
+        proof::PathContext, utils::get_local_merge_graph, AugmentedPathInstance,
+        SelectedHitInstance, ZoomedNode,
     },
+    proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
     types::Edge,
     Credit,
@@ -41,7 +41,7 @@ fn merge(
     left: &ZoomedNode,
     right: &ZoomedNode,
     edges_between: &[Edge],
-    context: &ProofContext,
+    context: &PathContext,
     do_complex: bool,
 ) -> ProofNode {
     let left_comp = left.get_comp();
@@ -184,8 +184,8 @@ fn merge(
     ProofNode::new_leaf("Local merge impossible".into(), false)
 }
 
-impl Tactic<AugmentedPathInstance> for LocalMergeTactic {
-    fn action(&mut self, data: &AugmentedPathInstance, context: &ProofContext) -> ProofNode {
+impl Tactic<AugmentedPathInstance, PathContext> for LocalMergeTactic {
+    fn action(&mut self, data: &AugmentedPathInstance, context: &PathContext) -> ProofNode {
         self.num_calls += 1;
 
         let res = data
@@ -220,17 +220,17 @@ impl Tactic<AugmentedPathInstance> for LocalMergeTactic {
         }
     }
 
-    fn precondition(&self, data: &AugmentedPathInstance, _context: &ProofContext) -> bool {
+    fn precondition(&self, data: &AugmentedPathInstance, _context: &PathContext) -> bool {
         data.path.nodes.iter().filter(|n| n.is_zoomed()).count() >= 2
     }
 }
 
-impl Tactic<SelectedHitInstance> for LocalMergeTactic {
-    fn precondition(&self, data: &SelectedHitInstance, context: &ProofContext) -> bool {
-        Tactic::<AugmentedPathInstance>::precondition(self, &data.instance, context)
+impl Tactic<SelectedHitInstance, PathContext> for LocalMergeTactic {
+    fn precondition(&self, data: &SelectedHitInstance, context: &PathContext) -> bool {
+        Tactic::<AugmentedPathInstance, PathContext>::precondition(self, &data.instance, context)
     }
 
-    fn action(&mut self, data: &SelectedHitInstance, context: &ProofContext) -> ProofNode {
-        Tactic::<AugmentedPathInstance>::action(self, &data.instance, context)
+    fn action(&mut self, data: &SelectedHitInstance, context: &PathContext) -> ProofNode {
+        Tactic::<AugmentedPathInstance, PathContext>::action(self, &data.instance, context)
     }
 }

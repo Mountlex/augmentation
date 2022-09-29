@@ -696,8 +696,39 @@ pub fn merge_graphs(graphs: Vec<Graph>) -> (Graph, Vec<Graph>) {
     (g, others)
 }
 
-pub trait CreditInvariant: Clone + Display {
-    fn credits(&self, comp: &Component) -> Credit {
+#[derive(Clone, Debug)]
+pub struct CreditInv {
+    pub c: Rational64,
+}
+
+impl CreditInv {
+    pub fn new(c: Rational64) -> Self {
+        CreditInv { c }
+    }
+}
+
+impl CreditInv {
+    pub fn two_ec_credit(&self, num_edges: usize) -> Credit {
+        (self.c * Credit::from_integer(num_edges as i64)).min(self.large())
+    }
+
+    pub fn complex_comp(&self) -> Credit {
+        (Credit::from_integer(13) * self.c) - Credit::from_integer(2)
+    }
+
+    pub fn complex_black(&self, deg: i64) -> Credit {
+        Credit::from_integer(deg) * self.c * Credit::new(1, 2)
+    }
+
+    pub fn complex_block(&self) -> Credit {
+        Credit::from_integer(1)
+    }
+
+    pub fn large(&self) -> Credit {
+        Credit::from_integer(2)
+    }
+
+    pub fn credits(&self, comp: &Component) -> Credit {
         match comp {
             Component::C6(_) => self.two_ec_credit(6),
             Component::C5(_) => self.two_ec_credit(5),
@@ -709,53 +740,14 @@ pub trait CreditInvariant: Clone + Display {
         }
     }
 
-    fn two_ec_credit(&self, num_edges: usize) -> Credit;
-
-    fn complex(&self, complex: &Complex) -> Credit {
+    pub fn complex(&self, complex: &Complex) -> Credit {
         self.complex_comp()
             + Credit::from_integer(complex.num_blocks as i64) * self.complex_block()
             + self.complex_black(complex.total_black_deg as i64)
     }
-    fn complex_comp(&self) -> Credit;
-    fn complex_black(&self, deg: i64) -> Credit;
-    fn complex_block(&self) -> Credit;
-    fn large(&self) -> Credit;
 }
 
-#[derive(Clone, Debug)]
-pub struct DefaultCredits {
-    pub c: Rational64,
-}
-
-impl DefaultCredits {
-    pub fn new(c: Rational64) -> Self {
-        DefaultCredits { c }
-    }
-}
-
-impl CreditInvariant for DefaultCredits {
-    fn two_ec_credit(&self, num_edges: usize) -> Credit {
-        (self.c * Credit::from_integer(num_edges as i64)).min(self.large())
-    }
-
-    fn complex_comp(&self) -> Credit {
-        (Credit::from_integer(13) * self.c) - Credit::from_integer(2)
-    }
-
-    fn complex_black(&self, deg: i64) -> Credit {
-        Credit::from_integer(deg) * self.c * Credit::new(1, 2)
-    }
-
-    fn complex_block(&self) -> Credit {
-        Credit::from_integer(1)
-    }
-
-    fn large(&self) -> Credit {
-        Credit::from_integer(2)
-    }
-}
-
-impl Display for DefaultCredits {
+impl Display for CreditInv {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Credit Scheme with c = {}", self.c)
     }

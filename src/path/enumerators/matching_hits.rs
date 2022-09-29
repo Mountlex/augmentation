@@ -1,6 +1,6 @@
-use crate::path::{
-    proof::{Enumerator, EnumeratorTactic, ProofContext},
-    AugmentedPathInstance, MatchingEdge, PathHit,
+use crate::{
+    path::{proof::PathContext, AugmentedPathInstance, MatchingEdge, PathHit},
+    proof_logic::{Enumerator, EnumeratorTactic},
 };
 
 #[derive(Clone)]
@@ -10,8 +10,8 @@ pub struct MatchingHitEnumerator<'a> {
     instance: &'a AugmentedPathInstance,
 }
 
-impl<'a> Enumerator<AugmentedPathInstance> for MatchingHitEnumerator<'a> {
-    fn iter(&self, context: &ProofContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+impl<'a> Enumerator<AugmentedPathInstance, PathContext> for MatchingHitEnumerator<'a> {
+    fn iter(&self, context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let path_len = context.path_len;
         let comp = self.instance.path.last_comp();
 
@@ -42,7 +42,9 @@ impl<'a> Enumerator<AugmentedPathInstance> for MatchingHitEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for MatchingHitEnum {
+impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
+    for MatchingHitEnum
+{
     type Enumer<'a> = MatchingHitEnumerator<'a>;
 
     fn msg(&self, _data_in: &AugmentedPathInstance) -> String {

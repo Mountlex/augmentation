@@ -1,11 +1,12 @@
-use std::ops::Deref;
 
 use itertools::Itertools;
 
-use crate::path::{
-    proof::{Enumerator, EnumeratorTactic, ProofContext},
-    AugmentedPathInstance, CycleEdge, PathHit, PseudoCycle, PseudoCycleInstance,
-    SelectedHitInstance, SuperNode,
+use crate::{
+    path::{
+        proof::PathContext, AugmentedPathInstance, CycleEdge, PseudoCycle, PseudoCycleInstance,
+        SelectedHitInstance, SuperNode,
+    },
+    proof_logic::{Enumerator, EnumeratorTactic},
 };
 
 #[derive(Clone)]
@@ -15,9 +16,8 @@ pub struct PseudoCyclesEnumerator<'a> {
     input: &'a AugmentedPathInstance,
 }
 
-impl<'a> Enumerator<PseudoCycleInstance> for PseudoCyclesEnumerator<'a> {
-    fn iter(&self, context: &ProofContext) -> Box<dyn Iterator<Item = PseudoCycleInstance> + '_> {
-        let path_len = context.path_len;
+impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator<'a> {
+    fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = PseudoCycleInstance> + '_> {
         let path = &self.input.path;
         let instance = self.input;
 
@@ -122,7 +122,9 @@ impl<'a> Enumerator<PseudoCycleInstance> for PseudoCyclesEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, PseudoCycleInstance> for PseudoCyclesEnum {
+impl EnumeratorTactic<AugmentedPathInstance, PseudoCycleInstance, PathContext>
+    for PseudoCyclesEnum
+{
     type Enumer<'a> = PseudoCyclesEnumerator<'a> where Self: 'a;
 
     fn msg(&self, _data_in: &AugmentedPathInstance) -> String {
@@ -138,7 +140,7 @@ impl EnumeratorTactic<AugmentedPathInstance, PseudoCycleInstance> for PseudoCycl
     }
 }
 
-impl EnumeratorTactic<SelectedHitInstance, PseudoCycleInstance> for PseudoCyclesEnum {
+impl EnumeratorTactic<SelectedHitInstance, PseudoCycleInstance, PathContext> for PseudoCyclesEnum {
     type Enumer<'a> = PseudoCyclesEnumerator<'a> where Self: 'a;
 
     fn msg(&self, _data_in: &SelectedHitInstance) -> String {

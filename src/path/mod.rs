@@ -13,7 +13,7 @@ use petgraph::algo::Cycle;
 pub use proof::prove_nice_path_progress;
 
 use crate::{
-    comps::{CompType, Component, CreditInvariant, Node},
+    comps::{CompType, Component, CreditInv, Node},
     path::utils::complex_cycle_value_base,
     types::Edge,
     Credit,
@@ -191,7 +191,6 @@ impl Display for SuperNode {
 #[derive(Debug, Clone)]
 pub struct AbstractNode {
     pub comp: Component,
-
     pub in_not_out: bool,
     pub nice_pair: bool,
     pub used: bool,
@@ -202,7 +201,7 @@ impl AbstractNode {
         &self.comp
     }
 
-    fn value<C: CreditInvariant>(&self, credit_inv: C, lower_complex: bool) -> Credit {
+    fn value(&self, credit_inv: &CreditInv, lower_complex: bool) -> Credit {
         match self.comp.comp_type() {
             CompType::Cycle(_) if !self.used => {
                 if self.nice_pair {
@@ -252,8 +251,8 @@ impl Display for AbstractNode {
 pub struct ZoomedNode {
     pub comp: Component,
     pub npc: NicePairConfig,
-    pub in_node: Option<Node>,
-    pub out_node: Option<Node>,
+    in_node: Option<Node>,
+    out_node: Option<Node>,
     pub connected_nodes: Vec<Node>,
     pub used: bool,
 }
@@ -284,7 +283,17 @@ impl ZoomedNode {
         self.valid_in_out(self.in_node.unwrap(), new_out, prelast)
     }
 
-    fn value<C: CreditInvariant>(&self, credit_inv: C, lower_complex: bool) -> Credit {
+    pub fn set_in(&mut self, new_in: Node) {
+        assert!(self.comp.contains(&new_in));
+        self.in_node = Some(new_in)
+    }
+
+    pub fn set_out(&mut self, new_out: Node) {
+        assert!(self.comp.contains(&new_out));
+        self.out_node = Some(new_out)
+    }
+
+    fn value(&self, credit_inv: &CreditInv, lower_complex: bool) -> Credit {
         let nice_pair = self
             .npc
             .is_nice_pair(self.in_node.unwrap(), self.out_node.unwrap());
@@ -316,7 +325,7 @@ impl ZoomedNode {
                 if nice_pair {
                     complex
                         + complex_cycle_value_base(
-                            credit_inv.clone(),
+                            credit_inv,
                             &self.comp.graph(),
                             self.in_node.unwrap(),
                             self.out_node.unwrap(),
@@ -324,7 +333,7 @@ impl ZoomedNode {
                 } else {
                     complex
                         + complex_cycle_value_base(
-                            credit_inv.clone(),
+                            credit_inv,
                             &self.comp.graph(),
                             self.in_node.unwrap(),
                             self.out_node.unwrap(),
@@ -532,7 +541,6 @@ impl AugmentedPathInstance {
         nodes
     }
 
-
     pub fn nodes_without_edges(&self, node_idx: usize) -> Vec<Node> {
         let edge_endpoints = self.nodes_with_edges(node_idx);
 
@@ -593,8 +601,8 @@ impl AugmentedPathInstance {
         assert!(self.fixed_edge.contains(&new_path_edge));
 
         let old_path_edge = self.path_edge(path_edge_idx).unwrap();
-        self.path[path_edge_idx - 1].get_zoomed_mut().out_node = Some(new_path_edge.0);
-        self.path[path_edge_idx].get_zoomed_mut().in_node = Some(new_path_edge.1);
+        self.path[path_edge_idx - 1].get_zoomed_mut().set_out(new_path_edge.0);
+        self.path[path_edge_idx].get_zoomed_mut().set_in(new_path_edge.1);
 
         self.fixed_edge.drain_filter(|e| *e == new_path_edge);
         self.fixed_edge.push(old_path_edge);

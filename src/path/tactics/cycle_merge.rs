@@ -3,11 +3,9 @@ use std::fmt::Display;
 use itertools::Itertools;
 
 use crate::{
-    comps::CreditInvariant,
-    path::{
-        proof::{ProofContext, Statistics, Tactic},
-        PseudoCycle, PseudoCycleInstance, SuperNode,
-    },
+    comps::CreditInv,
+    path::{proof::PathContext, PseudoCycle, PseudoCycleInstance, SuperNode},
+    proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
     Credit,
 };
@@ -33,11 +31,11 @@ impl Statistics for CycleMergeTactic {
     }
 }
 
-impl Tactic<PseudoCycleInstance> for CycleMergeTactic {
-    fn action(&mut self, data: &PseudoCycleInstance, context: &ProofContext) -> ProofNode {
+impl Tactic<PseudoCycleInstance, PathContext> for CycleMergeTactic {
+    fn action(&mut self, data: &PseudoCycleInstance, context: &PathContext) -> ProofNode {
         self.num_calls += 1;
 
-        let cycle_value = data.pseudo_cycle.value(context.credit_inv.clone());
+        let cycle_value = data.pseudo_cycle.value(&context.credit_inv);
         if cycle_value >= Credit::from_integer(2) {
             self.num_proofs += 1;
             ProofNode::new_leaf_success(
@@ -56,14 +54,14 @@ impl Tactic<PseudoCycleInstance> for CycleMergeTactic {
         }
     }
 
-    fn precondition(&self, _data: &PseudoCycleInstance, _context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &PseudoCycleInstance, _context: &PathContext) -> bool {
         // If we land here, we want that at least one matching edge hits C_j for j <= l - 2.
         true
     }
 }
 
 impl PseudoCycle {
-    pub fn value<C: CreditInvariant>(&self, credit_inv: C) -> Credit {
+    pub fn value(&self, credit_inv: &CreditInv) -> Credit {
         let first_complex = self
             .nodes
             .iter()
@@ -78,8 +76,8 @@ impl PseudoCycle {
                 let lower_complex = first_complex.is_some() && first_complex.unwrap() < j;
 
                 match node {
-                    SuperNode::Abstract(abs) => abs.value(credit_inv.clone(), lower_complex),
-                    SuperNode::Zoomed(zoomed) => zoomed.value(credit_inv.clone(), lower_complex),
+                    SuperNode::Abstract(abs) => abs.value(credit_inv, lower_complex),
+                    SuperNode::Zoomed(zoomed) => zoomed.value(credit_inv, lower_complex),
                 }
             })
             .sum()

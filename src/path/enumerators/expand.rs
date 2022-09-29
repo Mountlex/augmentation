@@ -3,9 +3,10 @@ use itertools::Itertools;
 use crate::{
     comps::{Component, Node},
     path::{
-        proof::{Enumerator, EnumeratorTactic, ProofContext},
-        AugmentedPathInstance, NicePairConfig, SelectedHitInstance, SuperNode, ZoomedNode,
+        proof::PathContext, AugmentedPathInstance, NicePairConfig, SelectedHitInstance, SuperNode,
+        ZoomedNode,
     },
+    proof_logic::{Enumerator, EnumeratorTactic},
 };
 
 #[derive(Clone)]
@@ -20,7 +21,7 @@ pub struct ExpandEnumerator<'a> {
 }
 
 impl<'a> ExpandEnumerator<'a> {
-    pub fn new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize, last_hit: bool) -> Self {
+    pub fn _new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize, last_hit: bool) -> Self {
         Self {
             instance,
             hit_comp_idx,
@@ -29,20 +30,21 @@ impl<'a> ExpandEnumerator<'a> {
     }
 }
 
-impl<'a> Enumerator<SelectedHitInstance> for ExpandEnumerator<'a> {
+impl<'a> Enumerator<SelectedHitInstance, PathContext> for ExpandEnumerator<'a> {
     fn iter(
         &self,
-        context: &crate::path::proof::ProofContext,
+        context: &crate::path::proof::PathContext,
     ) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
         let hit_comp_idx = self.hit_comp_idx;
         let last_hit = self.last_hit;
-        let iter = Enumerator::<AugmentedPathInstance>::iter(self, context).map(move |aug| {
-            SelectedHitInstance {
-                instance: aug,
-                hit_comp_idx,
-                last_hit,
-            }
-        });
+        let iter =
+            Enumerator::<AugmentedPathInstance, PathContext>::iter(self, context).map(move |aug| {
+                SelectedHitInstance {
+                    instance: aug,
+                    hit_comp_idx,
+                    last_hit,
+                }
+            });
 
         Box::new(iter)
     }
@@ -51,7 +53,7 @@ impl<'a> Enumerator<SelectedHitInstance> for ExpandEnumerator<'a> {
 pub fn expand_iter(
     instance: AugmentedPathInstance,
     node_idx: usize,
-    context: ProofContext,
+    context: PathContext,
 ) -> Box<dyn Iterator<Item = AugmentedPathInstance>> {
     let path_len = context.path_len;
     let path = instance.path.clone();
@@ -159,13 +161,15 @@ pub fn expand_iter(
     }
 }
 
-impl<'a> Enumerator<AugmentedPathInstance> for ExpandEnumerator<'a> {
-    fn iter(&self, context: &ProofContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+impl<'a> Enumerator<AugmentedPathInstance, PathContext> for ExpandEnumerator<'a> {
+    fn iter(&self, context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         expand_iter(self.instance.clone(), self.hit_comp_idx, context.clone())
     }
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for ExpandLastEnum {
+impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
+    for ExpandLastEnum
+{
     type Enumer<'a> = ExpandEnumerator<'a>;
 
     fn msg(&self, _data: &AugmentedPathInstance) -> String {
@@ -185,7 +189,7 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for ExpandLa
     }
 }
 
-impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance> for ExpandEnum {
+impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance, PathContext> for ExpandEnum {
     type Enumer<'a> = ExpandEnumerator<'a>;
 
     fn msg(&self, data: &SelectedHitInstance) -> String {

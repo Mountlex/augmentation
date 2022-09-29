@@ -1,11 +1,8 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{
-        proof::{ProofContext, Statistics, Tactic},
-        utils::hamiltonian_paths,
-        AugmentedPathInstance,
-    },
+    path::{proof::PathContext, utils::hamiltonian_paths, AugmentedPathInstance},
+    proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
 };
 #[derive(Clone)]
@@ -32,11 +29,11 @@ impl Statistics for ContractabilityTactic {
     }
 }
 
-impl Tactic<AugmentedPathInstance> for ContractabilityTactic {
+impl Tactic<AugmentedPathInstance, PathContext> for ContractabilityTactic {
     fn action(
         &mut self,
         data: &AugmentedPathInstance,
-        context: &ProofContext,
+        context: &PathContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
@@ -103,7 +100,7 @@ impl Tactic<AugmentedPathInstance> for ContractabilityTactic {
         }
     }
 
-    fn precondition(&self, _data: &AugmentedPathInstance, _context: &ProofContext) -> bool {
+    fn precondition(&self, _data: &AugmentedPathInstance, _context: &PathContext) -> bool {
         true
     }
 }

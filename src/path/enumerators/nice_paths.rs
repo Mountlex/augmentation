@@ -1,12 +1,13 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::{merge_components_to_base, CompType, Component, Graph},
+    comps::CompType,
     path::{
-        proof::{Enumerator, EnumeratorTactic, PathNode, ProofContext},
+        proof::{PathContext, PathNode},
         utils::relabels_nodes_sequentially,
         AbstractNode, AugmentedPathInstance, PathInstance, SuperNode,
     },
+    proof_logic::{Enumerator, EnumeratorTactic},
 };
 
 #[derive(Clone)]
@@ -28,8 +29,8 @@ pub struct PathEnumerator<'a> {
     input: &'a PathEnumeratorInput,
 }
 
-impl<'a> Enumerator<AugmentedPathInstance> for PathEnumerator<'a> {
-    fn iter(&self, context: &ProofContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+impl<'a> Enumerator<AugmentedPathInstance, PathContext> for PathEnumerator<'a> {
+    fn iter(&self, context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let comps = &self.input.comps;
         let path_len = context.path_len;
 
@@ -92,7 +93,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for PathEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<PathEnumeratorInput, AugmentedPathInstance> for PathEnum {
+impl EnumeratorTactic<PathEnumeratorInput, AugmentedPathInstance, PathContext> for PathEnum {
     type Enumer<'a> = PathEnumerator<'a>;
 
     fn msg(&self, data_in: &PathEnumeratorInput) -> String {

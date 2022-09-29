@@ -15,6 +15,7 @@ mod comps;
 mod contract;
 //mod local_merge;
 mod path;
+mod proof_logic;
 mod proof_tree;
 mod types;
 
@@ -99,7 +100,7 @@ fn prove_local(local: Local) {
 }
 
 fn prove_path(path: Path) {
-    let inv = DefaultCredits::new(Rational64::new(path.c_numer, path.c_demon));
+    let inv = CreditInv::new(Rational64::new(path.c_numer, path.c_demon));
 
     let comps = vec![
         c3(),
@@ -112,7 +113,7 @@ fn prove_path(path: Path) {
     ];
 
     let last_comps = vec![
-        c3(),
+        //c3(),
         c4(),
         c5(),
         c6(),
@@ -124,7 +125,7 @@ fn prove_path(path: Path) {
     prove_nice_path_progress(
         comps,
         last_comps,
-        inv,
+        &inv,
         path.output_dir,
         path.output_depth,
         path.sc,

@@ -4,7 +4,7 @@ use itertools::Itertools;
 use petgraph::visit::{depth_first_search, Control, DfsEvent};
 
 use crate::{
-    comps::{Component, CreditInvariant, EdgeType, Graph, Node},
+    comps::{Component, CreditInv, EdgeType, Graph, Node},
     Credit,
 };
 
@@ -75,12 +75,7 @@ pub fn get_local_merge_graph(
     graph
 }
 
-pub fn complex_cycle_value_base<C: CreditInvariant>(
-    credit_inv: C,
-    graph: &Graph,
-    a: Node,
-    b: Node,
-) -> Credit {
+pub fn complex_cycle_value_base(credit_inv: &CreditInv, graph: &Graph, a: Node, b: Node) -> Credit {
     let mut predecessor = HashMap::new();
     depth_first_search(&graph, Some(a), |event| {
         if let DfsEvent::TreeEdge(u, v) = event {

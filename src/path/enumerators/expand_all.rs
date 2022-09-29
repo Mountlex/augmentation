@@ -1,9 +1,11 @@
-use itertools::Itertools;
 
-use crate::path::{
-    enumerators::{expand::expand_iter, matching_nodes::matching_nodes_iter},
-    proof::{Enumerator, EnumeratorTactic},
-    AugmentedPathInstance, SelectedHitInstance,
+use crate::{
+    path::{
+        enumerators::{expand::expand_iter, matching_nodes::matching_nodes_iter},
+        proof::PathContext,
+        AugmentedPathInstance, SelectedHitInstance,
+    },
+    proof_logic::{Enumerator, EnumeratorTactic},
 };
 
 #[derive(Clone)]
@@ -13,10 +15,10 @@ pub struct ExpandAllEnumerator<'a> {
     instance: &'a AugmentedPathInstance,
 }
 
-impl<'a> Enumerator<AugmentedPathInstance> for ExpandAllEnumerator<'a> {
+impl<'a> Enumerator<AugmentedPathInstance, PathContext> for ExpandAllEnumerator<'a> {
     fn iter(
         &self,
-        context: &crate::path::proof::ProofContext,
+        context: &crate::path::proof::PathContext,
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let mut cases: Box<dyn Iterator<Item = AugmentedPathInstance>> =
             Box::new(vec![self.instance.clone()].into_iter());
@@ -46,7 +48,7 @@ impl<'a> Enumerator<AugmentedPathInstance> for ExpandAllEnumerator<'a> {
     }
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for ExpandAllEnum {
+impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext> for ExpandAllEnum {
     type Enumer<'a> = ExpandAllEnumerator<'a>;
 
     fn msg(&self, _data: &AugmentedPathInstance) -> String {
@@ -57,12 +59,12 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance> for ExpandAl
         ExpandAllEnumerator { instance: data }
     }
 
-    fn item_msg(&self, item: &AugmentedPathInstance) -> String {
+    fn item_msg(&self, _item: &AugmentedPathInstance) -> String {
         format!("Fully expanded nice path")
     }
 }
 
-impl EnumeratorTactic<SelectedHitInstance, AugmentedPathInstance> for ExpandAllEnum {
+impl EnumeratorTactic<SelectedHitInstance, AugmentedPathInstance, PathContext> for ExpandAllEnum {
     type Enumer<'a> = ExpandAllEnumerator<'a>;
 
     fn msg(&self, _data: &SelectedHitInstance) -> String {
@@ -75,7 +77,7 @@ impl EnumeratorTactic<SelectedHitInstance, AugmentedPathInstance> for ExpandAllE
         }
     }
 
-    fn item_msg(&self, item: &AugmentedPathInstance) -> String {
+    fn item_msg(&self, _item: &AugmentedPathInstance) -> String {
         format!("Fully expanded nice path")
     }
 }

@@ -1,10 +1,8 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{
-        proof::{Statistics, Tactic},
-        AugmentedPathInstance, PseudoCycle,
-    },
+    path::{proof::PathContext, AugmentedPathInstance, PseudoCycle},
+    proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
     Credit,
 };
@@ -33,19 +31,15 @@ impl Statistics for DoubleCycleMergeTactic {
     }
 }
 
-impl Tactic<AugmentedPathInstance> for DoubleCycleMergeTactic {
-    fn precondition(
-        &self,
-        data: &AugmentedPathInstance,
-        _context: &crate::path::proof::ProofContext,
-    ) -> bool {
+impl Tactic<AugmentedPathInstance, PathContext> for DoubleCycleMergeTactic {
+    fn precondition(&self, data: &AugmentedPathInstance, _context: &PathContext) -> bool {
         data.fixed_edges_between(0, 2).len() > 0 && data.fixed_edges_between(1, 3).len() > 0
     }
 
     fn action(
         &mut self,
         data: &AugmentedPathInstance,
-        context: &crate::path::proof::ProofContext,
+        context: &PathContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
         let left_cycle_edges = data.fixed_edges_between(0, 2);
@@ -60,19 +54,22 @@ impl Tactic<AugmentedPathInstance> for DoubleCycleMergeTactic {
                     data.path[1].clone(),
                 ];
 
-                cycle_nodes[0].get_zoomed_mut().in_node = cycle_nodes[0].get_zoomed().out_node;
-                cycle_nodes[0].get_zoomed_mut().out_node = Some(left_cycle_edge.0);
 
-                cycle_nodes[1].get_zoomed_mut().in_node = Some(left_cycle_edge.1);
+                let n = cycle_nodes[0].get_zoomed().out_node.unwrap();
+                cycle_nodes[0].get_zoomed_mut().set_in(n);
+                cycle_nodes[0].get_zoomed_mut().set_out(left_cycle_edge.0);
 
-                cycle_nodes[2].get_zoomed_mut().out_node = Some(right_cycle_edge.1);
+                cycle_nodes[1].get_zoomed_mut().set_in(left_cycle_edge.1);
 
-                cycle_nodes[3].get_zoomed_mut().out_node = cycle_nodes[3].get_zoomed().in_node;
-                cycle_nodes[3].get_zoomed_mut().in_node = Some(right_cycle_edge.0);
+                cycle_nodes[2].get_zoomed_mut().set_out(right_cycle_edge.1);
+
+                let n = cycle_nodes[3].get_zoomed().in_node.unwrap();
+                cycle_nodes[3].get_zoomed_mut().set_out(n);
+                cycle_nodes[3].get_zoomed_mut().set_in(right_cycle_edge.0);
 
                 let cycle = PseudoCycle { nodes: cycle_nodes };
 
-                let cycle_value = cycle.value(context.credit_inv.clone());
+                let cycle_value = cycle.value(&context.credit_inv);
                 if cycle_value >= Credit::from_integer(2) {
                     self.num_proofs += 1;
                     return ProofNode::new_leaf_success(

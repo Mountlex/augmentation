@@ -1,7 +1,10 @@
-use crate::path::{
-    proof::{or, Statistics, Tactic},
-    tactics::{cycle_merge::CycleMergeTactic, cycle_rearrange::CycleRearrangeTactic},
-    CycleEdge, PathHit, PseudoCycle, PseudoCycleInstance, SelectedHitInstance,
+use crate::{
+    path::{
+        proof::PathContext,
+        tactics::{cycle_merge::CycleMergeTactic, cycle_rearrange::CycleRearrangeTactic},
+        CycleEdge, PathHit, PseudoCycle, PseudoCycleInstance, SelectedHitInstance,
+    },
+    proof_logic::{or, Statistics, Tactic},
 };
 
 #[derive(Clone)]
@@ -28,11 +31,11 @@ impl Statistics for CycleMergeViaSwap {
     }
 }
 
-impl Tactic<SelectedHitInstance> for CycleMergeViaSwap {
+impl Tactic<SelectedHitInstance, PathContext> for CycleMergeViaSwap {
     fn precondition(
         &self,
         data: &SelectedHitInstance,
-        context: &crate::path::proof::ProofContext,
+        context: &crate::path::proof::PathContext,
     ) -> bool {
         data.hit_comp_idx == context.path_len - 2
             && data
@@ -50,7 +53,7 @@ impl Tactic<SelectedHitInstance> for CycleMergeViaSwap {
     fn action(
         &mut self,
         data: &SelectedHitInstance,
-        context: &crate::path::proof::ProofContext,
+        context: &crate::path::proof::PathContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 

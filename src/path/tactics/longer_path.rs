@@ -1,8 +1,6 @@
 use crate::{
-    path::{
-        proof::{ProofContext, Statistics, Tactic},
-        AugmentedPathInstance, SelectedHitInstance, SuperNode,
-    },
+    path::{proof::PathContext, AugmentedPathInstance, SelectedHitInstance, SuperNode},
+    proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
 };
 
@@ -27,21 +25,21 @@ impl Statistics for LongerPathTactic {
     }
 }
 
-impl Tactic<SelectedHitInstance> for LongerPathTactic {
-    fn precondition(&self, data: &SelectedHitInstance, context: &ProofContext) -> bool {
-        Tactic::<AugmentedPathInstance>::precondition(self, &data.instance, context)
+impl Tactic<SelectedHitInstance, PathContext> for LongerPathTactic {
+    fn precondition(&self, data: &SelectedHitInstance, context: &PathContext) -> bool {
+        Tactic::<AugmentedPathInstance, PathContext>::precondition(self, &data.instance, context)
     }
 
-    fn action(&mut self, data: &SelectedHitInstance, context: &ProofContext) -> ProofNode {
-        Tactic::<AugmentedPathInstance>::action(self, &data.instance, context)
+    fn action(&mut self, data: &SelectedHitInstance, context: &PathContext) -> ProofNode {
+        Tactic::<AugmentedPathInstance, PathContext>::action(self, &data.instance, context)
     }
 }
 
-impl Tactic<AugmentedPathInstance> for LongerPathTactic {
+impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
     fn action(
         &mut self,
         data: &AugmentedPathInstance,
-        context: &ProofContext,
+        context: &PathContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
@@ -116,7 +114,7 @@ impl Tactic<AugmentedPathInstance> for LongerPathTactic {
         ProofNode::new_leaf(format!("No longer nice path possible!"), false)
     }
 
-    fn precondition(&self, data: &AugmentedPathInstance, _context: &ProofContext) -> bool {
+    fn precondition(&self, data: &AugmentedPathInstance, _context: &PathContext) -> bool {
         !data.all_outside_hits().is_empty()
     }
 }
