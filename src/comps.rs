@@ -454,7 +454,7 @@ impl Component {
 
     pub fn matching_nodes(&self) -> &[Node] {
         match self {
-            Component::Large(nodes) => panic!("Large has no matching nodes"),
+            Component::Large(n) => std::slice::from_ref(n),
             Component::ComplexTree(_, nodes) => nodes,
             Component::ComplexPath(_, nodes) => nodes,
             _ => self.nodes(),

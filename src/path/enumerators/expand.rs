@@ -101,7 +101,7 @@ pub fn expand_iter(
                 comp_clone
                     .possible_in_out_nodes()
                     .into_iter()
-                    .filter(|n| **n != comp_clone.fixed_node())
+                    .filter(|n| valid_in_out(&comp, **n, comp.fixed_node(), node_idx == path_len - 2, node.used()))
                     .cloned()
                     .collect_vec(),
             )
@@ -164,6 +164,14 @@ pub fn expand_iter(
 impl<'a> Enumerator<AugmentedPathInstance, PathContext> for ExpandEnumerator<'a> {
     fn iter(&self, context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         expand_iter(self.instance.clone(), self.hit_comp_idx, context.clone())
+    }
+}
+
+fn valid_in_out(c: &Component, new_in: Node, new_out: Node, prelast: bool, used: bool) -> bool {
+    if c.is_c3() || c.is_c4() || c.is_complex() || (c.is_c5() && prelast && used) {
+        new_in != new_out
+    } else {
+        true
     }
 }
 

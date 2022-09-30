@@ -9,7 +9,6 @@ use std::{
 };
 
 use itertools::Itertools;
-use petgraph::algo::Cycle;
 pub use proof::prove_nice_path_progress;
 
 use crate::{
@@ -618,11 +617,16 @@ impl AugmentedPathInstance {
             .cloned()
             .collect_vec();
 
-        if left + 1 == right {
-            if let Some(path_edge) = self.path_edge(right) {
+        if left.max(right) - left.min(right) == 1 {
+            if let Some(path_edge) = self.path_edge(left.max(right)) {
                 edges.push(path_edge);
             }
         }
-        edges
+
+        if left > right {
+            edges.into_iter().map(|e| e.reverse()).collect_vec()
+        } else {
+            edges
+        }
     }
 }

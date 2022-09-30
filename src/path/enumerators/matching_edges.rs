@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::Node,
+    comps::{Node, Component},
     path::{proof::PathContext, AugmentedPathInstance, MatchingEdge, PathHit},
     proof_logic::{Enumerator, EnumeratorTactic},
     types::Edge,
@@ -69,10 +69,13 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
             .dedup()
             .collect_vec();
 
-        let free_prelast = prelast_nodes
+        let mut free_prelast = prelast_nodes
             .into_iter()
             .filter(|n| !prelast_matching_endpoints.contains(n))
             .collect_vec();
+            if let Component::Large(n) = path[2].get_comp() {
+                free_prelast.push(n);
+            }
 
         if (num_left_last_crossing + self.instance.outside_hits_from(3).len() <= 1
             && left_prelast_edges.len() + self.instance.outside_hits_from(2).len() <= 1)
@@ -94,6 +97,13 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
                         })
                         .map(|left| Hit::Node(left)),
                 );
+                if let Component::Large(n) = path[0].get_comp() {
+                    left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Node(*n))));
+                }
+                if let Component::Large(n) = path[1].get_comp() {
+                    left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Node(*n))));
+                }
+                
                 if prelast_matching_endpoints.len() < 3 {
                     left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Outside)));
                 };
@@ -139,9 +149,7 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
         )
     }
 
-    fn precondition(&self, data: &AugmentedPathInstance, _context: &PathContext) -> bool {
-        !data.path[0].get_comp().is_large()
-            && !data.path[1].get_comp().is_large()
-            && !data.path[2].get_comp().is_large()
+    fn precondition(&self, _data: &AugmentedPathInstance, _context: &PathContext) -> bool {
+        true
     }
 }

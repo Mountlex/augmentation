@@ -21,6 +21,10 @@ impl Edge {
     pub fn edge_incident(&self, edge: &Edge) -> bool {
         self.0 == edge.0 || self.1 == edge.0 || self.0 == edge.1 || self.1 == edge.1
     }
+
+    pub fn reverse(&self) -> Edge {
+        Edge(self.1, self.0)
+    }
 }
 
 impl Eq for Edge {}
