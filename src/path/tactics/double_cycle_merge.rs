@@ -33,7 +33,7 @@ impl Statistics for DoubleCycleMergeTactic {
 
 impl Tactic<AugmentedPathInstance, PathContext> for DoubleCycleMergeTactic {
     fn precondition(&self, data: &AugmentedPathInstance, _context: &PathContext) -> bool {
-        data.fixed_edges_between(0, 2).len() > 0 && data.fixed_edges_between(1, 3).len() > 0
+        true
     }
 
     fn action(
@@ -73,6 +73,39 @@ impl Tactic<AugmentedPathInstance, PathContext> for DoubleCycleMergeTactic {
                     self.num_proofs += 1;
                     return ProofNode::new_leaf_success(
                         format!("Merged double pseudo"),
+                        cycle_value == Credit::from_integer(2),
+                    );
+                }
+            }
+        }
+
+        for perm in vec![0, 1, 2, 3].into_iter().permutations(3) {
+            let first = perm[0];
+            let edges = vec![perm.clone(), vec![first]]
+                .concat()
+                .windows(2)
+                .map(|e| data.fixed_edges_between(e[0], e[1]))
+                .collect_vec();
+
+            for (e1, e2, e3) in iproduct!(&edges[0], &edges[1], &edges[2]) {
+                let mut cycle_nodes = perm.iter().map(|i| data.path[*i].clone()).collect_vec();
+
+                cycle_nodes[0].get_zoomed_mut().set_in(e3.1);
+                cycle_nodes[0].get_zoomed_mut().set_out(e1.0);
+
+                cycle_nodes[1].get_zoomed_mut().set_in(e1.1);
+                cycle_nodes[1].get_zoomed_mut().set_out(e2.0);
+
+                cycle_nodes[2].get_zoomed_mut().set_in(e2.1);
+                cycle_nodes[2].get_zoomed_mut().set_out(e3.0);
+
+                let cycle = PseudoCycle { nodes: cycle_nodes };
+
+                let cycle_value = cycle.value(&context.credit_inv);
+                if cycle_value >= Credit::from_integer(2) {
+                    self.num_proofs += 1;
+                    return ProofNode::new_leaf_success(
+                        format!("Merged single pseudo"),
                         cycle_value == Credit::from_integer(2),
                     );
                 }

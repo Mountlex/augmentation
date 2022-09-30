@@ -97,7 +97,10 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleRearrangeTactic {
         return ProofNode::new_leaf(format!("Cannot rearrange cycle"), false);
     }
 
-    fn precondition(&self, _data: &PseudoCycleInstance, _context: &PathContext) -> bool {
-        true
+    fn precondition(&self, data: &PseudoCycleInstance, context: &PathContext) -> bool {
+        match data.cycle_edge {
+            crate::path::CycleEdge::Fixed(e) => data.path_matching.path.index_of_super_node(e.1) == context.path_len - 1,
+            crate::path::CycleEdge::Matching(e) => e.source_path() == context.path_len - 1,
+        }
     }
 }
