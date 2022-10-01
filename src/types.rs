@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::comps::Node;
+use crate::Node;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Edge {
@@ -31,7 +31,10 @@ impl Edge {
     }
 
     pub fn path_indices(&self) -> (usize, usize) {
-        (self.path_index_n1.min(self.path_index_n2), self.path_index_n1.max(self.path_index_n2))
+        (
+            self.path_index_n1.min(self.path_index_n2),
+            self.path_index_n1.max(self.path_index_n2),
+        )
     }
 
     pub fn to_tuple(&self) -> (Node, Node) {

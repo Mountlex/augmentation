@@ -2,9 +2,7 @@ use std::fmt::Write;
 use std::path::PathBuf;
 
 use itertools::Itertools;
-use rayon::prelude::{
-    IntoParallelIterator, ParallelIterator,
-};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::path::enumerators::expand::{ExpandEnum, ExpandLastEnum};
 use crate::path::enumerators::expand_all::ExpandAllEnum;
@@ -15,12 +13,9 @@ use crate::path::tactics::double_cycle_merge::DoubleCycleMergeTactic;
 use crate::path::tactics::pendant_rewire::PendantRewireTactic;
 use crate::path::tactics::swap_pseudo_cycle::CycleMergeViaSwap;
 use crate::path::SelectedHitInstance;
-use crate::proof_logic::*;
-use crate::{
-    proof_tree::ProofNode,
-};
+use crate::proof_tree::ProofNode;
+use crate::{proof_logic::*, CreditInv};
 
-use super::comps::{Component, CreditInv};
 use super::enumerators::comp_hits::ComponentHitEnum;
 use super::enumerators::matching_hits::MatchingHitEnum;
 use super::enumerators::matching_nodes::MatchingNodesEnum;
@@ -30,6 +25,7 @@ use super::tactics::cycle_merge::CycleMergeTactic;
 use super::tactics::local_merge::LocalMergeTactic;
 use super::tactics::longer_path::LongerPathTactic;
 use super::AugmentedPathInstance;
+use crate::comps::Component;
 
 #[derive(Clone)]
 pub struct PathContext {

@@ -3,9 +3,8 @@ use std::{collections::HashMap, fmt::Display};
 use itertools::Itertools;
 use num_rational::Rational64;
 
-use crate::Credit;
+use crate::{Credit, Graph, Node};
 
-use super::types::Edge;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub enum EdgeType {
@@ -17,8 +16,7 @@ pub enum EdgeType {
     Buyable,
 }
 
-pub type Node = u32;
-pub type Graph = petgraph::graphmap::UnGraphMap<Node, EdgeType>;
+
 
 pub fn c3() -> Component {
     Component::C3([0, 1, 2])
@@ -323,9 +321,7 @@ impl Component {
         }
     }
 
-    // pub fn is_incident(&self, edge: &Edge) -> bool {
-    //     self.incident(edge).is_some()
-    // }
+    
     pub fn incident(&self, edge: &Edge) -> Option<Node> {
         if let Component::Large(n) = self {
             if edge.node_incident(n) {

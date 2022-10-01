@@ -275,19 +275,17 @@ mod test_complex {
     use petgraph::graph::node_index as n;
     use petgraph::prelude::UnGraph;
 
-    use crate::path::comps::ComponentType;
-
     use super::*;
 
-    #[test]
-    fn test_complex_base() {
-        let graphs = ComponentType::Complex.components();
-        let res0 = is_complex(graphs[0].graph());
-        let res1 = is_complex(graphs[1].graph());
-        assert!(matches!(res0, ComplexCheckResult::Complex(_, _)));
-        dbg!(&res1);
-        assert!(matches!(res1, ComplexCheckResult::Complex(_, _)));
-    }
+    // #[test]
+    // fn test_complex_base() {
+    //     let graphs = ComponentType::Complex.components();
+    //     let res0 = is_complex(graphs[0].graph());
+    //     let res1 = is_complex(graphs[1].graph());
+    //     assert!(matches!(res0, ComplexCheckResult::Complex(_, _)));
+    //     dbg!(&res1);
+    //     assert!(matches!(res1, ComplexCheckResult::Complex(_, _)));
+    // }
 
     #[test]
     fn test_complex_triangle() {

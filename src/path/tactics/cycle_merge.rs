@@ -3,11 +3,10 @@ use std::fmt::Display;
 use itertools::Itertools;
 
 use crate::{
-    path::comps::CreditInv,
     path::{proof::PathContext, PseudoCycle, PseudoCycleInstance, SuperNode},
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
-    Credit,
+    Credit, CreditInv,
 };
 
 #[derive(Clone)]

@@ -1,4 +1,3 @@
-
 use itertools::Itertools;
 
 use crate::{
@@ -50,8 +49,10 @@ impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator
                             .into_iter()
                             .map(move |path_edge| {
                                 let mut nodes = nodes.clone();
-                                nodes[pk].get_zoomed_mut().out_node = Some(path_edge.endpoint_at(k).unwrap());
-                                nodes[pl].get_zoomed_mut().in_node = Some(path_edge.endpoint_at(l).unwrap());
+                                nodes[pk].get_zoomed_mut().out_node =
+                                    Some(path_edge.endpoint_at(k).unwrap());
+                                nodes[pl].get_zoomed_mut().in_node =
+                                    Some(path_edge.endpoint_at(l).unwrap());
                                 nodes
                             })
                             .chain(vec![nodes_clone].into_iter())
@@ -72,16 +73,19 @@ impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator
         let fixed_edges_iter = instance
             .fixed_edge
             .iter()
-            .filter(|m_edge| {
-                m_edge.path_distance() >= 2
-            })
+            .filter(|m_edge| m_edge.path_distance() >= 2)
             .flat_map(move |cycle_edge| {
-                let (i,j) =cycle_edge.path_indices();
+                let (i, j) = cycle_edge.path_indices();
 
                 let mut pseudo_nodes = self.input.path.nodes.as_slice()[i..=j].to_vec();
 
-                pseudo_nodes.last_mut().unwrap().get_zoomed_mut().set_out(cycle_edge.endpoint_at(j).unwrap());
-                pseudo_nodes.first_mut().unwrap().get_zoomed_mut().in_node = Some(cycle_edge.endpoint_at(i).unwrap());
+                pseudo_nodes
+                    .last_mut()
+                    .unwrap()
+                    .get_zoomed_mut()
+                    .set_out(cycle_edge.endpoint_at(j).unwrap());
+                pseudo_nodes.first_mut().unwrap().get_zoomed_mut().in_node =
+                    Some(cycle_edge.endpoint_at(i).unwrap());
 
                 let mut path_iter: Box<dyn Iterator<Item = Vec<SuperNode>>> =
                     Box::new(vec![pseudo_nodes].into_iter());
@@ -96,8 +100,10 @@ impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator
                             .into_iter()
                             .map(move |path_edge| {
                                 let mut nodes = nodes.clone();
-                                nodes[pk].get_zoomed_mut().out_node = Some(path_edge.endpoint_at(k).unwrap());
-                                nodes[pl].get_zoomed_mut().in_node = Some(path_edge.endpoint_at(l).unwrap());
+                                nodes[pk].get_zoomed_mut().out_node =
+                                    Some(path_edge.endpoint_at(k).unwrap());
+                                nodes[pl].get_zoomed_mut().in_node =
+                                    Some(path_edge.endpoint_at(l).unwrap());
                                 nodes
                             })
                             .chain(vec![nodes_clone].into_iter())

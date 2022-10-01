@@ -4,19 +4,25 @@ use std::{fs::OpenOptions, path::PathBuf};
 
 use clap::Parser;
 
-use itertools::Itertools;
+pub use credit::*;
 use num_rational::Rational64;
 use path::prove_nice_path_progress;
 
-
-use path::comps::*;
+use comps::*;
 
 mod bridges;
 //mod contract;
 //mod local_merge;
+mod comps;
+mod credit;
 mod path;
 mod proof_logic;
 mod proof_tree;
+mod tree;
+mod types;
+
+pub type Node = u32;
+pub type Graph = petgraph::graphmap::UnGraphMap<Node, EdgeType>;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -60,8 +66,6 @@ struct Path {
     #[clap(short, long)]
     sc: bool,
 }
-
-pub type Credit = Rational64;
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();

@@ -93,7 +93,9 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
                     for prelast_edge in
                         data.fixed_edges_between(context.path_len - 2, context.path_len - 1)
                     {
-                        if data.path[1].get_zoomed().valid_out(cycle_edge.endpoint_at(1).unwrap(), false)
+                        if data.path[1]
+                            .get_zoomed()
+                            .valid_out(cycle_edge.endpoint_at(1).unwrap(), false)
                             && data.path[3].get_zoomed().valid_in_out(
                                 cycle_edge.endpoint_at(3).unwrap(),
                                 prelast_edge.endpoint_at(3).unwrap(),

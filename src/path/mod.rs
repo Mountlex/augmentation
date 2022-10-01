@@ -2,8 +2,6 @@ mod enumerators;
 mod proof;
 mod tactics;
 mod utils;
-mod types;
-pub mod comps;
 
 use std::{
     fmt::Display,
@@ -13,12 +11,9 @@ use std::{
 use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 
-use crate::{
-    path::utils::complex_cycle_value_base,
-    Credit,
-};
+use crate::{path::utils::complex_cycle_value_base, Credit, CreditInv, Node};
 
-use self::{comps::*, types::Edge};
+use crate::{comps::*, types::Edge};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MatchingEdge {
@@ -556,15 +551,24 @@ impl AugmentedPathInstance {
             .collect_vec()
     }
 
-    pub fn fix_matching_edge(&mut self, matching_edge: &MatchingEdge, hit_idx: usize, new_target: Node) {
+    pub fn fix_matching_edge(
+        &mut self,
+        matching_edge: &MatchingEdge,
+        hit_idx: usize,
+        new_target: Node,
+    ) {
         self.non_path_matching_edges
             .drain_filter(|e| matching_edge == e);
 
-        self.fixed_edge.push(Edge::new(new_target, hit_idx, matching_edge.source(), matching_edge.source_path()));
+        self.fixed_edge.push(Edge::new(
+            new_target,
+            hit_idx,
+            matching_edge.source(),
+            matching_edge.source_path(),
+        ));
     }
 
     pub fn fixed_incident_edges(&self, idx: usize) -> Vec<Edge> {
-
         self.fixed_edge
             .iter()
             .filter(|e| e.path_incident(idx))
@@ -586,7 +590,7 @@ impl AugmentedPathInstance {
                 self.path[idx - 1].get_zoomed().out_node.unwrap(),
                 idx - 1,
                 self.path[idx].get_zoomed().in_node.unwrap(),
-                idx
+                idx,
             ))
         } else {
             None
@@ -598,8 +602,12 @@ impl AugmentedPathInstance {
         assert!(self.fixed_edge.contains(&new_path_edge));
 
         let old_path_edge = self.path_edge(path_edge_idx).unwrap();
-        self.path[path_edge_idx - 1].get_zoomed_mut().set_out(new_path_edge.endpoint_at(path_edge_idx - 1).unwrap());
-        self.path[path_edge_idx].get_zoomed_mut().set_in(new_path_edge.endpoint_at(path_edge_idx).unwrap());
+        self.path[path_edge_idx - 1]
+            .get_zoomed_mut()
+            .set_out(new_path_edge.endpoint_at(path_edge_idx - 1).unwrap());
+        self.path[path_edge_idx]
+            .get_zoomed_mut()
+            .set_in(new_path_edge.endpoint_at(path_edge_idx).unwrap());
 
         self.fixed_edge.drain_filter(|e| *e == new_path_edge);
         self.fixed_edge.push(old_path_edge);

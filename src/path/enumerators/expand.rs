@@ -1,12 +1,13 @@
 use itertools::Itertools;
 
 use crate::{
-    path::comps::{Component, Node},
+    comps::Component,
     path::{
         proof::PathContext, AugmentedPathInstance, NicePairConfig, SelectedHitInstance, SuperNode,
         ZoomedNode,
     },
     proof_logic::{Enumerator, EnumeratorTactic},
+    Node,
 };
 
 #[derive(Clone)]
@@ -101,7 +102,15 @@ pub fn expand_iter(
                 comp_clone
                     .possible_in_out_nodes()
                     .into_iter()
-                    .filter(|n| valid_in_out(&comp, **n, comp.fixed_node(), node_idx == path_len - 2, node.used()))
+                    .filter(|n| {
+                        valid_in_out(
+                            &comp,
+                            **n,
+                            comp.fixed_node(),
+                            node_idx == path_len - 2,
+                            node.used(),
+                        )
+                    })
                     .cloned()
                     .collect_vec(),
             )
@@ -249,7 +258,7 @@ fn comp_npcs(
                 .iter()
                 .cloned()
                 .tuple_combinations::<(_, _)>()
-                .filter(|(u,v)| !comp.is_adjacent(u, v))
+                .filter(|(u, v)| !comp.is_adjacent(u, v))
                 .powerset()
                 .map(|config| NicePairConfig { nice_pairs: config })
                 // .filter(|npc| {
