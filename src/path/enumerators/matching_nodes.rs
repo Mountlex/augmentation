@@ -95,7 +95,7 @@ pub fn matching_nodes_iter(
             .map(move |left_matched| {
                 let mut instance = instance.clone();
                 for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
-                    instance.fix_matching_edge(right.source(), hit_comp_idx, left);
+                    instance.fix_matching_edge(&right, hit_comp_idx, left);
                 }
                 instance
             });
@@ -110,7 +110,7 @@ pub fn matching_nodes_iter(
             .map(move |left_matched| {
                 let mut instance = instance.clone();
                 for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
-                    instance.fix_matching_edge(right.source(), hit_comp_idx, left);
+                    instance.fix_matching_edge(&right, hit_comp_idx, left);
                 }
                 instance
             });

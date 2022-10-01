@@ -3,10 +3,8 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use petgraph::visit::{depth_first_search, Control, DfsEvent};
 
-use crate::{
-    comps::{Component, CreditInv, EdgeType, Graph, Node},
-    Credit,
-};
+use crate::Credit;
+use super::comps::{Component, CreditInv, EdgeType, Graph, Node};
 
 pub fn hamiltonian_paths(v1: Node, v2: Node, nodes: &[Node]) -> Vec<Vec<Node>> {
     assert!(nodes.contains(&v1));

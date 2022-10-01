@@ -3,7 +3,9 @@ use std::{collections::HashMap, fmt::Display};
 use itertools::Itertools;
 use num_rational::Rational64;
 
-use crate::{types::Edge, Credit};
+use crate::Credit;
+
+use super::types::Edge;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub enum EdgeType {
@@ -321,9 +323,9 @@ impl Component {
         }
     }
 
-    pub fn is_incident(&self, edge: &Edge) -> bool {
-        self.incident(edge).is_some()
-    }
+    // pub fn is_incident(&self, edge: &Edge) -> bool {
+    //     self.incident(edge).is_some()
+    // }
     pub fn incident(&self, edge: &Edge) -> Option<Node> {
         if let Component::Large(n) = self {
             if edge.node_incident(n) {

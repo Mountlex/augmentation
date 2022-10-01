@@ -3,7 +3,7 @@ use std::fmt::Display;
 use itertools::Itertools;
 
 use crate::{
-    comps::CreditInv,
+    path::comps::CreditInv,
     path::{proof::PathContext, PseudoCycle, PseudoCycleInstance, SuperNode},
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,

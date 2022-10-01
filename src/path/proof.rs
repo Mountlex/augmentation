@@ -17,10 +17,10 @@ use crate::path::tactics::swap_pseudo_cycle::CycleMergeViaSwap;
 use crate::path::SelectedHitInstance;
 use crate::proof_logic::*;
 use crate::{
-    comps::{Component, CreditInv},
     proof_tree::ProofNode,
 };
 
+use super::comps::{Component, CreditInv};
 use super::enumerators::comp_hits::ComponentHitEnum;
 use super::enumerators::matching_hits::MatchingHitEnum;
 use super::enumerators::matching_nodes::MatchingNodesEnum;

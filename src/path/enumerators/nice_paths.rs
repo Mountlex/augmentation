@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::CompType,
+    path::comps::CompType,
     path::{
         proof::{PathContext, PathNode},
         utils::relabels_nodes_sequentially,

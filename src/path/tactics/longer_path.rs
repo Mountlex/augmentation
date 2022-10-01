@@ -46,6 +46,7 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
         let outside_hits = data.all_outside_hits();
 
         for outside_hit in outside_hits {
+            let source_path_idx = outside_hit.source_path();
             let source_path_node = &data.path[outside_hit.source_path()];
 
             if outside_hit.source_path() == context.path_len - 1 {
@@ -65,14 +66,17 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
                 {
                     let prelast_cond =
                         if let SuperNode::Zoomed(prelast) = &data.path[context.path_len - 2] {
-                            prelast.valid_out(prelast_edge.0, false)
+                            prelast.valid_out(
+                                prelast_edge.endpoint_at(context.path_len - 2).unwrap(),
+                                false,
+                            )
                         } else {
                             true
                         };
 
                     if prelast_cond
                         && source_path_node.get_zoomed().valid_in_out(
-                            prelast_edge.1,
+                            prelast_edge.endpoint_at(source_path_idx).unwrap(),
                             outside_hit.source,
                             true,
                         )
@@ -89,14 +93,14 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
                     for prelast_edge in
                         data.fixed_edges_between(context.path_len - 2, context.path_len - 1)
                     {
-                        if data.path[1].get_zoomed().valid_out(cycle_edge.0, false)
+                        if data.path[1].get_zoomed().valid_out(cycle_edge.endpoint_at(1).unwrap(), false)
                             && data.path[3].get_zoomed().valid_in_out(
-                                cycle_edge.1,
-                                prelast_edge.1,
+                                cycle_edge.endpoint_at(3).unwrap(),
+                                prelast_edge.endpoint_at(3).unwrap(),
                                 false,
                             )
                             && data.path[2].get_zoomed().valid_in_out(
-                                prelast_edge.0,
+                                prelast_edge.endpoint_at(2).unwrap(),
                                 outside_hit.source(),
                                 true,
                             )

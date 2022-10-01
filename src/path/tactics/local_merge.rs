@@ -3,14 +3,14 @@ use petgraph::{algo::connected_components, visit::EdgeFiltered};
 
 use crate::{
     bridges::{is_complex, ComplexCheckResult},
-    comps::{edges_of_type, EdgeType},
+    path::comps::{edges_of_type, EdgeType},
     path::{
         proof::PathContext, utils::get_local_merge_graph, AugmentedPathInstance,
         SelectedHitInstance, ZoomedNode,
     },
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
-    types::Edge,
+    path::types::Edge,
     Credit,
 };
 
@@ -58,7 +58,7 @@ fn merge(
         let graph_with_matching = get_local_merge_graph(
             &left_comp,
             &right_comp,
-            &edges_between.iter().map(|e| (e.0, e.1)).collect_vec(),
+            &edges_between.iter().map(|e| e.to_tuple()).collect_vec(),
         );
 
         for sell in edges_of_type(&graph_with_matching, EdgeType::Sellable)
@@ -81,7 +81,7 @@ fn merge(
                         || sell.contains(&(v2, v1))
                     {
                         false
-                    } else if t == &EdgeType::Buyable && !buy.contains(&Edge(v1, v2)) {
+                    } else if t == &EdgeType::Buyable && !buy.contains(&Edge::new(v1,0, v2,0)) {
                         false
                     } else {
                         true
@@ -89,10 +89,10 @@ fn merge(
                 });
 
                 if buy.len() == 2 && !(left_comp.is_complex() && right_comp.is_complex()) {
-                    let l1 = buy[0].0;
-                    let r1 = buy[0].1;
-                    let l2 = buy[1].0;
-                    let r2 = buy[1].1;
+                    let l1 =  left_comp.incident(&buy[0]).unwrap();
+                    let l2 =  left_comp.incident(&buy[1]).unwrap();
+                    let r1 =  right_comp.incident(&buy[0]).unwrap();
+                    let r2 =  right_comp.incident(&buy[1]).unwrap();
 
                     if !left_comp.is_adjacent(&l1, &l2) && left.npc.is_nice_pair(l1, l2) {
                         total_plus_sell += Credit::from_integer(1)
@@ -142,10 +142,10 @@ fn merge(
         }
     } else {
         for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
-            let l1 = buy[0].0;
-            let r1 = buy[0].1;
-            let l2 = buy[1].0;
-            let r2 = buy[1].1;
+            let l1 =  left_comp.incident(&buy[0]).unwrap();
+            let l2 =  left_comp.incident(&buy[1]).unwrap();
+            let r1 =  right_comp.incident(&buy[0]).unwrap();
+            let r2 =  right_comp.incident(&buy[1]).unwrap();
 
             let mut credits = total_comp_credit - Credit::from_integer(2);
 

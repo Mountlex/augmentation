@@ -275,7 +275,7 @@ mod test_complex {
     use petgraph::graph::node_index as n;
     use petgraph::prelude::UnGraph;
 
-    use crate::comps::ComponentType;
+    use crate::path::comps::ComponentType;
 
     use super::*;
 

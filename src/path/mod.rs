@@ -2,6 +2,8 @@ mod enumerators;
 mod proof;
 mod tactics;
 mod utils;
+mod types;
+pub mod comps;
 
 use std::{
     fmt::Display,
@@ -12,11 +14,11 @@ use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 
 use crate::{
-    comps::{CompType, Component, CreditInv, Node},
     path::utils::complex_cycle_value_base,
-    types::Edge,
     Credit,
 };
+
+use self::{comps::*, types::Edge};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MatchingEdge {
@@ -480,12 +482,7 @@ impl AugmentedPathInstance {
             return vec![*n];
         }
         let fixed_incident = self.fixed_incident_edges(node_idx);
-        let matching_sources = self
-            .non_path_matching_edges
-            .iter()
-            .filter(|e| e.source_path() == node_idx)
-            .map(|e| e.source())
-            .collect_vec();
+        let matching_sources = self.nodes_with_matching_edges(node_idx);
 
         comp.matching_nodes()
             .into_iter()
@@ -502,15 +499,15 @@ impl AugmentedPathInstance {
             .collect_vec()
     }
 
-    pub fn nodes_with_fixed_edges(&self, node_idx: usize) -> Vec<Node> {
-        let comp = self.path[node_idx].get_comp();
+    pub fn nodes_with_fixed_edges(&self, path_idx: usize) -> Vec<Node> {
+        let comp = self.path[path_idx].get_comp();
         let mut edge_endpoints = self
             .fixed_edge
             .iter()
-            .flat_map(|e| comp.incident(e))
+            .flat_map(|e| e.endpoint_at(path_idx))
             .collect_vec();
 
-        if let SuperNode::Zoomed(zoomed) = &self.path[node_idx] {
+        if let SuperNode::Zoomed(zoomed) = &self.path[path_idx] {
             if let Some(node) = zoomed.in_node {
                 edge_endpoints.push(node)
             }
@@ -559,19 +556,18 @@ impl AugmentedPathInstance {
             .collect_vec()
     }
 
-    pub fn fix_matching_edge(&mut self, source: Node, hit_idx: usize, new_target: Node) {
+    pub fn fix_matching_edge(&mut self, matching_edge: &MatchingEdge, hit_idx: usize, new_target: Node) {
         self.non_path_matching_edges
-            .drain_filter(|e| e.source() == source && e.hits_path() == Some(hit_idx));
+            .drain_filter(|e| matching_edge == e);
 
-        self.fixed_edge.push(Edge(new_target, source));
+        self.fixed_edge.push(Edge::new(new_target, hit_idx, matching_edge.source(), matching_edge.source_path()));
     }
 
     pub fn fixed_incident_edges(&self, idx: usize) -> Vec<Edge> {
-        let comp = self.path[idx].get_comp();
 
         self.fixed_edge
             .iter()
-            .filter(|e| comp.is_incident(e))
+            .filter(|e| e.path_incident(idx))
             .cloned()
             .chain(
                 vec![self.path_edge(idx), self.path_edge(idx + 1)]
@@ -586,9 +582,11 @@ impl AugmentedPathInstance {
             return None;
         }
         if self.path[idx - 1].is_zoomed() && self.path[idx].is_zoomed() {
-            Some(Edge(
+            Some(Edge::new(
                 self.path[idx - 1].get_zoomed().out_node.unwrap(),
+                idx - 1,
                 self.path[idx].get_zoomed().in_node.unwrap(),
+                idx
             ))
         } else {
             None
@@ -600,20 +598,18 @@ impl AugmentedPathInstance {
         assert!(self.fixed_edge.contains(&new_path_edge));
 
         let old_path_edge = self.path_edge(path_edge_idx).unwrap();
-        self.path[path_edge_idx - 1].get_zoomed_mut().set_out(new_path_edge.0);
-        self.path[path_edge_idx].get_zoomed_mut().set_in(new_path_edge.1);
+        self.path[path_edge_idx - 1].get_zoomed_mut().set_out(new_path_edge.endpoint_at(path_edge_idx - 1).unwrap());
+        self.path[path_edge_idx].get_zoomed_mut().set_in(new_path_edge.endpoint_at(path_edge_idx).unwrap());
 
         self.fixed_edge.drain_filter(|e| *e == new_path_edge);
         self.fixed_edge.push(old_path_edge);
     }
 
     pub fn fixed_edges_between(&self, left: usize, right: usize) -> Vec<Edge> {
-        let left_comp = self.path[left].get_comp();
-        let right_comp = self.path[right].get_comp();
         let mut edges = self
             .fixed_edge
             .iter()
-            .filter(|&edge| left_comp.is_incident(edge) && right_comp.is_incident(edge))
+            .filter(|&edge| edge.between_path_nodes(left, right))
             .cloned()
             .collect_vec();
 
@@ -623,10 +619,6 @@ impl AugmentedPathInstance {
             }
         }
 
-        if left > right {
-            edges.into_iter().map(|e| e.reverse()).collect_vec()
-        } else {
-            edges
-        }
+        edges
     }
 }

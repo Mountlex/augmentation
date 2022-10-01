@@ -99,7 +99,7 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleRearrangeTactic {
 
     fn precondition(&self, data: &PseudoCycleInstance, context: &PathContext) -> bool {
         match data.cycle_edge {
-            crate::path::CycleEdge::Fixed(e) => data.path_matching.path.index_of_super_node(e.1) == context.path_len - 1,
+            crate::path::CycleEdge::Fixed(e) => e.path_incident(context.path_len - 1),
             crate::path::CycleEdge::Matching(e) => e.source_path() == context.path_len - 1,
         }
     }

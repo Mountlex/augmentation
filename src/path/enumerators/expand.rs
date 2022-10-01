@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::{Component, Node},
+    path::comps::{Component, Node},
     path::{
         proof::PathContext, AugmentedPathInstance, NicePairConfig, SelectedHitInstance, SuperNode,
         ZoomedNode,

@@ -8,16 +8,15 @@ use itertools::Itertools;
 use num_rational::Rational64;
 use path::prove_nice_path_progress;
 
-use crate::comps::*;
+
+use path::comps::*;
 
 mod bridges;
-mod comps;
-mod contract;
+//mod contract;
 //mod local_merge;
 mod path;
 mod proof_logic;
 mod proof_tree;
-mod types;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]

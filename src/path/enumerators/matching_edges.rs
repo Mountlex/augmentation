@@ -1,10 +1,10 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::{Node, Component},
+    path::comps::{Node, Component},
     path::{proof::PathContext, AugmentedPathInstance, MatchingEdge, PathHit},
     proof_logic::{Enumerator, EnumeratorTactic},
-    types::Edge,
+    path::types::Edge,
 };
 
 #[derive(Clone)]
@@ -53,7 +53,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
             .filter(|edge| edge.nodes_incident(&left_nodes) && edge.nodes_incident(&prelast_nodes))
             .collect_vec();
 
-        let left_used_nodes = left_prelast_edges.iter().map(|e| e.0).chain(left_last_edges.iter().map(|e| e.0)).collect_vec();
+        let left_used_nodes = left_nodes.iter().filter(|n| left_prelast_edges.iter().any(|e| e.node_incident(n)) || left_last_edges.iter().any(|e| e.node_incident(n))).cloned().collect_vec();
 
         let free_left = left_nodes
             .into_iter()
@@ -115,7 +115,10 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
                         Hit::Outside => new_instance
                             .non_path_matching_edges
                             .push(MatchingEdge::new(2, *right_matched, PathHit::Outside)),
-                        Hit::Node(left) => new_instance.fixed_edge.push(Edge(left, *right_matched)),
+                        Hit::Node(left) => {
+                            let left_idx = path.index_of_super_node(left);
+                            new_instance.fixed_edge.push(Edge::new(left, left_idx, *right_matched, 2))
+                        } 
                     }
 
                     new_instance
