@@ -99,8 +99,4 @@ impl Tactic<AugmentedPathInstance, PathContext> for ContractabilityTactic {
             );
         }
     }
-
-    fn precondition(&self, _data: &AugmentedPathInstance, _context: &PathContext) -> bool {
-        true
-    }
 }

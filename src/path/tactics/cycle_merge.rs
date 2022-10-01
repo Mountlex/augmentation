@@ -53,10 +53,6 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleMergeTactic {
         }
     }
 
-    fn precondition(&self, _data: &PseudoCycleInstance, _context: &PathContext) -> bool {
-        // If we land here, we want that at least one matching edge hits C_j for j <= l - 2.
-        true
-    }
 }
 
 impl PseudoCycle {

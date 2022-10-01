@@ -21,7 +21,9 @@ pub trait Enumerator<O, C> {
 }
 
 pub trait Tactic<I, C> {
-    fn precondition(&self, data: &I, context: &C) -> bool;
+    fn precondition(&self, data: &I, context: &C) -> bool {
+        true
+    }
 
     fn action(&mut self, data: &I, context: &C) -> ProofNode;
 }
