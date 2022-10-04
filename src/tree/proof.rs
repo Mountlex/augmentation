@@ -37,51 +37,38 @@ pub fn prove_tree_case(
         CompEnum,
         all_sc(
             sc,
-            MatchingEnum,
+            MatchingEnum::new(2),
             or(
                 DirectMerge::new(),
                 all_sc(
                     sc,
-                    MatchingEnum,
-                    or(
+                    MatchingEnum::new(1),
+                    or4(
                         DirectMerge::new(),
-                        all_sc(
-                            sc,
-                            MatchingEnum,
-                            or4(
-                                DirectMerge::new(),
-                                any(
-                                    ContractableCompsEnum,
-                                    all(ContractableEdgesEnum, DirectMerge::new()),
-                                ),
-                                all(
-                                    CompEnum,
+                        any(
+                            ContractableCompsEnum,
+                            all(ContractableEdgesEnum, DirectMerge::new()),
+                        ),
+                        all(
+                            CompEnum,
+                            all(
+                                MatchingEnum::new(2),
+                                or(
+                                    DirectMerge::new(),
                                     all(
-                                        MatchingEnum,
-                                        all(
-                                            MatchingEnum,
-                                            or(
-                                                DirectMerge::new(),
-                                                all(
-                                                    MatchingEnum,
-                                                    or(
-                                                        DirectMerge::new(),
-                                                        any(
-                                                            ContractableCompsEnum,
-                                                            all(
-                                                                ContractableEdgesEnum,
-                                                                DirectMerge::new(),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
+                                        MatchingEnum::new(1),
+                                        or(
+                                            DirectMerge::new(),
+                                            any(
+                                                ContractableCompsEnum,
+                                                all(ContractableEdgesEnum, DirectMerge::new()),
                                             ),
                                         ),
                                     ),
                                 ),
-                                TacticsExhausted::new(),
                             ),
                         ),
+                        TacticsExhausted::new(),
                     ),
                 ),
             ),

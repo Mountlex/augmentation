@@ -51,6 +51,10 @@ impl Node {
         }
     }
 
+    pub fn is_comp(&self) -> bool {
+        matches!(self, Node::Comp(_))
+    }
+
     pub fn to_vertex(&self) -> u32 {
         match self {
             Node::Node(n) => *n,

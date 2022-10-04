@@ -9,10 +9,19 @@ use crate::{
     Node,
 };
 
-pub struct MatchingEnum;
+pub struct MatchingEnum {
+    size: usize
+}
+
+impl MatchingEnum {
+    pub fn new(size: usize) -> Self {
+        Self { size }
+    }
+}
 
 pub struct MatchingEnumerator<'a> {
     instance: &'a TreeCaseInstance,
+    size: usize
 }
 
 impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
@@ -31,7 +40,7 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
             .collect_vec();
 
         let left_free: Box<dyn Iterator<Item = &Node>> = if let Component::Large(n) = left {
-            Box::new(std::iter::once(n))
+            Box::new(std::iter::repeat(n).take(self.size))
         } else {
             Box::new(
                 left.matching_nodes()
@@ -41,7 +50,7 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
         };
 
         let right_free: Vec<Node> = if let Component::Large(n) = right {
-            vec![*n]
+            vec![*n; self.size]
         } else {
             right
                 .matching_nodes()
@@ -52,14 +61,17 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
         };
 
         let instance = self.instance.clone();
-        let iter = left_free.flat_map(move |l| {
+       
+        let iter = left_free.combinations(self.size).flat_map(move |lefts| {
             let right_free = right_free.clone();
             let instance = instance.clone();
-            right_free.into_iter().map(move |r| {
+            right_free.into_iter().permutations(self.size).map(move |rights| {
                 let mut instance_clone = instance.clone();
-                instance_clone
+                for (l,r) in lefts.iter().zip(rights.into_iter()) {
+                    instance_clone
                     .edges
-                    .push(Edge::new(*l, last_idx - 1, r, last_idx));
+                    .push(Edge::new(**l, last_idx - 1, r, last_idx));
+                }
                 instance_clone
             })
         });
@@ -76,7 +88,7 @@ impl EnumeratorTactic<TreeCaseInstance, TreeCaseInstance, TreeContext> for Match
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a TreeCaseInstance) -> Self::Enumer<'a> {
-        MatchingEnumerator { instance: data }
+        MatchingEnumerator { instance: data, size: self.size }
     }
 
     fn item_msg(&self, item: &TreeCaseInstance) -> String {
