@@ -325,7 +325,7 @@ impl Tactic<AugmentedPathInstance, PathContext> for CountTactic {
 
     fn action(&mut self, _data: &AugmentedPathInstance, _context: &PathContext) -> ProofNode {
         self.num_calls += 1;
-        ProofNode::new_leaf("".into(), false)
+        ProofNode::new_leaf(String::new(), false)
     }
 }
 

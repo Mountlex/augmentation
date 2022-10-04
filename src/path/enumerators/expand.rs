@@ -190,7 +190,7 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
     type Enumer<'a> = ExpandEnumerator<'a>;
 
     fn msg(&self, _data: &AugmentedPathInstance) -> String {
-        format!("Expand last node")
+        String::new()
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a AugmentedPathInstance) -> Self::Enumer<'a> {
@@ -210,7 +210,7 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance, PathContext> for
     type Enumer<'a> = ExpandEnumerator<'a>;
 
     fn msg(&self, data: &SelectedHitInstance) -> String {
-        format!("Expand node {}", data.hit_comp_idx)
+        String::new()
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a SelectedHitInstance) -> Self::Enumer<'a> {

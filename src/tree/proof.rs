@@ -4,8 +4,12 @@ use std::path::PathBuf;
 use crate::{
     comps::Component,
     proof_logic::*,
+    proof_tree::ProofNode,
     tree::{
-        enumerators::{cases::CompEnum, matching_edge::MatchingEnum},
+        enumerators::{
+            cases::CompEnum, contractable_comps::ContractableCompsEnum,
+            contractable_edges::ContractableEdgesEnum, matching_edge::MatchingEnum,
+        },
         tactics::direct_merge::DirectMerge,
         TreeCaseInstance, TreeContext,
     },
@@ -41,7 +45,43 @@ pub fn prove_tree_case(
                     MatchingEnum,
                     or(
                         DirectMerge::new(),
-                        all_sc(sc, MatchingEnum, or(DirectMerge::new(), DirectMerge::new())),
+                        all_sc(
+                            sc,
+                            MatchingEnum,
+                            or4(
+                                DirectMerge::new(),
+                                any(
+                                    ContractableCompsEnum,
+                                    all(ContractableEdgesEnum, DirectMerge::new()),
+                                ),
+                                all(
+                                    CompEnum,
+                                    all(
+                                        MatchingEnum,
+                                        all(
+                                            MatchingEnum,
+                                            or(
+                                                DirectMerge::new(),
+                                                all(
+                                                    MatchingEnum,
+                                                    or(
+                                                        DirectMerge::new(),
+                                                        any(
+                                                            ContractableCompsEnum,
+                                                            all(
+                                                                ContractableEdgesEnum,
+                                                                DirectMerge::new(),
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                TacticsExhausted::new(),
+                            ),
+                        ),
                     ),
                 ),
             ),
@@ -86,4 +126,61 @@ pub fn prove_tree_case(
         .print_tree(&mut buf, output_depth)
         .expect("Unable to format tree");
     std::fs::write(filename, buf).expect("Unable to write file");
+}
+
+#[derive(Clone)]
+struct TacticsExhausted {
+    num_calls: usize,
+}
+
+impl TacticsExhausted {
+    fn new() -> Self {
+        Self { num_calls: 0 }
+    }
+}
+
+impl Tactic<TreeCaseInstance, TreeContext> for TacticsExhausted {
+    fn precondition(&self, _data: &TreeCaseInstance, _context: &TreeContext) -> bool {
+        true
+    }
+
+    fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> ProofNode {
+        self.num_calls += 1;
+        ProofNode::new_leaf("Tactics exhausted!".into(), false)
+    }
+}
+
+impl Statistics for TacticsExhausted {
+    fn print_stats(&self) {
+        println!("Unproved tree matching instances {}", self.num_calls)
+    }
+}
+
+#[derive(Clone)]
+struct CountTactic {
+    name: String,
+    num_calls: usize,
+}
+
+impl CountTactic {
+    fn new(name: String) -> Self {
+        Self { name, num_calls: 0 }
+    }
+}
+
+impl Tactic<TreeCaseInstance, TreeContext> for CountTactic {
+    fn precondition(&self, _data: &TreeCaseInstance, _context: &TreeContext) -> bool {
+        true
+    }
+
+    fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> ProofNode {
+        self.num_calls += 1;
+        ProofNode::new_leaf(String::new(), false)
+    }
+}
+
+impl Statistics for CountTactic {
+    fn print_stats(&self) {
+        println!("{} {}", self.name, self.num_calls)
+    }
 }

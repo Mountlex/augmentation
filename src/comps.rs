@@ -315,6 +315,18 @@ impl Component {
             self.nodes().contains(node)
         }
     }
+
+    pub fn num_labels(&self) -> usize {
+        match self {
+            Component::C6(_) => 6,
+            Component::C5(_) => 5,
+            Component::C4(_) => 4,
+            Component::C3(_) => 3,
+            Component::Large(_) => 1,
+            Component::ComplexPath(_, _) => 8,
+            Component::ComplexTree(_, _) => 10,
+        }
+    }
 }
 
 fn is_adjacent_in_cycle(nodes: &[Node], v1: &Node, v2: &Node) -> bool {

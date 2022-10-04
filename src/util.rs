@@ -1,7 +1,6 @@
 use crate::{comps::Component, Graph, Node};
 
-pub fn relabels_nodes_sequentially(comps: &mut [Component]) {
-    let mut offset = 0;
+pub fn relabels_nodes_sequentially(comps: &mut [Component], mut offset: u32) {
     for comp in comps {
         match comp {
             Component::C6(nodes) => offset += relabel_slice(nodes, offset),

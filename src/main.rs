@@ -9,6 +9,7 @@ use num_rational::Rational64;
 use path::prove_nice_path_progress;
 
 use comps::*;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tree::prove_tree_case;
 
 mod bridges;
@@ -144,18 +145,39 @@ fn prove_local(tree: Tree) {
         complex_tree(),
     ];
 
-    let leaf_comps = vec![c4(), c5(), c6(), large(), complex_path(), complex_tree()];
+    let leaf_comps = vec![
+        complex_path(), 
+        complex_tree(), 
+        c4(), 
+        c5(), 
+        c6(),
+        large(), 
+        ];
 
-    for leaf_comp in leaf_comps {
-        prove_tree_case(
-            comps.clone(),
-            leaf_comp,
-            &inv,
-            tree.output_dir.clone(),
-            tree.output_depth,
-            tree.sc,
-            tree.parallel,
-        )
+    if tree.parallel {
+        leaf_comps.into_par_iter().for_each(|leaf_comp| {
+            prove_tree_case(
+                comps.clone(),
+                leaf_comp,
+                &inv,
+                tree.output_dir.clone(),
+                tree.output_depth,
+                tree.sc,
+                tree.parallel,
+            )
+        });
+    } else {
+        for leaf_comp in leaf_comps {
+            prove_tree_case(
+                comps.clone(),
+                leaf_comp,
+                &inv,
+                tree.output_dir.clone(),
+                tree.output_depth,
+                tree.sc,
+                tree.parallel,
+            )
+        }
     }
 }
 

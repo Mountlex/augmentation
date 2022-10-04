@@ -1,10 +1,10 @@
 //mod local_merge;
 
-use std::{fmt::Display, path::PathBuf};
+use std::fmt::Display;
 
 use itertools::Itertools;
 
-use crate::{comps::Component, types::Edge, CreditInv};
+use crate::{comps::Component, types::Edge, CreditInv, Node};
 
 mod enumerators;
 mod proof;
@@ -28,6 +28,14 @@ impl TreeCaseInstance {
             .collect_vec()
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct ContractableCompInstance {
+    instance: TreeCaseInstance,
+    contr_idx: usize,
+    free_nodes: Vec<Node>,
+}
+
 
 impl Display for TreeCaseInstance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

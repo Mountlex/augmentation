@@ -330,3 +330,4 @@ where
         self.enum_tactic.precondition(data, context)
     }
 }
+

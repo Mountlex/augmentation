@@ -14,9 +14,11 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for CasesEnumerator<'a> {
     fn iter(&self, context: &TreeContext) -> Box<dyn Iterator<Item = TreeCaseInstance> + '_> {
         let iter = context.inner_comps.clone().into_iter().map(|c| {
             let mut comps = self.input.comps.clone();
-            comps.push(c);
+            let num_used_labels = comps.iter().map(|c| c.num_labels()).sum::<usize>() as u32;
+            let mut new_comps = vec![c];
+            relabels_nodes_sequentially(&mut new_comps, num_used_labels);
+            comps.push(new_comps.remove(0));
             let edges = self.input.edges.clone();
-            relabels_nodes_sequentially(&mut comps);
             TreeCaseInstance { comps, edges }
         });
         Box::new(iter)

@@ -39,7 +39,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for PathEnumerator<'a> {
                 let path = vec![c1, c2, c3, self.input.last_comp.clone()];
 
                 let mut path_updated = path.iter().map(|n| n.get_comp().clone()).collect_vec();
-                relabels_nodes_sequentially(&mut path_updated);
+                relabels_nodes_sequentially(&mut path_updated, 0);
 
                 let path = path
                     .into_iter()

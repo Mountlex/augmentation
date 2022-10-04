@@ -35,7 +35,11 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
     fn action(&mut self, data: &TreeCaseInstance, context: &TreeContext) -> ProofNode {
         self.num_calls += 1;
 
-        if data.comps.windows(2).any(|w| w[0].is_large() && w[1].is_large()) {
+        if data
+            .comps
+            .windows(2)
+            .any(|w| w[0].is_large() && w[1].is_large())
+        {
             return ProofNode::new_leaf("Direct merge between two Large".into(), true);
         }
 
@@ -54,24 +58,45 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
             .map(|c| context.credit_inv.credits(c))
             .sum();
 
+        let one_is_complex = data.comps.iter().any(|c| c.is_complex());
         let result = find_feasible_merge(
             &graph,
-            buyable.powerset().filter(|p| p.len() >= 1),
-            sellable.powerset(),
+            buyable.powerset().filter(|p| {
+                if one_is_complex {
+                    p.len() >= (data.comps.len() - 1)
+                } else {
+                    p.len() >= 2 * (data.comps.len() - 1)
+                }
+            }),
+            sellable.powerset().filter(|p| p.len() <= data.comps.len()),
             total_component_credits,
             data.comps.iter().map(|c| c.num_edges()).sum(),
             &context.credit_inv,
-            data.comps.iter().any(|c| c.is_complex()),
+            one_is_complex,
         );
 
         match result {
             MergeResult::Feasible2EC(merge) => {
                 self.num_proofs += 1;
-                return ProofNode::new_leaf(format!("Direct merge to 2EC possible [bought = {}, sold = {}]", merge.bought_edges.iter().join(", "), merge.sold_edges.iter().join(", ")), true);
+                return ProofNode::new_leaf(
+                    format!(
+                        "Direct merge to 2EC possible [bought = {}, sold = {}]",
+                        merge.bought_edges.iter().join(", "),
+                        merge.sold_edges.iter().join(", ")
+                    ),
+                    true,
+                );
             }
             MergeResult::FeasibleComplex(merge) => {
                 self.num_proofs += 1;
-                return ProofNode::new_leaf(format!("Direct merge to complex possible [bought = {}, sold = {}]", merge.bought_edges.iter().join(", "), merge.sold_edges.iter().join(", ")), true);
+                return ProofNode::new_leaf(
+                    format!(
+                        "Direct merge to complex possible [bought = {}, sold = {}]",
+                        merge.bought_edges.iter().join(", "),
+                        merge.sold_edges.iter().join(", ")
+                    ),
+                    true,
+                );
             }
             MergeResult::Impossible => {
                 return ProofNode::new_leaf(
@@ -111,6 +136,8 @@ where
     B: Iterator<Item = Vec<Edge>> + Clone,
     S: Iterator<Item = Vec<Edge>>,
 {
+    let req_credits = credit_inv.two_ec_credit(num_comp_edges);
+
     for sell in sell_iter {
         let sell_credits = Credit::from_integer(sell.len() as i64);
         let total_plus_sell = total_component_credits + sell_credits;
@@ -134,7 +161,7 @@ where
             });
 
             if !one_is_complex {
-                if total_plus_sell - buy_credits < credit_inv.large() {
+                if total_plus_sell - buy_credits < req_credits {
                     continue;
                 }
             }
@@ -168,7 +195,6 @@ where
                     }
                 }
                 ComplexCheckResult::NoBridges => {
-                    let req_credits = credit_inv.two_ec_credit(num_comp_edges);
                     if total_plus_sell - buy_credits >= req_credits {
                         return MergeResult::Feasible2EC(FeasibleMerge {
                             bought_edges: buy.clone(),

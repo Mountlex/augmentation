@@ -1,4 +1,3 @@
-use std::fmt::format;
 
 use itertools::Itertools;
 
@@ -72,8 +71,8 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
 impl EnumeratorTactic<TreeCaseInstance, TreeCaseInstance, TreeContext> for MatchingEnum {
     type Enumer<'a> = MatchingEnumerator<'a>;
 
-    fn msg(&self, data_in: &TreeCaseInstance) -> String {
-        "".into()
+    fn msg(&self, _data_in: &TreeCaseInstance) -> String {
+        String::new()
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a TreeCaseInstance) -> Self::Enumer<'a> {
