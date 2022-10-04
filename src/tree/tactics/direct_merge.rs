@@ -67,11 +67,11 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
         match result {
             MergeResult::Feasible2EC(merge) => {
                 self.num_proofs += 1;
-                return ProofNode::new_leaf(format!("Direct merge to large possible [bought = {:?}, sold = {:?}, credits: {} + {} - {} >= {}]", merge.bought_edges, merge.sold_edges, total_component_credits, merge.sold_edges.len(), merge.bought_edges.len(), merge.new_comp_credit), true);
+                return ProofNode::new_leaf(format!("Direct merge to 2EC possible [bought = {}, sold = {}]", merge.bought_edges.iter().join(", "), merge.sold_edges.iter().join(", ")), true);
             }
             MergeResult::FeasibleComplex(merge) => {
                 self.num_proofs += 1;
-                return ProofNode::new_leaf(format!("Direct merge to complex possible [bought = {:?}, sold = {:?}, credits: {} + {} - {} >= {}]", merge.bought_edges, merge.sold_edges, total_component_credits, merge.sold_edges.len(), merge.bought_edges.len(), merge.new_comp_credit), true);
+                return ProofNode::new_leaf(format!("Direct merge to complex possible [bought = {}, sold = {}]", merge.bought_edges.iter().join(", "), merge.sold_edges.iter().join(", ")), true);
             }
             MergeResult::Impossible => {
                 return ProofNode::new_leaf(
