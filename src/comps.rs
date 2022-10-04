@@ -17,86 +17,79 @@ pub enum EdgeType {
 }
 
 pub fn c3() -> Component {
-    Component::C3([0, 1, 2])
+    Component::C3([0.into(), 1.into(), 2.into()])
 }
 pub fn c4() -> Component {
-    Component::C4([0, 1, 2, 3])
+    Component::C4([0.into(), 1.into(), 2.into(), 3.into()])
 }
 pub fn c5() -> Component {
-    Component::C5([0, 1, 2, 3, 4])
+    Component::C5([0.into(), 1.into(), 2.into(), 3.into(), 4.into()])
 }
 pub fn c6() -> Component {
-    Component::C6([0, 1, 2, 3, 4, 5])
+    Component::C6([0.into(), 1.into(), 2.into(), 3.into(), 4.into(), 5.into()])
 }
 pub fn large() -> Component {
-    Component::Large(0)
+    Component::Large(Node::Comp(0))
 }
 
 pub fn complex_path() -> Component {
     Component::ComplexPath(
         Complex {
             graph: Graph::from_edges(vec![
-                (0, 1, EdgeType::Fixed),
-                (0, 8, EdgeType::Fixed),
-                (8, 9, EdgeType::Fixed),
-                (9, 0, EdgeType::Fixed),
-                (1, 2, EdgeType::Sellable),
-                (2, 3, EdgeType::Sellable),
-                (3, 4, EdgeType::Sellable),
-                (4, 5, EdgeType::Sellable),
-                (5, 6, EdgeType::Sellable),
-                (6, 7, EdgeType::Fixed),
-                (7, 10, EdgeType::Fixed),
-                (10, 11, EdgeType::Fixed),
-                (11, 7, EdgeType::Fixed),
+                (Node::c(0), 1.into(), EdgeType::Fixed),
+                (1.into(), 2.into(), EdgeType::Sellable),
+                (2.into(), 3.into(), EdgeType::Sellable),
+                (3.into(), 4.into(), EdgeType::Sellable),
+                (4.into(), 5.into(), EdgeType::Sellable),
+                (5.into(), 6.into(), EdgeType::Sellable),
+                (6.into(), Node::c(7), EdgeType::Fixed),
             ]),
             num_blocks: 2,
             total_black_deg: 12,
         },
-        [1, 2, 3, 4, 5, 6],
+        [1.into(), 2.into(), 3.into(), 4.into(), 5.into(), 6.into()],
     )
 }
 
 pub fn complex_tree() -> Component {
     Component::ComplexTree(
         Complex {
-            ///          {0,10,11}
+            ///          0
             ///          |
             ///          1
             ///          |
             ///          2
             ///          |
-            ///          3 -- 7 -- 8 -- {9,12,13}
+            ///          3 -- 7 -- 8 -- 9
             ///          |
             ///          4
             ///          |
             ///          5
             ///          |
-            ///          {6,14,15}
+            ///          6
             graph: Graph::from_edges(vec![
-                (0, 10, EdgeType::Fixed),
-                (10, 11, EdgeType::Fixed),
-                (11, 0, EdgeType::Fixed),
-                (0, 1, EdgeType::Sellable),
-                (1, 2, EdgeType::Sellable),
-                (2, 3, EdgeType::Sellable),
-                (3, 4, EdgeType::Sellable),
-                (4, 5, EdgeType::Sellable),
-                (3, 7, EdgeType::Sellable),
-                (7, 8, EdgeType::Sellable),
-                (5, 6, EdgeType::Fixed),
-                (6, 14, EdgeType::Fixed),
-                (14, 15, EdgeType::Fixed),
-                (15, 6, EdgeType::Fixed),
-                (8, 9, EdgeType::Fixed),
-                (9, 12, EdgeType::Fixed),
-                (12, 13, EdgeType::Fixed),
-                (13, 9, EdgeType::Fixed),
+                (Node::c(0), 1.into(), EdgeType::Fixed),
+                (1.into(), 2.into(), EdgeType::Sellable),
+                (2.into(), 3.into(), EdgeType::Sellable),
+                (3.into(), 4.into(), EdgeType::Sellable),
+                (4.into(), 5.into(), EdgeType::Sellable),
+                (5.into(), Node::c(6), EdgeType::Fixed),
+                (3.into(), 7.into(), EdgeType::Sellable),
+                (7.into(), 8.into(), EdgeType::Sellable),
+                (8.into(), Node::c(9), EdgeType::Fixed),
             ]),
             num_blocks: 3,
             total_black_deg: 15,
         },
-        [1, 2, 3, 4, 5, 7, 8],
+        [
+            1.into(),
+            2.into(),
+            3.into(),
+            4.into(),
+            5.into(),
+            7.into(),
+            8.into(),
+        ],
     )
 }
 
@@ -248,6 +241,18 @@ impl Component {
         }
     }
 
+    pub fn white_nodes(&self) -> Vec<Node> {
+        match self {
+            Component::Large(n) => vec![*n],
+            Component::ComplexPath(complex, _) | Component::ComplexTree(complex, _) => complex
+                .graph
+                .nodes()
+                .filter(|n| matches!(n, Node::Comp(_)))
+                .collect_vec(),
+            _ => vec![],
+        }
+    }
+
     pub fn graph(&self) -> Graph {
         match self {
             Component::C6(_) | Component::C5(_) | Component::C4(_) | Component::C3(_) => {
@@ -315,7 +320,7 @@ impl Component {
 fn is_adjacent_in_cycle(nodes: &[Node], v1: &Node, v2: &Node) -> bool {
     // Assumes that nodes are numbered sequentially from nodes[0],...,nodes[k]
 
-    v1.max(v2) - v1.min(v2) == 1
+    v1.to_vertex().max(v2.to_vertex()) - v1.to_vertex().min(v2.to_vertex()) == 1
         || (nodes.first() == Some(v1) && nodes.last() == Some(v2))
         || (nodes.first() == Some(v2) && nodes.last() == Some(v1))
 }

@@ -1,6 +1,6 @@
 #![feature(drain_filter)]
 
-use std::{fs::OpenOptions, path::PathBuf};
+use std::{fmt::Display, fs::OpenOptions, path::PathBuf};
 
 use clap::Parser;
 
@@ -9,8 +9,10 @@ use num_rational::Rational64;
 use path::prove_nice_path_progress;
 
 use comps::*;
+use tree::prove_tree_case;
 
 mod bridges;
+mod util;
 //mod contract;
 //mod local_merge;
 mod comps;
@@ -21,32 +23,82 @@ mod proof_tree;
 mod tree;
 mod types;
 
-pub type Node = u32;
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Hash)]
+pub enum Node {
+    Node(u32),
+    Comp(u32),
+}
+
+impl Node {
+    pub fn n(id: u32) -> Self {
+        Node::Node(id)
+    }
+    pub fn c(id: u32) -> Self {
+        Node::Comp(id)
+    }
+    pub fn set_id(&mut self, offset: u32) {
+        match self {
+            Node::Node(id) => *id = offset,
+            Node::Comp(id) => *id = offset,
+        }
+    }
+
+    pub fn inc_id(&mut self, offset: u32) {
+        match self {
+            Node::Node(id) => *id += offset,
+            Node::Comp(id) => *id += offset,
+        }
+    }
+
+    pub fn to_vertex(&self) -> u32 {
+        match self {
+            Node::Node(n) => *n,
+            Node::Comp(_) => panic!("Node not a vertex!"),
+        }
+    }
+}
+
+impl Display for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Node::Node(n) => write!(f, "{}", n),
+            Node::Comp(n) => write!(f, "2ec({})", n),
+        }
+    }
+}
+
+impl From<u32> for Node {
+    fn from(n: u32) -> Self {
+        Node::Node(n)
+    }
+}
+
+//pub type Node = u32;
 pub type Graph = petgraph::graphmap::UnGraphMap<Node, EdgeType>;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 enum Cli {
-    Local(Local),
+    Tree(Tree),
     Path(Path),
 }
 
 #[derive(Parser)]
-struct Local {
+struct Tree {
     c_numer: i64,
     c_demon: i64,
 
-    #[clap(short, long, default_value = "0")]
-    depth: usize,
+    #[clap(short, long, default_value = "proofs_tree")]
+    output_dir: PathBuf,
+
+    #[clap(short = 'd', long = "depth", default_value = "2")]
+    output_depth: usize,
 
     #[clap(short, long)]
     parallel: bool,
 
-    #[clap(short, long, default_value = "proofs_local")]
-    output_dir: PathBuf,
-
-    #[clap(short, long, default_value = "false")]
-    verbose: bool,
+    #[clap(short, long)]
+    sc: bool,
 }
 
 #[derive(Parser)]
@@ -72,34 +124,39 @@ fn main() -> anyhow::Result<()> {
     setup_logging(false)?;
 
     match cli {
-        Cli::Local(local) => prove_local(local),
+        Cli::Tree(local) => prove_local(local),
         Cli::Path(path) => prove_path(path),
     }
 
     Ok(())
 }
 
-fn prove_local(local: Local) {
-    // let inv = DefaultCredits::new(Rational64::new(local.c_numer, local.c_demon));
-    // let leaf_comps = vec![
-    //     ComponentType::Cycle(4),
-    //     ComponentType::Cycle(5),
-    //     ComponentType::Cycle(6),
-    //     ComponentType::Large,
-    //     ComponentType::Complex,
-    // ];
-    // let comps = vec![
-    //     ComponentType::Cycle(3),
-    //     ComponentType::Cycle(4),
-    //     ComponentType::Cycle(5),
-    //     ComponentType::Cycle(6),
-    //     ComponentType::Large,
-    //     ComponentType::Complex,
-    // ];
+fn prove_local(tree: Tree) {
+    let inv = CreditInv::new(Rational64::new(tree.c_numer, tree.c_demon));
 
-    // println!("========== Proof for c = {} ==========", inv.c);
-    // let proof1 = TreeCaseProof::new(leaf_comps, comps.clone(), inv.clone(), local.depth);
-    // proof1.prove(local.parallel, local.output_dir);
+    let comps = vec![
+        c3(),
+        c4(),
+        c5(),
+        c6(),
+        large(),
+        complex_path(),
+        complex_tree(),
+    ];
+
+    let leaf_comps = vec![c4(), c5(), c6(), large(), complex_path(), complex_tree()];
+
+    for leaf_comp in leaf_comps {
+        prove_tree_case(
+            comps.clone(),
+            leaf_comp,
+            &inv,
+            tree.output_dir.clone(),
+            tree.output_depth,
+            tree.sc,
+            tree.parallel,
+        )
+    }
 }
 
 fn prove_path(path: Path) {

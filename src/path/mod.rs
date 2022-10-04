@@ -495,7 +495,6 @@ impl AugmentedPathInstance {
     }
 
     pub fn nodes_with_fixed_edges(&self, path_idx: usize) -> Vec<Node> {
-        let comp = self.path[path_idx].get_comp();
         let mut edge_endpoints = self
             .fixed_edge
             .iter()
@@ -522,14 +521,14 @@ impl AugmentedPathInstance {
     }
 
     pub fn nodes_with_edges(&self, node_idx: usize) -> Vec<Node> {
-        let mut nodes = vec![
+        vec![
             self.nodes_with_matching_edges(node_idx),
             self.nodes_with_fixed_edges(node_idx),
         ]
-        .concat();
-        nodes.sort();
-        nodes.dedup();
-        nodes
+        .into_iter()
+        .flatten()
+        .unique()
+        .collect_vec()
     }
 
     pub fn nodes_without_edges(&self, node_idx: usize) -> Vec<Node> {

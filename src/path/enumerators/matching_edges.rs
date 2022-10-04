@@ -73,8 +73,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
             .nodes_with_fixed_edges(2)
             .into_iter()
             .chain(self.instance.outside_edges_on(2).into_iter())
-            .sorted()
-            .dedup()
+            .unique()
             .collect_vec();
 
         let mut free_prelast = prelast_nodes

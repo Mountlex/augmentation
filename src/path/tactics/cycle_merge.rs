@@ -52,7 +52,6 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleMergeTactic {
             )
         }
     }
-
 }
 
 impl PseudoCycle {

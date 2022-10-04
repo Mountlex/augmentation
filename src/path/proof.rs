@@ -96,7 +96,7 @@ pub fn prove_nice_path_progress(
             prove_last_node(
                 nodes.clone(),
                 last_node,
-                credit_inv,
+                credit_inv.clone(),
                 &output_dir,
                 output_depth,
                 sc,
@@ -107,7 +107,7 @@ pub fn prove_nice_path_progress(
             prove_last_node(
                 nodes.clone(),
                 last_node,
-                credit_inv,
+                credit_inv.clone(),
                 &output_dir,
                 output_depth,
                 sc,
@@ -119,16 +119,15 @@ pub fn prove_nice_path_progress(
 fn prove_last_node(
     nodes: Vec<PathNode>,
     last_node: PathNode,
-    credit_inv: &CreditInv,
+    credit_inv: CreditInv,
     output_dir: &PathBuf,
     output_depth: usize,
     sc: bool,
 ) {
     let path_length = 4;
-    let c = credit_inv.complex_black(2);
 
     let mut context = PathContext {
-        credit_inv: CreditInv::new(c),
+        credit_inv: credit_inv.clone(),
         path_len: path_length,
     };
 

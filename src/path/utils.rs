@@ -19,45 +19,6 @@ pub fn hamiltonian_paths(v1: Node, v2: Node, nodes: &[Node]) -> Vec<Vec<Node>> {
         .collect_vec()
 }
 
-pub fn relabels_nodes_sequentially(comps: &mut [Component]) {
-    let mut offset = 0;
-    for comp in comps {
-        match comp {
-            Component::C6(nodes) => offset += relabel_slice(nodes, offset),
-            Component::C5(nodes) => offset += relabel_slice(nodes, offset),
-            Component::C4(nodes) => offset += relabel_slice(nodes, offset),
-            Component::C3(nodes) => offset += relabel_slice(nodes, offset),
-            Component::Large(n) => {
-                *n = offset;
-                offset += 1;
-            }
-            Component::ComplexPath(c, blacks) => {
-                c.graph = Graph::from_edges(
-                    c.graph
-                        .all_edges()
-                        .map(|(w1, w2, t)| (w1 + offset, w2 + offset, *t)),
-                );
-                blacks.iter_mut().for_each(|n| *n += offset);
-                offset += c.graph.node_count() as u32;
-            }
-            Component::ComplexTree(c, blacks) => {
-                c.graph = Graph::from_edges(
-                    c.graph
-                        .all_edges()
-                        .map(|(w1, w2, t)| (w1 + offset, w2 + offset, *t)),
-                );
-                blacks.iter_mut().for_each(|n| *n += offset);
-                offset += c.graph.node_count() as u32;
-            }
-        }
-    }
-}
-
-fn relabel_slice(slice: &mut [Node], offset: u32) -> u32 {
-    slice.iter_mut().for_each(|n| *n += offset);
-    slice.len() as u32
-}
-
 pub fn get_local_merge_graph(
     comp1: &Component,
     comp2: &Component,

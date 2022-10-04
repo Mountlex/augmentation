@@ -1,5 +1,8 @@
 use itertools::Itertools;
-use petgraph::{algo::connected_components, visit::EdgeFiltered};
+use petgraph::{
+    algo::connected_components,
+    visit::{EdgeFiltered, IntoNodeIdentifiers, IntoNodeReferences},
+};
 
 use crate::{
     bridges::{is_complex, ComplexCheckResult},
@@ -102,7 +105,10 @@ fn merge(
                     }
                 }
 
-                match is_complex(&check_graph) {
+                let white_vertices =
+                    vec![left_comp.white_nodes(), right_comp.white_nodes()].concat();
+
+                match is_complex(&check_graph, &white_vertices) {
                     ComplexCheckResult::Complex(bridges, black_vertices) => {
                         let blocks_graph = EdgeFiltered::from_fn(&check_graph, |(v, u, _)| {
                             !bridges.contains(&(v, u)) && !bridges.contains(&(u, v))

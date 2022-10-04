@@ -32,7 +32,6 @@ impl Statistics for DoubleCycleMergeTactic {
 }
 
 impl Tactic<AugmentedPathInstance, PathContext> for DoubleCycleMergeTactic {
-
     fn action(
         &mut self,
         data: &AugmentedPathInstance,

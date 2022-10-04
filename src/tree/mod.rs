@@ -1,1 +1,47 @@
 //mod local_merge;
+
+use std::{fmt::Display, path::PathBuf};
+
+use itertools::Itertools;
+
+use crate::{comps::Component, types::Edge, CreditInv};
+
+mod enumerators;
+mod proof;
+mod tactics;
+mod utils;
+
+pub use proof::prove_tree_case;
+
+#[derive(Debug, Clone)]
+pub struct TreeCaseInstance {
+    comps: Vec<Component>,
+    edges: Vec<Edge>,
+}
+
+impl TreeCaseInstance {
+    pub fn edges_between(&self, idx: usize) -> Vec<Edge> {
+        self.edges
+            .iter()
+            .filter(|e| e.between_path_nodes(idx - 1, idx))
+            .cloned()
+            .collect_vec()
+    }
+}
+
+impl Display for TreeCaseInstance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Instance {} with edges [{}]",
+            self.comps.iter().join(" -- "),
+            self.edges.iter().join(", ")
+        )
+    }
+}
+
+#[derive(Clone)]
+pub struct TreeContext {
+    pub credit_inv: CreditInv,
+    pub inner_comps: Vec<Component>,
+}

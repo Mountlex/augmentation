@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::Node;
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug)]
 pub struct Edge {
     n1: Node,
     n2: Node,
@@ -17,6 +17,15 @@ impl PartialEq for Edge {
 }
 
 impl Edge {
+    pub fn from_tuple(n1: Node, n2: Node) -> Self {
+        Self {
+            n1,
+            n2,
+            path_index_n1: 0,
+            path_index_n2: 0,
+        }
+    }
+
     pub fn new(n1: Node, p1: usize, n2: Node, p2: usize) -> Self {
         Self {
             n1,

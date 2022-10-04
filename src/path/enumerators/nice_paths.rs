@@ -4,10 +4,10 @@ use crate::{
     comps::CompType,
     path::{
         proof::{PathContext, PathNode},
-        utils::relabels_nodes_sequentially,
         AbstractNode, AugmentedPathInstance, PathInstance, SuperNode,
     },
     proof_logic::{Enumerator, EnumeratorTactic},
+    util::relabels_nodes_sequentially,
 };
 
 #[derive(Clone)]

@@ -271,8 +271,6 @@ fn comp_npcs(
                     npc
                 })
                 .filter(|npc| npc.is_consistent_with(&consistent_npc, &consistent_nodes))
-                //.sorted()
-                //.dedup()
                 .collect_vec()
         }
     }
