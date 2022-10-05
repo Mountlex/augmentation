@@ -1,13 +1,13 @@
 use std::fmt::Display;
 
-use crate::Node;
+use crate::{path::Pidx, Node};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Edge {
     n1: Node,
     n2: Node,
-    path_index_n1: usize,
-    path_index_n2: usize,
+    path_index_n1: Pidx,
+    path_index_n2: Pidx,
 }
 
 impl PartialEq for Edge {
@@ -21,12 +21,12 @@ impl Edge {
         Self {
             n1,
             n2,
-            path_index_n1: 0,
-            path_index_n2: 0,
+            path_index_n1: Pidx::Last,
+            path_index_n2: Pidx::Last,
         }
     }
 
-    pub fn new(n1: Node, p1: usize, n2: Node, p2: usize) -> Self {
+    pub fn new(n1: Node, p1: Pidx, n2: Node, p2: Pidx) -> Self {
         Self {
             n1,
             n2,
@@ -36,10 +36,10 @@ impl Edge {
     }
 
     pub fn path_distance(&self) -> usize {
-        self.path_index_n1.max(self.path_index_n2) - self.path_index_n1.min(self.path_index_n2)
+        self.path_index_n1.dist(&self.path_index_n2)
     }
 
-    pub fn path_indices(&self) -> (usize, usize) {
+    pub fn path_indices(&self) -> (Pidx, Pidx) {
         (
             self.path_index_n1.min(self.path_index_n2),
             self.path_index_n1.max(self.path_index_n2),
@@ -50,7 +50,7 @@ impl Edge {
         (self.n1, self.n2)
     }
 
-    pub fn endpoint_at(&self, path_idx: usize) -> Option<Node> {
+    pub fn endpoint_at(&self, path_idx: Pidx) -> Option<Node> {
         if self.path_index_n1 == path_idx {
             Some(self.n1)
         } else if self.path_index_n2 == path_idx {
@@ -66,11 +66,11 @@ impl Edge {
     pub fn node_incident(&self, n: &Node) -> bool {
         n == &self.n1 || n == &self.n2
     }
-    pub fn path_incident(&self, path_idx: usize) -> bool {
+    pub fn path_incident(&self, path_idx: Pidx) -> bool {
         path_idx == self.path_index_n1 || path_idx == self.path_index_n2
     }
 
-    pub fn between_path_nodes(&self, path_idx1: usize, path_idx2: usize) -> bool {
+    pub fn between_path_nodes(&self, path_idx1: Pidx, path_idx2: Pidx) -> bool {
         self.path_incident(path_idx1) && self.path_incident(path_idx2)
     }
 

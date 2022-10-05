@@ -1,5 +1,5 @@
 use crate::{
-    path::{proof::PathContext, SelectedHitInstance},
+    path::{proof::PathContext, Pidx, SelectedHitInstance},
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
 };
@@ -23,12 +23,12 @@ impl Tactic<SelectedHitInstance, PathContext> for PendantRewireTactic {
     fn precondition(
         &self,
         data: &SelectedHitInstance,
-        context: &crate::path::proof::PathContext,
+        _context: &crate::path::proof::PathContext,
     ) -> bool {
-        data.hit_comp_idx == context.path_len - 2
+        data.hit_comp_idx.is_prelast()
             && data
                 .instance
-                .fixed_edges_between(context.path_len - 2, context.path_len - 1)
+                .fixed_edges_between(Pidx::Last, Pidx::Prelast)
                 .len()
                 == 3
     }

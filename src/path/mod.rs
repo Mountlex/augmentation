@@ -4,6 +4,7 @@ mod tactics;
 mod utils;
 
 use std::{
+    cmp::Ordering,
     fmt::Display,
     ops::{Index, IndexMut},
 };
@@ -17,19 +18,20 @@ use crate::{comps::*, types::Edge};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MatchingEdge {
-    source_path: usize,
+    source_path: Pidx,
     source: Node,
     hit: PathHit,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PathHit {
-    Path(usize),
+    Path(Pidx),
     Outside,
 }
 
 impl MatchingEdge {
-    pub fn new(source_path: usize, source: Node, hit: PathHit) -> Self {
+    // source_path < hit !!!!
+    pub fn new(source_path: Pidx, source: Node, hit: PathHit) -> Self {
         Self {
             source_path,
             source,
@@ -37,7 +39,7 @@ impl MatchingEdge {
         }
     }
 
-    pub fn source_path(&self) -> usize {
+    pub fn source_path(&self) -> Pidx {
         self.source_path
     }
 
@@ -49,17 +51,17 @@ impl MatchingEdge {
         self.hit.clone()
     }
 
-    pub fn hits_path(&self) -> Option<usize> {
+    pub fn hits_path(&self) -> Option<Pidx> {
         match self.hit {
             PathHit::Path(i) => Some(i),
             PathHit::Outside => None,
         }
     }
 
-    pub fn is_cycle_edge(&self) -> Option<(usize, usize)> {
+    pub fn is_cycle_edge(&self) -> Option<(Pidx, Pidx)> {
         let j = self.source_path;
         match self.hit {
-            PathHit::Path(i) if i.max(j) - i.min(j) >= 2 => Some((i, j)),
+            PathHit::Path(i) if i.dist(&j) >= 2 => Some((j, i)),
             _ => None,
         }
     }
@@ -110,6 +112,9 @@ impl NicePairConfig {
             .is_some()
     }
 
+    /// Checks whether this configuration is consistent with `consistent_npc` on the node set `consistent_nodes`.
+    /// This function returns true if for every pair of nodes from `consistent_nodes`, this configuration has the
+    /// same value for this pair as `consistent_npc`.
     pub fn is_consistent_with(
         &self,
         consistent_npc: &NicePairConfig,
@@ -271,10 +276,6 @@ impl ZoomedNode {
         }
     }
 
-    pub fn _valid_in(&self, new_in: Node, prelast: bool) -> bool {
-        self.valid_in_out(new_in, self.out_node.unwrap(), prelast)
-    }
-
     pub fn valid_out(&self, new_out: Node, prelast: bool) -> bool {
         self.valid_in_out(self.in_node.unwrap(), new_out, prelast)
     }
@@ -355,58 +356,9 @@ impl Display for ZoomedNode {
 }
 
 #[derive(Clone, Debug)]
-pub struct PathInstance {
-    pub nodes: Vec<SuperNode>,
-}
-
-impl PathInstance {
-    pub fn last_comp(&self) -> &Component {
-        self.nodes.last().unwrap().get_comp()
-    }
-
-    pub fn index_of_super_node(&self, node: Node) -> usize {
-        self.nodes
-            .iter()
-            .enumerate()
-            .find(|(_i, super_node)| super_node.get_comp().contains(&node))
-            .unwrap()
-            .0
-    }
-}
-
-impl Index<usize> for PathInstance {
-    type Output = SuperNode;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.nodes[index]
-    }
-}
-
-impl IndexMut<usize> for PathInstance {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.nodes[index]
-    }
-}
-
-impl Display for PathInstance {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[")?;
-        write!(
-            f,
-            "{}",
-            self.nodes
-                .iter()
-                .map(|node| format!("{}", node))
-                .join(" -- ")
-        )?;
-        write!(f, "]")
-    }
-}
-
-#[derive(Clone, Debug)]
 pub struct SelectedHitInstance {
     pub instance: AugmentedPathInstance,
-    pub hit_comp_idx: usize,
+    pub hit_comp_idx: Pidx,
     pub last_hit: bool,
 }
 
@@ -437,14 +389,105 @@ pub struct PseudoCycle {
     nodes: Vec<SuperNode>,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Pidx {
+    Last,
+    Prelast,
+    N(usize),
+}
+
+impl Pidx {
+    fn is_last(&self) -> bool {
+        matches!(self, Pidx::Last)
+    }
+    fn is_prelast(&self) -> bool {
+        matches!(self, Pidx::Prelast)
+    }
+
+    pub fn raw(&self) -> usize {
+        match self {
+            Pidx::Last => 0,
+            Pidx::Prelast => 1,
+            Pidx::N(n) => *n,
+        }
+    }
+
+    pub fn right(&self) -> Pidx {
+        if let Pidx::Last = self {
+            Pidx::Prelast
+        } else {
+            Pidx::N(self.raw() + 1)
+        }
+    }
+
+    pub fn left(&self) -> Option<Pidx> {
+        match self {
+            Pidx::Last => None,
+            Pidx::Prelast => Some(Pidx::Last),
+            Pidx::N(n) if *n == 2 => Some(Pidx::Prelast),
+            Pidx::N(n) => Some(Pidx::N(n - 1)),
+        }
+    }
+
+    pub fn dist(&self, other: &Pidx) -> usize {
+        self.raw().max(other.raw()) - self.raw().min(other.raw())
+    }
+}
+
+impl From<usize> for Pidx {
+    fn from(n: usize) -> Self {
+        if n == 0 {
+            Pidx::Last
+        } else if n == 1 {
+            Pidx::Prelast
+        } else {
+            Pidx::N(n)
+        }
+    }
+}
+
+impl PartialOrd for Pidx {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.raw().partial_cmp(&other.raw())
+    }
+}
+
+impl Ord for Pidx {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.raw().cmp(&other.raw())
+    }
+}
+
+impl Display for Pidx {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Pidx::Last => write!(f, "Last"),
+            Pidx::Prelast => write!(f, "Prelast"),
+            Pidx::N(n) => write!(f, "Path[{}]", n),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct AugmentedPathInstance {
-    pub path: PathInstance,
+    nodes: Vec<SuperNode>,
     pub non_path_matching_edges: Vec<MatchingEdge>,
     pub fixed_edge: Vec<Edge>,
 }
 
 impl AugmentedPathInstance {
+    pub fn index_of_super_node(&self, node: Node) -> Pidx {
+        let raw = self
+            .nodes
+            .iter()
+            .enumerate()
+            .find(|(_i, super_node)| super_node.get_comp().contains(&node))
+            .unwrap()
+            .0;
+
+        Pidx::from(raw)
+    }
+
     pub fn all_outside_hits(&self) -> Vec<MatchingEdge> {
         self.non_path_matching_edges
             .iter()
@@ -453,31 +496,31 @@ impl AugmentedPathInstance {
             .collect_vec()
     }
 
-    pub fn outside_hits_from(&self, node_idx: usize) -> Vec<MatchingEdge> {
+    pub fn outside_hits_from(&self, path_idx: Pidx) -> Vec<MatchingEdge> {
         self.non_path_matching_edges
             .iter()
-            .filter(|e| e.hits_outside() && e.source_path() == node_idx)
+            .filter(|e| e.hits_outside() && e.source_path() == path_idx)
             .cloned()
             .collect_vec()
     }
 
-    pub fn outside_edges_on(&self, node_idx: usize) -> Vec<Node> {
+    pub fn outside_edges_on(&self, path_idx: Pidx) -> Vec<Node> {
         self.non_path_matching_edges
             .iter()
-            .filter(|e| e.hits_outside() && e.source_path() == node_idx)
+            .filter(|e| e.hits_outside() && e.source_path() == path_idx)
             .map(|e| e.source())
             .collect_vec()
     }
 
-    // Returns a list of nodes of node_idx which can have _one_ additional matching edge
-    pub fn unmatched_nodes(&self, node_idx: usize) -> Vec<Node> {
-        let comp = self.path[node_idx].get_comp();
+    // Returns a list of nodes of path_idx which can have _one_ additional matching edge
+    pub fn unmatched_nodes(&self, path_idx: Pidx) -> Vec<Node> {
+        let comp = self[path_idx].get_comp();
 
         if let Component::Large(n) = comp {
             return vec![*n];
         }
-        let fixed_incident = self.fixed_incident_edges(node_idx);
-        let matching_sources = self.nodes_with_matching_edges(node_idx);
+        let fixed_incident = self.fixed_incident_edges(path_idx);
+        let matching_sources = self.nodes_with_matching_edges(path_idx);
 
         comp.matching_nodes()
             .into_iter()
@@ -494,36 +537,47 @@ impl AugmentedPathInstance {
             .collect_vec()
     }
 
-    pub fn nodes_with_fixed_edges(&self, path_idx: usize) -> Vec<Node> {
+    pub fn nodes_with_fixed_edges(&self, path_idx: Pidx) -> Vec<Node> {
         let mut edge_endpoints = self
             .fixed_edge
             .iter()
             .flat_map(|e| e.endpoint_at(path_idx))
             .collect_vec();
 
-        if let SuperNode::Zoomed(zoomed) = &self.path[path_idx] {
+        if let SuperNode::Zoomed(zoomed) = &self[path_idx] {
             if let Some(node) = zoomed.in_node {
+                assert!(self[path_idx].get_comp().contains(&node));
                 edge_endpoints.push(node)
             }
             if let Some(node) = zoomed.out_node {
+                assert!(self[path_idx].get_comp().contains(&node));
                 edge_endpoints.push(node)
             }
         }
+        assert!(edge_endpoints
+            .iter()
+            .all(|n| self[path_idx].get_comp().contains(n)));
         edge_endpoints
     }
 
-    pub fn nodes_with_matching_edges(&self, node_idx: usize) -> Vec<Node> {
-        self.non_path_matching_edges
+    pub fn nodes_with_matching_edges(&self, path_idx: Pidx) -> Vec<Node> {
+        let endpoints = self
+            .non_path_matching_edges
             .iter()
-            .filter(|e| e.source_path() == node_idx)
+            .filter(|e| e.source_path() == path_idx)
             .map(|e| e.source())
-            .collect_vec()
+            .collect_vec();
+
+        assert!(endpoints
+            .iter()
+            .all(|n| self[path_idx].get_comp().contains(n)));
+        endpoints
     }
 
-    pub fn nodes_with_edges(&self, node_idx: usize) -> Vec<Node> {
+    pub fn nodes_with_edges(&self, path_idx: Pidx) -> Vec<Node> {
         vec![
-            self.nodes_with_matching_edges(node_idx),
-            self.nodes_with_fixed_edges(node_idx),
+            self.nodes_with_matching_edges(path_idx),
+            self.nodes_with_fixed_edges(path_idx),
         ]
         .into_iter()
         .flatten()
@@ -531,10 +585,10 @@ impl AugmentedPathInstance {
         .collect_vec()
     }
 
-    pub fn nodes_without_edges(&self, node_idx: usize) -> Vec<Node> {
-        let edge_endpoints = self.nodes_with_edges(node_idx);
+    pub fn nodes_without_edges(&self, path_idx: Pidx) -> Vec<Node> {
+        let edge_endpoints = self.nodes_with_edges(path_idx);
 
-        self.path[node_idx]
+        self[path_idx]
             .get_comp()
             .graph()
             .nodes()
@@ -542,10 +596,10 @@ impl AugmentedPathInstance {
             .collect_vec()
     }
 
-    pub fn matching_edges_hit(&self, node_idx: usize) -> Vec<MatchingEdge> {
+    pub fn matching_edges_hit(&self, path_idx: Pidx) -> Vec<MatchingEdge> {
         self.non_path_matching_edges
             .iter()
-            .filter(|e| e.hits_path() == Some(node_idx))
+            .filter(|e| e.hits_path() == Some(path_idx))
             .cloned()
             .collect_vec()
     }
@@ -553,7 +607,7 @@ impl AugmentedPathInstance {
     pub fn fix_matching_edge(
         &mut self,
         matching_edge: &MatchingEdge,
-        hit_idx: usize,
+        hit_idx: Pidx,
         new_target: Node,
     ) {
         self.non_path_matching_edges
@@ -567,28 +621,33 @@ impl AugmentedPathInstance {
         ));
     }
 
-    pub fn fixed_incident_edges(&self, idx: usize) -> Vec<Edge> {
+    /// Returns fixed edges incident on `idx`
+    pub fn fixed_incident_edges(&self, idx: Pidx) -> Vec<Edge> {
         self.fixed_edge
             .iter()
             .filter(|e| e.path_incident(idx))
             .cloned()
             .chain(
-                vec![self.path_edge(idx), self.path_edge(idx + 1)]
-                    .into_iter()
-                    .flatten(),
+                vec![
+                    self.path_edge(idx),
+                    idx.left().and_then(|left| self.path_edge(left)),
+                ]
+                .into_iter()
+                .flatten(),
             )
             .collect_vec()
     }
 
-    pub fn path_edge(&self, idx: usize) -> Option<Edge> {
-        if idx >= self.path.nodes.len() {
+    /// Returns path edge between `idx` and `idx + 1`
+    pub fn path_edge(&self, idx: Pidx) -> Option<Edge> {
+        if idx.raw() >= self.nodes.len() {
             return None;
         }
-        if self.path[idx - 1].is_zoomed() && self.path[idx].is_zoomed() {
+        if self[idx].is_zoomed() && self[idx.right()].is_zoomed() {
             Some(Edge::new(
-                self.path[idx - 1].get_zoomed().out_node.unwrap(),
-                idx - 1,
-                self.path[idx].get_zoomed().in_node.unwrap(),
+                self[idx.right()].get_zoomed().out_node.unwrap(),
+                idx.right(),
+                self[idx].get_zoomed().in_node.unwrap(),
                 idx,
             ))
         } else {
@@ -596,15 +655,15 @@ impl AugmentedPathInstance {
         }
     }
 
-    pub fn swap_path_edge(&mut self, new_path_edge: Edge, path_edge_idx: usize) {
-        assert!(self.path[path_edge_idx - 1].is_zoomed() && self.path[path_edge_idx].is_zoomed());
+    pub fn swap_path_edge(&mut self, new_path_edge: Edge, path_edge_idx: Pidx) {
+        assert!(self[path_edge_idx.right()].is_zoomed() && self[path_edge_idx].is_zoomed());
         assert!(self.fixed_edge.contains(&new_path_edge));
 
         let old_path_edge = self.path_edge(path_edge_idx).unwrap();
-        self.path[path_edge_idx - 1]
+        self[path_edge_idx.right()]
             .get_zoomed_mut()
-            .set_out(new_path_edge.endpoint_at(path_edge_idx - 1).unwrap());
-        self.path[path_edge_idx]
+            .set_out(new_path_edge.endpoint_at(path_edge_idx.right()).unwrap());
+        self[path_edge_idx]
             .get_zoomed_mut()
             .set_in(new_path_edge.endpoint_at(path_edge_idx).unwrap());
 
@@ -612,20 +671,49 @@ impl AugmentedPathInstance {
         self.fixed_edge.push(old_path_edge);
     }
 
-    pub fn fixed_edges_between(&self, left: usize, right: usize) -> Vec<Edge> {
+    pub fn fixed_edges_between(&self, idx1: Pidx, idx2: Pidx) -> Vec<Edge> {
         let mut edges = self
             .fixed_edge
             .iter()
-            .filter(|&edge| edge.between_path_nodes(left, right))
+            .filter(|&edge| edge.between_path_nodes(idx1, idx2))
             .cloned()
             .collect_vec();
 
-        if left.max(right) - left.min(right) == 1 {
-            if let Some(path_edge) = self.path_edge(left.max(right)) {
+        if idx1.dist(&idx2) == 1 {
+            if let Some(path_edge) = self.path_edge(idx1.min(idx2)) {
                 edges.push(path_edge);
             }
         }
 
         edges
+    }
+}
+
+impl Index<Pidx> for AugmentedPathInstance {
+    type Output = SuperNode;
+
+    fn index(&self, index: Pidx) -> &Self::Output {
+        &self.nodes[index.raw()]
+    }
+}
+
+impl IndexMut<Pidx> for AugmentedPathInstance {
+    fn index_mut(&mut self, index: Pidx) -> &mut Self::Output {
+        &mut self.nodes[index.raw()]
+    }
+}
+
+impl Display for AugmentedPathInstance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
+        write!(
+            f,
+            "{}",
+            self.nodes
+                .iter()
+                .map(|node| format!("{}", node))
+                .join(" -- ")
+        )?;
+        write!(f, "]")
     }
 }

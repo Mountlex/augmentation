@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{proof::PathContext, utils::hamiltonian_paths, AugmentedPathInstance},
+    path::{proof::PathContext, utils::hamiltonian_paths, AugmentedPathInstance, Pidx},
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
 };
@@ -33,11 +33,11 @@ impl Tactic<AugmentedPathInstance, PathContext> for ContractabilityTactic {
     fn action(
         &mut self,
         data: &AugmentedPathInstance,
-        context: &PathContext,
+        _context: &PathContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
-        let last = data.path.nodes.last().unwrap().get_zoomed();
+        let last = data[Pidx::Last].get_zoomed();
         let last_comp = last.get_comp();
 
         if last_comp.is_complex() || last_comp.is_large() || last_comp.is_c3() {
@@ -47,8 +47,8 @@ impl Tactic<AugmentedPathInstance, PathContext> for ContractabilityTactic {
             );
         }
 
-        let free_nodes = data.nodes_without_edges(context.path_len - 1);
-        let used_nodes = data.nodes_with_edges(context.path_len - 1);
+        let free_nodes = data.nodes_without_edges(Pidx::Last);
+        let used_nodes = data.nodes_with_edges(Pidx::Last);
 
         let num_edges_between_free_nodes = last_comp
             .graph()

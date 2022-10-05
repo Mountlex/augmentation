@@ -1,18 +1,16 @@
 use itertools::Itertools;
 
-use crate::{tree::{TreeCaseInstance, TreeContext, ContractableCompInstance}, proof_logic::{Enumerator, EnumeratorTactic}, types::Edge};
-
-
-
+use crate::{
+    proof_logic::{Enumerator, EnumeratorTactic},
+    tree::{ContractableCompInstance, TreeCaseInstance, TreeContext},
+    types::Edge,
+};
 
 pub struct ContractableEdgesEnum;
 
-
-
 pub struct ContractableEdgesEnumerator<'a> {
-    instance: &'a ContractableCompInstance
+    instance: &'a ContractableCompInstance,
 }
-
 
 impl<'a> Enumerator<TreeCaseInstance, TreeContext> for ContractableEdgesEnumerator<'a> {
     fn iter(&self, _context: &TreeContext) -> Box<dyn Iterator<Item = TreeCaseInstance> + '_> {
@@ -22,12 +20,14 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for ContractableEdgesEnumerat
             instance_clone.edges.push(new_edge);
             instance_clone
         });
-        
+
         Box::new(iter)
     }
 }
 
-impl EnumeratorTactic<ContractableCompInstance, TreeCaseInstance, TreeContext> for ContractableEdgesEnum {
+impl EnumeratorTactic<ContractableCompInstance, TreeCaseInstance, TreeContext>
+    for ContractableEdgesEnum
+{
     type Enumer<'a> = ContractableEdgesEnumerator<'a>;
 
     fn msg(&self, _data_in: &ContractableCompInstance) -> String {
@@ -39,6 +39,9 @@ impl EnumeratorTactic<ContractableCompInstance, TreeCaseInstance, TreeContext> f
     }
 
     fn item_msg(&self, item: &TreeCaseInstance) -> String {
-        format!("Contractability implied edge: Edges [{}]", item.edges.iter().join(", "))
+        format!(
+            "Contractability implied edge: Edges [{}]",
+            item.edges.iter().join(", ")
+        )
     }
 }

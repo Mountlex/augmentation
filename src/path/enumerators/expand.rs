@@ -3,8 +3,8 @@ use itertools::Itertools;
 use crate::{
     comps::Component,
     path::{
-        proof::PathContext, AugmentedPathInstance, NicePairConfig, SelectedHitInstance, SuperNode,
-        ZoomedNode,
+        proof::PathContext, AugmentedPathInstance, NicePairConfig, Pidx, SelectedHitInstance,
+        SuperNode, ZoomedNode,
     },
     proof_logic::{Enumerator, EnumeratorTactic},
     Node,
@@ -17,12 +17,12 @@ pub struct ExpandLastEnum;
 
 pub struct ExpandEnumerator<'a> {
     pub instance: &'a AugmentedPathInstance,
-    pub hit_comp_idx: usize,
+    pub hit_comp_idx: Pidx,
     pub last_hit: bool,
 }
 
 impl<'a> ExpandEnumerator<'a> {
-    pub fn _new(instance: &'a AugmentedPathInstance, hit_comp_idx: usize, last_hit: bool) -> Self {
+    pub fn _new(instance: &'a AugmentedPathInstance, hit_comp_idx: Pidx, last_hit: bool) -> Self {
         Self {
             instance,
             hit_comp_idx,
@@ -53,12 +53,10 @@ impl<'a> Enumerator<SelectedHitInstance, PathContext> for ExpandEnumerator<'a> {
 
 pub fn expand_iter(
     instance: AugmentedPathInstance,
-    node_idx: usize,
-    context: PathContext,
+    node_idx: Pidx,
+    _context: PathContext,
 ) -> Box<dyn Iterator<Item = AugmentedPathInstance>> {
-    let path_len = context.path_len;
-    let path = instance.path.clone();
-    let node = path[node_idx].clone();
+    let node = instance[node_idx].clone();
     let comp = node.get_comp().clone();
 
     let mut updated_nodes_with_edges = instance.nodes_with_edges(node_idx);
@@ -76,16 +74,11 @@ pub fn expand_iter(
             )
             .into_iter()
             .map(move |npc| {
-                let mut path_clone = path.clone();
-                let mut zoomed_node = path_clone[node_idx].get_zoomed_mut();
+                let mut instance_clone = instance.clone();
+                let mut zoomed_node = instance_clone[node_idx].get_zoomed_mut();
                 zoomed_node.npc = npc;
                 zoomed_node.connected_nodes = updated_nodes_with_edges.clone();
-
-                AugmentedPathInstance {
-                    path: path_clone,
-                    non_path_matching_edges: instance.non_path_matching_edges.clone(),
-                    fixed_edge: instance.fixed_edge.clone(),
-                }
+                instance_clone
             });
             Box::new(iter)
         } else {
@@ -95,7 +88,7 @@ pub fn expand_iter(
         // this will be out
         updated_nodes_with_edges.push(comp.fixed_node());
 
-        let in_node_iter = if node_idx < path_len - 1 {
+        let in_node_iter = if !node_idx.is_last() {
             // enumerate all ins
             let comp_clone = comp.clone();
             Box::new(
@@ -107,7 +100,7 @@ pub fn expand_iter(
                             &comp,
                             **n,
                             comp.fixed_node(),
-                            node_idx == path_len - 2,
+                            node_idx.is_prelast(),
                             node.used(),
                         )
                     })
@@ -124,7 +117,7 @@ pub fn expand_iter(
             nodes.sort();
             nodes.dedup();
 
-            let npcs = if node_idx < path_len - 1
+            let npcs = if !node_idx.is_last()
                 && (comp.is_complex()
                     || comp.is_c3()
                     || comp.is_c4()
@@ -144,12 +137,12 @@ pub fn expand_iter(
 
             npcs.into_iter()
                 .map(|npc| {
-                    let mut path_clone = path.clone();
-                    path_clone[node_idx] = SuperNode::Zoomed(ZoomedNode {
+                    let mut instance_clone = instance.clone();
+                    instance_clone[node_idx] = SuperNode::Zoomed(ZoomedNode {
                         comp: comp.clone(),
                         npc,
                         in_node: Some(in_node),
-                        out_node: if node_idx < path_len - 1 {
+                        out_node: if !node_idx.is_last() {
                             Some(comp.fixed_node())
                         } else {
                             None
@@ -158,11 +151,7 @@ pub fn expand_iter(
                         used: node.get_abstract().used,
                     });
 
-                    AugmentedPathInstance {
-                        path: path_clone,
-                        non_path_matching_edges: instance.non_path_matching_edges.clone(),
-                        fixed_edge: instance.fixed_edge.clone(),
-                    }
+                    instance_clone
                 })
                 .collect_vec()
         });
@@ -196,20 +185,20 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
     fn get_enumerator<'a>(&'a self, data: &'a AugmentedPathInstance) -> Self::Enumer<'a> {
         ExpandEnumerator {
             instance: data,
-            hit_comp_idx: data.path.nodes.len() - 1,
+            hit_comp_idx: Pidx::Last,
             last_hit: false,
         }
     }
 
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
-        format!("Expanded {}", item.path.nodes.last().unwrap())
+        format!("Expanded {}", item[Pidx::Last])
     }
 }
 
 impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance, PathContext> for ExpandEnum {
     type Enumer<'a> = ExpandEnumerator<'a>;
 
-    fn msg(&self, data: &SelectedHitInstance) -> String {
+    fn msg(&self, _data: &SelectedHitInstance) -> String {
         String::new()
     }
 
@@ -222,7 +211,7 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance, PathContext> for
     }
 
     fn item_msg(&self, item: &SelectedHitInstance) -> String {
-        format!("Expanded node {}", item.instance.path[item.hit_comp_idx])
+        format!("Expanded node {}", item.instance[item.hit_comp_idx])
     }
 }
 

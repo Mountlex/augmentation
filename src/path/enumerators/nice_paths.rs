@@ -4,7 +4,7 @@ use crate::{
     comps::CompType,
     path::{
         proof::{PathContext, PathNode},
-        AbstractNode, AugmentedPathInstance, PathInstance, SuperNode,
+        AbstractNode, AugmentedPathInstance, SuperNode,
     },
     proof_logic::{Enumerator, EnumeratorTactic},
     util::relabels_nodes_sequentially,
@@ -30,13 +30,12 @@ pub struct PathEnumerator<'a> {
 }
 
 impl<'a> Enumerator<AugmentedPathInstance, PathContext> for PathEnumerator<'a> {
-    fn iter(&self, context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+    fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let comps = &self.input.comps;
-        let path_len = context.path_len;
 
         let iter = itertools::iproduct!(comps.clone(), comps.clone(), comps.clone()).map(
             move |(c1, c2, c3)| {
-                let path = vec![c1, c2, c3, self.input.last_comp.clone()];
+                let path = vec![self.input.last_comp.clone(), c1, c2, c3];
 
                 let mut path_updated = path.iter().map(|n| n.get_comp().clone()).collect_vec();
                 relabels_nodes_sequentially(&mut path_updated, 0);
@@ -56,16 +55,12 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for PathEnumerator<'a> {
                     .map(|(i, c)| -> SuperNode {
                         let nice_pair = match c.get_comp().comp_type() {
                             CompType::Cycle(num) if num <= 4 => true,
-                            CompType::Cycle(num)
-                                if num == 5 && i == path_len - 2 && !c.is_used() =>
-                            {
-                                true
-                            }
+                            CompType::Cycle(num) if num == 5 && i == 1 && !c.is_used() => true,
                             CompType::Complex => true,
                             _ => false,
                         };
 
-                        let in_not_out = if c.get_comp().is_c5() && i == path_len - 2 {
+                        let in_not_out = if c.get_comp().is_c5() && i == 1 {
                             true
                         } else {
                             nice_pair
@@ -80,9 +75,8 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for PathEnumerator<'a> {
                     })
                     .collect();
 
-                let nice_path = PathInstance { nodes };
                 AugmentedPathInstance {
-                    path: nice_path,
+                    nodes,
                     non_path_matching_edges: vec![],
                     fixed_edge: vec![],
                 }
@@ -111,7 +105,7 @@ impl EnumeratorTactic<PathEnumeratorInput, AugmentedPathInstance, PathContext> f
     }
 
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
-        format!("Nice path {}", item.path)
+        format!("Nice path {}", item)
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a PathEnumeratorInput) -> Self::Enumer<'a> {

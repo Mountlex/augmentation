@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use itertools::Itertools;
 
-use crate::{comps::Component, types::Edge, CreditInv, Node};
+use crate::{comps::Component, path::Pidx, types::Edge, CreditInv, Node};
 
 mod enumerators;
 mod proof;
@@ -23,7 +23,7 @@ impl TreeCaseInstance {
     pub fn edges_between(&self, idx: usize) -> Vec<Edge> {
         self.edges
             .iter()
-            .filter(|e| e.between_path_nodes(idx - 1, idx))
+            .filter(|e| e.between_path_nodes(Pidx::N(idx - 1), Pidx::N(idx)))
             .cloned()
             .collect_vec()
     }
@@ -35,7 +35,6 @@ pub struct ContractableCompInstance {
     contr_idx: usize,
     free_nodes: Vec<Node>,
 }
-
 
 impl Display for TreeCaseInstance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

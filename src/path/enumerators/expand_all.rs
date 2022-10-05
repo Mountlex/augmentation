@@ -2,7 +2,7 @@ use crate::{
     path::{
         enumerators::{expand::expand_iter, matching_nodes::matching_nodes_iter},
         proof::PathContext,
-        AugmentedPathInstance, SelectedHitInstance,
+        AugmentedPathInstance, Pidx, SelectedHitInstance,
     },
     proof_logic::{Enumerator, EnumeratorTactic},
 };
@@ -21,16 +21,14 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for ExpandAllEnumerator<
     ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let mut cases: Box<dyn Iterator<Item = AugmentedPathInstance>> =
             Box::new(vec![self.instance.clone()].into_iter());
-        let path_len = context.path_len;
 
-        for (i, _node) in self.instance.path.nodes.iter().enumerate() {
+        for (i, _node) in self.instance.nodes.iter().enumerate() {
             //if !node.is_zoomed() {
             let context = context.clone();
             cases = Box::new(cases.into_iter().flat_map(move |instance| {
-                let i = i;
                 let context = context.clone();
-                matching_nodes_iter(instance, i, path_len)
-                    .flat_map(move |instance| expand_iter(instance, i, context.clone()))
+                matching_nodes_iter(instance, i.into())
+                    .flat_map(move |instance| expand_iter(instance, Pidx::from(i), context.clone()))
             }));
             //}
         }
@@ -59,7 +57,7 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
     }
 
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
-        format!("Nice path {}", item.path)
+        format!("Nice path {}", item)
     }
 }
 
@@ -77,6 +75,6 @@ impl EnumeratorTactic<SelectedHitInstance, AugmentedPathInstance, PathContext> f
     }
 
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
-        format!("Nice path {}", item.path)
+        format!("Nice path {}", item)
     }
 }

@@ -174,7 +174,7 @@ where
                         //     });
 
                         //if !no_bridges {
-                        if    has_at_least_one_bridge(&check_graph) {
+                        if has_at_least_one_bridge(&check_graph) {
                             continue;
                         } else {
                             return MergeResult::Feasible2EC(FeasibleMerge {

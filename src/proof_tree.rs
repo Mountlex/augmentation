@@ -231,7 +231,7 @@ impl ProofNode {
                     new_depth += 1;
                     (0..depth).try_for_each(|_| write!(writer, "  "))?;
                     writeln!(writer, "{}", self.msg())?;
-                } 
+                }
             }
             _ => { // dont print or's
             }

@@ -1,14 +1,11 @@
 use itertools::Itertools;
-use petgraph::{
-    algo::connected_components,
-    visit::{EdgeFiltered, IntoNodeIdentifiers, IntoNodeReferences},
-};
+use petgraph::{algo::connected_components, visit::EdgeFiltered};
 
 use crate::{
     bridges::{is_complex, ComplexCheckResult},
     comps::{edges_of_type, EdgeType},
     path::{
-        proof::PathContext, utils::get_local_merge_graph, AugmentedPathInstance,
+        proof::PathContext, utils::get_local_merge_graph, AugmentedPathInstance, Pidx,
         SelectedHitInstance, ZoomedNode,
     },
     proof_logic::{Statistics, Tactic},
@@ -84,7 +81,9 @@ fn merge(
                         || sell.contains(&(v2, v1))
                     {
                         false
-                    } else if t == &EdgeType::Buyable && !buy.contains(&Edge::new(v1, 0, v2, 0)) {
+                    } else if t == &EdgeType::Buyable
+                        && !buy.contains(&Edge::new(v1, Pidx::Last, v2, Pidx::Last))
+                    {
                         false
                     } else {
                         true
@@ -178,7 +177,6 @@ impl Tactic<AugmentedPathInstance, PathContext> for LocalMergeTactic {
         self.num_calls += 1;
 
         let res = data
-            .path
             .nodes
             .iter()
             .enumerate()
@@ -187,7 +185,7 @@ impl Tactic<AugmentedPathInstance, PathContext> for LocalMergeTactic {
                 if left.is_zoomed() && right.is_zoomed() {
                     let left = left.get_zoomed();
                     let right = right.get_zoomed();
-                    let edges_between = data.fixed_edges_between(left_idx, right_idx);
+                    let edges_between = data.fixed_edges_between(left_idx.into(), right_idx.into());
                     if !edges_between.is_empty() {
                         let mut res = merge(left, right, &edges_between, &context, self.do_complex);
                         if res.eval().success() {
@@ -210,7 +208,7 @@ impl Tactic<AugmentedPathInstance, PathContext> for LocalMergeTactic {
     }
 
     fn precondition(&self, data: &AugmentedPathInstance, _context: &PathContext) -> bool {
-        data.path.nodes.iter().filter(|n| n.is_zoomed()).count() >= 2
+        data.nodes.iter().filter(|n| n.is_zoomed()).count() >= 2
     }
 }
 

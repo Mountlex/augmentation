@@ -2,7 +2,7 @@ use crate::{
     path::{
         proof::PathContext,
         tactics::{cycle_merge::CycleMergeTactic, cycle_rearrange::CycleRearrangeTactic},
-        CycleEdge, PathHit, PseudoCycle, PseudoCycleInstance, SelectedHitInstance,
+        CycleEdge, PathHit, Pidx, PseudoCycle, PseudoCycleInstance, SelectedHitInstance,
     },
     proof_logic::{or, Statistics, Tactic},
 };
@@ -35,19 +35,19 @@ impl Tactic<SelectedHitInstance, PathContext> for CycleMergeViaSwap {
     fn precondition(
         &self,
         data: &SelectedHitInstance,
-        context: &crate::path::proof::PathContext,
+        _context: &crate::path::proof::PathContext,
     ) -> bool {
-        data.hit_comp_idx == context.path_len - 2
+        data.hit_comp_idx.is_prelast()
             && data
                 .instance
-                .fixed_edges_between(context.path_len - 2, context.path_len - 1)
+                .fixed_edges_between(Pidx::Last, Pidx::Prelast)
                 .len()
                 == 2
             && data
                 .instance
                 .non_path_matching_edges
                 .iter()
-                .any(|m| matches!(m.hit(), PathHit::Path(i) if i <= context.path_len - 3))
+                .any(|m| matches!(m.hit(), PathHit::Path(i) if i >= 2.into()))
     }
 
     fn action(
@@ -57,39 +57,42 @@ impl Tactic<SelectedHitInstance, PathContext> for CycleMergeViaSwap {
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
-        let matched = data
-            .instance
-            .fixed_edges_between(context.path_len - 2, context.path_len - 1);
+        let matched = data.instance.fixed_edges_between(Pidx::Last, Pidx::Prelast);
 
-        let m_path = data.instance.path_edge(context.path_len - 1).unwrap();
+        let m_path = data.instance.path_edge(Pidx::Last).unwrap();
         let m_other = matched.iter().find(|e| m_path != **e).unwrap().clone();
 
         let mut new_instance = data.clone();
-        new_instance
-            .instance
-            .swap_path_edge(m_other, context.path_len - 1);
+        new_instance.instance.swap_path_edge(m_other, Pidx::Last);
 
         //dbg!(&new_instance);
         let path_hit = new_instance
             .instance
             .non_path_matching_edges
             .iter()
-            .find(|e| matches!(e.hit(), PathHit::Path(i) if i <= context.path_len - 3))
+            .find(|e| matches!(e.hit(), PathHit::Path(i) if i >= 2.into()))
             .unwrap();
 
         // Build new cycle
         let mut pseudo_nodes = new_instance
             .instance
-            .path
             .nodes
-            .split_at(path_hit.hits_path().unwrap())
-            .1
+            .split_at(path_hit.hits_path().unwrap().raw() + 1)
+            .0
             .to_vec();
 
         // Set in and out for matching edge
-        pseudo_nodes.last_mut().unwrap().get_zoomed_mut().out_node = Some(path_hit.source());
+
+        // set out of first node
         pseudo_nodes
             .first_mut()
+            .unwrap()
+            .get_zoomed_mut()
+            .set_out(path_hit.source());
+
+        // the last node in the cycle is still abstract, so there might be no nice pair now!
+        pseudo_nodes
+            .last_mut()
             .unwrap()
             .get_abstract_mut()
             .nice_pair = false;
@@ -103,12 +106,8 @@ impl Tactic<SelectedHitInstance, PathContext> for CycleMergeViaSwap {
             pseudo_cycle: cycle,
         };
 
-        let mut proof = or(
-            CycleMergeTactic::new(),
-            //DoubleCycleMergeTactic::new(),
-            CycleRearrangeTactic::new(),
-        )
-        .action(&cycle_instance, context);
+        let mut proof = or(CycleMergeTactic::new(), CycleRearrangeTactic::new())
+            .action(&cycle_instance, context);
         if proof.eval().success() {
             self.num_proofs += 1;
         }

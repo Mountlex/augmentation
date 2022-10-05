@@ -60,6 +60,7 @@ impl PseudoCycle {
             .nodes
             .iter()
             .enumerate()
+            .rev()
             .find(|(_, n)| n.get_comp().is_complex())
             .map(|(i, _)| i);
 
@@ -67,7 +68,7 @@ impl PseudoCycle {
             .iter()
             .enumerate()
             .map(|(j, node)| {
-                let lower_complex = first_complex.is_some() && first_complex.unwrap() < j;
+                let lower_complex = first_complex.is_some() && first_complex.unwrap() > j;
 
                 match node {
                     SuperNode::Abstract(abs) => abs.value(credit_inv, lower_complex),

@@ -16,6 +16,7 @@ impl<'a> Enumerator<SelectedHitInstance, PathContext> for ComponentHitEnumerator
     fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = SelectedHitInstance> + '_> {
         let mut matching_edges = self.input.non_path_matching_edges.clone();
         matching_edges.sort_by_key(|m| m.hit());
+
         let mut num_path_matching_edges =
             matching_edges.len() - self.input.all_outside_hits().len();
         let iter = matching_edges

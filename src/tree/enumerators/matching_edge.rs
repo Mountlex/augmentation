@@ -2,6 +2,7 @@ use itertools::Itertools;
 
 use crate::{
     comps::Component,
+    path::Pidx,
     proof_logic::{Enumerator, EnumeratorTactic},
     tree::{TreeCaseInstance, TreeContext},
     types::Edge,
@@ -31,11 +32,11 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
         let right = &self.instance.comps[last_idx];
         let mut left_matched = edges
             .iter()
-            .flat_map(|e| e.endpoint_at(last_idx - 1))
+            .flat_map(|e| e.endpoint_at(Pidx::N(last_idx - 1)))
             .collect_vec();
         let mut right_matched = edges
             .iter()
-            .flat_map(|e| e.endpoint_at(last_idx))
+            .flat_map(|e| e.endpoint_at(Pidx::N(last_idx)))
             .collect_vec();
 
         let mut left_fix = 0;
@@ -94,9 +95,12 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
                                     .chain(std::iter::once(right.fixed_node()).take(right_fix)),
                             )
                         {
-                            instance_clone
-                                .edges
-                                .push(Edge::new(**l, last_idx - 1, r, last_idx));
+                            instance_clone.edges.push(Edge::new(
+                                **l,
+                                Pidx::N(last_idx - 1),
+                                r,
+                                Pidx::N(last_idx),
+                            ));
                         }
                         instance_clone
                     })

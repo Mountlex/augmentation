@@ -1,5 +1,5 @@
 use crate::{
-    path::{proof::PathContext, AugmentedPathInstance, SelectedHitInstance, SuperNode},
+    path::{proof::PathContext, AugmentedPathInstance, Pidx, SelectedHitInstance, SuperNode},
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
 };
@@ -39,18 +39,18 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
     fn action(
         &mut self,
         data: &AugmentedPathInstance,
-        context: &PathContext,
+        _context: &PathContext,
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
         let outside_hits = data.all_outside_hits();
 
         for outside_hit in outside_hits {
-            let source_path_idx = outside_hit.source_path();
-            let source_path_node = &data.path[outside_hit.source_path()];
-
-            if outside_hit.source_path() == context.path_len - 1 {
-                if source_path_node
+            if outside_hit.source_path().is_last() {
+                //   0 --- 1 --- 2 ---
+                //   |
+                //  out
+                if data[Pidx::Last]
                     .get_zoomed()
                     .valid_out(outside_hit.source, true)
                 {
@@ -61,22 +61,16 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
                     );
                 }
 
-                for prelast_edge in
-                    data.fixed_edges_between(context.path_len - 2, context.path_len - 1)
-                {
-                    let prelast_cond =
-                        if let SuperNode::Zoomed(prelast) = &data.path[context.path_len - 2] {
-                            prelast.valid_out(
-                                prelast_edge.endpoint_at(context.path_len - 2).unwrap(),
-                                false,
-                            )
-                        } else {
-                            true
-                        };
+                for prelast_edge in data.fixed_edges_between(Pidx::Last, Pidx::Prelast) {
+                    let prelast_cond = if let SuperNode::Zoomed(prelast) = &data[Pidx::Prelast] {
+                        prelast.valid_out(prelast_edge.endpoint_at(Pidx::Prelast).unwrap(), false)
+                    } else {
+                        true
+                    };
 
                     if prelast_cond
-                        && source_path_node.get_zoomed().valid_in_out(
-                            prelast_edge.endpoint_at(source_path_idx).unwrap(),
+                        && data[Pidx::Last].get_zoomed().valid_in_out(
+                            prelast_edge.endpoint_at(Pidx::Last).unwrap(),
                             outside_hit.source,
                             true,
                         )
@@ -88,21 +82,24 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
                         );
                     }
                 }
-            } else if outside_hit.source_path() == context.path_len - 2 {
-                for cycle_edge in data.fixed_edges_between(1, 3) {
-                    for prelast_edge in
-                        data.fixed_edges_between(context.path_len - 2, context.path_len - 1)
-                    {
-                        if data.path[1]
+            } else if outside_hit.source_path().is_prelast() {
+                //   -------------  <-- cycle_edge
+                //   |           |
+                //   0 --- 1 --- 2 ---
+                //         |
+                //        out
+                for cycle_edge in data.fixed_edges_between(Pidx::Last, Pidx::N(2)) {
+                    for prelast_edge in data.fixed_edges_between(Pidx::Prelast, Pidx::Last) {
+                        if data[Pidx::N(2)]
                             .get_zoomed()
-                            .valid_out(cycle_edge.endpoint_at(1).unwrap(), false)
-                            && data.path[3].get_zoomed().valid_in_out(
-                                cycle_edge.endpoint_at(3).unwrap(),
-                                prelast_edge.endpoint_at(3).unwrap(),
+                            .valid_out(cycle_edge.endpoint_at(Pidx::N(2)).unwrap(), false)
+                            && data[Pidx::Last].get_zoomed().valid_in_out(
+                                cycle_edge.endpoint_at(Pidx::Last).unwrap(),
+                                prelast_edge.endpoint_at(Pidx::Last).unwrap(),
                                 false,
                             )
-                            && data.path[2].get_zoomed().valid_in_out(
-                                prelast_edge.endpoint_at(2).unwrap(),
+                            && data[Pidx::Prelast].get_zoomed().valid_in_out(
+                                prelast_edge.endpoint_at(Pidx::Prelast).unwrap(),
                                 outside_hit.source(),
                                 true,
                             )

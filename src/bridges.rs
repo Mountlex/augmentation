@@ -133,7 +133,6 @@ where
     }
 }
 
-
 pub fn has_at_least_one_bridge<G>(g: G) -> bool
 where
     G: IntoNeighbors + Visitable + IntoNodeIdentifiers + NodeIndexable,

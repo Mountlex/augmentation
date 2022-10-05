@@ -1,7 +1,7 @@
 use itertools::{iproduct, Itertools};
 
 use crate::{
-    path::{proof::PathContext, AugmentedPathInstance, PseudoCycle},
+    path::{proof::PathContext, AugmentedPathInstance, Pidx, PseudoCycle},
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
     Credit,
@@ -39,7 +39,10 @@ impl Tactic<AugmentedPathInstance, PathContext> for DoubleCycleMergeTactic {
     ) -> crate::proof_tree::ProofNode {
         self.num_calls += 1;
 
-        for perm in vec![0, 1, 2, 3].into_iter().permutations(4) {
+        for perm in vec![Pidx::Last, Pidx::Prelast, Pidx::N(2), Pidx::N(3)]
+            .into_iter()
+            .permutations(4)
+        {
             let first = perm[0];
             let edges = vec![perm.clone(), vec![first]]
                 .concat()
@@ -48,7 +51,7 @@ impl Tactic<AugmentedPathInstance, PathContext> for DoubleCycleMergeTactic {
                 .collect_vec();
 
             for (e1, e2, e3, e4) in iproduct!(&edges[0], &edges[1], &edges[2], &edges[3]) {
-                let mut cycle_nodes = perm.iter().map(|i| data.path[*i].clone()).collect_vec();
+                let mut cycle_nodes = perm.iter().map(|i| data[*i].clone()).collect_vec();
 
                 cycle_nodes[0]
                     .get_zoomed_mut()
@@ -91,7 +94,10 @@ impl Tactic<AugmentedPathInstance, PathContext> for DoubleCycleMergeTactic {
             }
         }
 
-        for perm in vec![0, 1, 2, 3].into_iter().permutations(3) {
+        for perm in vec![Pidx::Last, Pidx::Prelast, Pidx::N(2), Pidx::N(3)]
+            .into_iter()
+            .permutations(3)
+        {
             let first = perm[0];
             let edges = vec![perm.clone(), vec![first]]
                 .concat()
@@ -100,7 +106,7 @@ impl Tactic<AugmentedPathInstance, PathContext> for DoubleCycleMergeTactic {
                 .collect_vec();
 
             for (e1, e2, e3) in iproduct!(&edges[0], &edges[1], &edges[2]) {
-                let mut cycle_nodes = perm.iter().map(|i| data.path[*i].clone()).collect_vec();
+                let mut cycle_nodes = perm.iter().map(|i| data[*i].clone()).collect_vec();
 
                 cycle_nodes[0]
                     .get_zoomed_mut()

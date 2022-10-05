@@ -331,7 +331,7 @@ impl Component {
 
 fn is_adjacent_in_cycle(nodes: &[Node], v1: &Node, v2: &Node) -> bool {
     if !nodes.contains(v1) || !nodes.contains(v2) || v1.is_comp() || v2.is_comp() {
-        return false
+        return false;
     }
     // Assumes that nodes are numbered sequentially from nodes[0],...,nodes[k]
 

@@ -1,5 +1,5 @@
 use crate::{
-    path::{proof::PathContext, AugmentedPathInstance, MatchingEdge, PathHit},
+    path::{proof::PathContext, AugmentedPathInstance, MatchingEdge, PathHit, Pidx},
     proof_logic::{Enumerator, EnumeratorTactic},
 };
 
@@ -13,18 +13,18 @@ pub struct MatchingHitEnumerator<'a> {
 impl<'a> Enumerator<AugmentedPathInstance, PathContext> for MatchingHitEnumerator<'a> {
     fn iter(&self, context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let path_len = context.path_len;
-        let comp = self.instance.path.last_comp();
+        let comp = self.instance[Pidx::Last].get_comp();
 
         let mut targets = vec![PathHit::Outside];
-        for i in 0..path_len - 1 {
-            targets.push(PathHit::Path(i));
+        for i in 1..path_len {
+            targets.push(PathHit::Path(i.into()));
         }
 
         let instance = self.instance.clone();
 
         let iter = self
             .instance
-            .unmatched_nodes(path_len - 1)
+            .unmatched_nodes(Pidx::Last)
             .into_iter()
             .filter(|n| comp.is_large() || n != &comp.fixed_node())
             .flat_map(move |source| {
@@ -33,7 +33,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for MatchingHitEnumerato
                     let mut instance_clone = instance_clone.clone();
                     instance_clone
                         .non_path_matching_edges
-                        .push(MatchingEdge::new(path_len - 1, source, hit));
+                        .push(MatchingEdge::new(Pidx::Last, source, hit));
                     instance_clone
                 })
             });
