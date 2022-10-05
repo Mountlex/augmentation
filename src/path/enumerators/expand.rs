@@ -119,17 +119,14 @@ pub fn expand_iter(
         };
 
         
-        let comp = comp.clone();
-        let node = node.clone();
-
         let iter: Box<dyn Iterator<Item = AugmentedPathInstance>> =
         Box::new(in_nodes.into_iter().flat_map(move |in_node| {
             let iter: Box<dyn Iterator<Item = AugmentedPathInstance>> = if !node_idx.is_last() {
                     let comp_filter = comp.clone();
                     let node_filter = node.clone();
                     let node_map = node.clone();
-                    let instance = instance.clone();
                     let comp_map = comp.clone();
+                    let instance = instance.clone();
                     let nodes =  updated_nodes_with_edges.clone();
 
                     Box::new(
@@ -147,10 +144,8 @@ pub fn expand_iter(
                                 )
                             })
                             .flat_map(move |out_node| {
-                                let node = node_map.clone();
-                                let comp = comp_map.clone();
+                                
                                 let instance = instance.clone();
-
 
                                 let mut nodes = nodes.clone();
                                 nodes.push(in_node);
@@ -158,13 +153,13 @@ pub fn expand_iter(
                                 nodes.sort();
                                 nodes.dedup();
 
-                                let npcs = if comp.is_complex()
-                                    || comp.is_c3()
-                                    || comp.is_c4()
-                                    || (comp.is_c5() && !node.used())
+                                let npcs = if comp_map.is_complex()
+                                    || comp_map.is_c3()
+                                    || comp_map.is_c4()
+                                    || (comp_map.is_c5() && !node_map.used())
                                 {
                                     comp_npcs(
-                                        &node,
+                                        &node_map,
                                         &nodes,
                                         &NicePairConfig {
                                             nice_pairs: vec![(out_node, in_node)],
@@ -172,18 +167,21 @@ pub fn expand_iter(
                                         &vec![out_node, in_node],
                                     )
                                 } else {
-                                    comp_npcs(&node, &nodes, &NicePairConfig::empty(), &vec![])
+                                    comp_npcs(&node_map, &nodes, &NicePairConfig::empty(), &vec![])
                                 };
+
+                                let comp_map_map = comp_map.clone();
+                                let node_map_map = node_map.clone();
 
                                 npcs.into_iter().map(move |npc| {
                                     let mut instance_clone = instance.clone();
                                     instance_clone[node_idx] = SuperNode::Zoomed(ZoomedNode {
-                                        comp: comp.clone(),
+                                        comp: comp_map_map.clone(),
                                         npc,
                                         in_node: Some(in_node),
                                         out_node: Some(out_node),
                                         connected_nodes: nodes.clone(),
-                                        used: node.get_abstract().used,
+                                        used: node_map_map.get_abstract().used,
                                     });
 
                                     instance_clone

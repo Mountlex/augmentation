@@ -97,8 +97,8 @@ pub fn matching_nodes_iter(
             })
             .map(move |prelast_matched| {
                 let mut instance = instance.clone();
-                for (prelast, right) in prelast_matched.into_iter().zip(matching_edges.iter()) {
-                    instance.fix_matching_edge(&right, hit_comp_idx, prelast);
+                for (prelast, matching_edge) in prelast_matched.into_iter().zip(matching_edges.iter()) {
+                    instance.fix_matching_edge(&matching_edge, hit_comp_idx, prelast);
                 }
                 instance
             });
@@ -110,10 +110,10 @@ pub fn matching_nodes_iter(
         let iter = hit_comp
             .matching_permutations(matching_edges.len())
             .into_iter()
-            .map(move |left_matched| {
+            .map(move |hit_matched| {
                 let mut instance = instance.clone();
-                for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
-                    instance.fix_matching_edge(&right, hit_comp_idx, left);
+                for (hit_node, matching_edge) in hit_matched.into_iter().zip(matching_edges.iter()) {
+                    instance.fix_matching_edge(&matching_edge, hit_comp_idx, hit_node);
                 }
                 instance
             });

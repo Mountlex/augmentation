@@ -2,7 +2,7 @@ use itertools::Itertools;
 use petgraph::{algo::connected_components, visit::EdgeFiltered};
 
 use crate::{
-    bridges::{has_at_least_one_bridge, is_complex, ComplexCheckResult},
+    bridges::{is_complex, ComplexCheckResult},
     comps::{edges_of_type, EdgeType},
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
@@ -176,7 +176,7 @@ where
                         //     });
 
                         //if !no_bridges {
-                        if has_at_least_one_bridge(&check_graph) {
+                        if is_complex(&check_graph, &vec![], true).has_bridges() {
                             continue;
                         } else {
                             return MergeResult::Feasible2EC(FeasibleMerge {
@@ -192,7 +192,7 @@ where
                     continue;
                 }
             } else {
-                match is_complex(&check_graph, &white_vertices) {
+                match is_complex(&check_graph, &white_vertices, false) {
                     ComplexCheckResult::Complex(bridges, black_vertices) => {
                         let blocks_graph = EdgeFiltered::from_fn(&check_graph, |(v, u, _)| {
                             !bridges.contains(&(v, u)) && !bridges.contains(&(u, v))

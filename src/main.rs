@@ -149,7 +149,7 @@ fn prove_local(tree: Tree) {
         complex_tree(),
     ];
 
-    let leaf_comps = vec![c4(), c5(), c6(), large(), complex_tree(), complex_path()];
+    let leaf_comps = vec![large(), complex_tree(), complex_path(), c4(), c5(), c6()];
 
     if tree.parallel {
         leaf_comps.into_par_iter().for_each(|leaf_comp| {

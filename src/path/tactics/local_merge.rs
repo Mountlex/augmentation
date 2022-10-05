@@ -107,7 +107,7 @@ fn merge(
                 let white_vertices =
                     vec![left_comp.white_nodes(), right_comp.white_nodes()].concat();
 
-                match is_complex(&check_graph, &white_vertices) {
+                match is_complex(&check_graph, &white_vertices, false) {
                     ComplexCheckResult::Complex(bridges, black_vertices) => {
                         let blocks_graph = EdgeFiltered::from_fn(&check_graph, |(v, u, _)| {
                             !bridges.contains(&(v, u)) && !bridges.contains(&(u, v))
