@@ -162,7 +162,19 @@ where
             if !one_is_complex {
                 if total_plus_sell - buy_credits >= req_credits {
                     if connected_components(&check_graph) == 1 {
-                        if has_at_least_one_bridge(&check_graph) {
+                        // let no_bridges = check_graph
+                        //     .0
+                        //     .all_edges()
+                        //     .filter(|e| (check_graph.1)(*e))
+                        //     .all(|(e1, e2, _)| {
+                        //         let g = EdgeFiltered::from_fn(&check_graph, |(v1, v2, _)| {
+                        //             !((v1 == e1 && v2 == e2) || (v1 == e2 && v2 == e1))
+                        //         });
+                        //         connected_components(&g) == 1
+                        //     });
+
+                        //if !no_bridges {
+                        if    has_at_least_one_bridge(&check_graph) {
                             continue;
                         } else {
                             return MergeResult::Feasible2EC(FeasibleMerge {

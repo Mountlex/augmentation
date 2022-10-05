@@ -150,9 +150,9 @@ fn prove_local(tree: Tree) {
     ];
 
     let leaf_comps = vec![
+        c4(), 
         complex_path(), 
         complex_tree(), 
-        c4(), 
         c5(), 
         c6(),
         large(), 
