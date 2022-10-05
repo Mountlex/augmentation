@@ -59,7 +59,7 @@ pub fn expand_iter(
     let node = instance[node_idx].clone();
     let comp = node.get_comp().clone();
 
-    let mut updated_nodes_with_edges = instance.nodes_with_edges(node_idx);
+    let updated_nodes_with_edges = instance.nodes_with_edges(node_idx);
 
     if node.is_zoomed() {
         let comp_conn_nodes = &node.get_zoomed().connected_nodes;
@@ -85,76 +85,140 @@ pub fn expand_iter(
             Box::new(vec![instance].into_iter())
         }
     } else {
-        // this will be out
-        updated_nodes_with_edges.push(comp.fixed_node());
+        // Expand node and enumerate in and out
 
-        let in_node_iter = if !node_idx.is_last() {
-            // enumerate all ins
-            let comp_clone = comp.clone();
-            Box::new(
-                comp_clone
-                    .possible_in_out_nodes()
-                    .into_iter()
-                    .filter(|n| {
-                        valid_in_out(
-                            &comp,
-                            **n,
-                            comp.fixed_node(),
-                            node_idx.is_prelast(),
-                            node.used(),
-                        )
-                    })
-                    .cloned()
-                    .collect_vec(),
-            )
+        let out_nodes = if let Some(fixed) = comp.fixed_node() {
+            vec![fixed] // we assume here that if comp has a fixed node it was not used for any matching hit node.
         } else {
-            Box::new(vec![comp.fixed_node()])
+            if let Some(left) = node_idx.left() {
+                let matching_endpoints_from_right = instance
+                    .fixed_edges_between(node_idx, left)
+                    .into_iter()
+                    .flat_map(|e| e.endpoint_at(node_idx))
+                    .collect_vec();
+
+                comp.possible_in_out_nodes()
+                    .into_iter()
+                    .filter(|&n| !matching_endpoints_from_right.contains(n))
+                    .cloned()
+                    .collect_vec()
+            } else {
+                comp.possible_in_out_nodes().to_vec()
+            }
         };
 
-        let iter = in_node_iter.into_iter().flat_map(move |in_node| {
-            let mut nodes = updated_nodes_with_edges.clone();
-            nodes.push(in_node);
-            nodes.sort();
-            nodes.dedup();
 
-            let npcs = if !node_idx.is_last()
-                && (comp.is_complex()
-                    || comp.is_c3()
-                    || comp.is_c4()
-                    || (comp.is_c5() && !node.used()))
-            {
-                comp_npcs(
-                    &node,
-                    &nodes,
-                    &NicePairConfig {
-                        nice_pairs: vec![(comp.fixed_node(), in_node)],
-                    },
-                    &vec![comp.fixed_node(), in_node],
-                )
+        let in_nodes = if !node_idx.is_last() {
+            comp.possible_in_out_nodes().to_vec()
+        } else {
+            if let Some(fixed) = comp.fixed_node() {
+                vec![fixed]
             } else {
-                comp_npcs(&node, &nodes, &NicePairConfig::empty(), &vec![])
-            };
+                comp.possible_in_out_nodes().to_vec()
+            }
+        };
 
-            npcs.into_iter()
-                .map(|npc| {
-                    let mut instance_clone = instance.clone();
-                    instance_clone[node_idx] = SuperNode::Zoomed(ZoomedNode {
-                        comp: comp.clone(),
-                        npc,
-                        in_node: Some(in_node),
-                        out_node: if !node_idx.is_last() {
-                            Some(comp.fixed_node())
-                        } else {
-                            None
-                        },
-                        connected_nodes: nodes.clone(),
-                        used: node.get_abstract().used,
-                    });
+        
+        let comp = comp.clone();
+        let node = node.clone();
 
-                    instance_clone
-                })
-                .collect_vec()
-        });
+        let iter: Box<dyn Iterator<Item = AugmentedPathInstance>> =
+        Box::new(in_nodes.into_iter().flat_map(move |in_node| {
+            let iter: Box<dyn Iterator<Item = AugmentedPathInstance>> = if !node_idx.is_last() {
+                    let comp_filter = comp.clone();
+                    let node_filter = node.clone();
+                    let node_map = node.clone();
+                    let instance = instance.clone();
+                    let comp_map = comp.clone();
+                    let nodes =  updated_nodes_with_edges.clone();
+
+                    Box::new(
+                        // case where we not consider the last node --> we need an out node
+                        out_nodes
+                            .clone()
+                            .into_iter()
+                            .filter(move |out_node| {
+                                valid_in_out(
+                                    &comp_filter,
+                                    in_node,
+                                    *out_node,
+                                    node_idx.is_prelast(),
+                                    node_filter.used(),
+                                )
+                            })
+                            .flat_map(move |out_node| {
+                                let node = node_map.clone();
+                                let comp = comp_map.clone();
+                                let instance = instance.clone();
+
+
+                                let mut nodes = nodes.clone();
+                                nodes.push(in_node);
+                                nodes.push(out_node);
+                                nodes.sort();
+                                nodes.dedup();
+
+                                let npcs = if comp.is_complex()
+                                    || comp.is_c3()
+                                    || comp.is_c4()
+                                    || (comp.is_c5() && !node.used())
+                                {
+                                    comp_npcs(
+                                        &node,
+                                        &nodes,
+                                        &NicePairConfig {
+                                            nice_pairs: vec![(out_node, in_node)],
+                                        },
+                                        &vec![out_node, in_node],
+                                    )
+                                } else {
+                                    comp_npcs(&node, &nodes, &NicePairConfig::empty(), &vec![])
+                                };
+
+                                npcs.into_iter().map(move |npc| {
+                                    let mut instance_clone = instance.clone();
+                                    instance_clone[node_idx] = SuperNode::Zoomed(ZoomedNode {
+                                        comp: comp.clone(),
+                                        npc,
+                                        in_node: Some(in_node),
+                                        out_node: Some(out_node),
+                                        connected_nodes: nodes.clone(),
+                                        used: node.get_abstract().used,
+                                    });
+
+                                    instance_clone
+                                })
+                            }),
+                    )
+                } else {
+                    let instance = instance.clone();
+                    let comp = comp.clone();
+                    let node = node.clone();
+
+                    // last node -- we only need in node
+                    let mut nodes = updated_nodes_with_edges.clone();
+                    nodes.push(in_node);
+                    nodes.sort();
+                    nodes.dedup();
+
+                    let npcs = comp_npcs(&node, &nodes, &NicePairConfig::empty(), &vec![]);
+
+                    Box::new(npcs.into_iter().map(move |npc| {
+                        let mut instance_clone = instance.clone();
+                        instance_clone[node_idx] = SuperNode::Zoomed(ZoomedNode {
+                            comp: comp.clone(),
+                            npc,
+                            in_node: Some(in_node),
+                            out_node: None,
+                            connected_nodes: nodes.clone(),
+                            used: node.get_abstract().used,
+                        });
+
+                        instance_clone
+                    }))
+                };
+                iter
+            }));
         Box::new(iter)
     }
 }

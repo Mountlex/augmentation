@@ -160,7 +160,6 @@ fn prove_local(tree: Tree) {
                 tree.output_dir.clone(),
                 tree.output_depth,
                 tree.sc,
-                tree.parallel,
             )
         });
     } else {
@@ -172,7 +171,6 @@ fn prove_local(tree: Tree) {
                 tree.output_dir.clone(),
                 tree.output_depth,
                 tree.sc,
-                tree.parallel,
             )
         }
     }
@@ -192,13 +190,13 @@ fn prove_path(path: Path) {
     ];
 
     let last_comps = vec![
+        complex_path(),
+        complex_tree(),
         c3(),
         c4(),
         c5(),
         c6(),
         large(),
-        complex_path(),
-        complex_tree(),
     ];
 
     prove_nice_path_progress(
@@ -212,7 +210,7 @@ fn prove_path(path: Path) {
     )
 }
 
-fn setup_logging(verbose: bool) -> Result<(), fern::InitError> {
+fn setup_logging(_verbose: bool) -> Result<(), fern::InitError> {
     let base_config = fern::Dispatch::new();
 
     // Separate file config so we can include year, month and day in file logs

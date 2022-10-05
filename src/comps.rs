@@ -203,15 +203,15 @@ impl Component {
         }
     }
 
-    pub fn fixed_node(&self) -> Node {
+    pub fn fixed_node(&self) -> Option<Node> {
         match self {
-            Component::C6(nodes) => nodes[0],
-            Component::C5(nodes) => nodes[0],
-            Component::C4(nodes) => nodes[0],
-            Component::C3(nodes) => nodes[0],
-            Component::Large(node) => *node,
-            Component::ComplexPath(_, blacks) => blacks[3],
-            Component::ComplexTree(_, blacks) => blacks[3],
+            Component::C6(nodes) => Some(nodes[0]),
+            Component::C5(nodes) => Some(nodes[0]),
+            Component::C4(nodes) => Some(nodes[0]),
+            Component::C3(nodes) => Some(nodes[0]),
+            Component::Large(node) => Some(*node),
+            Component::ComplexPath(_, _) => None,
+            Component::ComplexTree(_, _) => None,
         }
     }
 

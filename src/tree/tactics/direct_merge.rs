@@ -80,9 +80,10 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
                 self.num_proofs += 1;
                 return ProofNode::new_leaf(
                     format!(
-                        "Direct merge to 2EC possible [bought = {}, sold = {}]",
+                        "Direct merge to 2EC possible [bought = {}, sold = {}, new = {}]",
                         merge.bought_edges.iter().join(", "),
-                        merge.sold_edges.iter().join(", ")
+                        merge.sold_edges.iter().join(", "),
+                        merge.new_comp_credit
                     ),
                     true,
                 );
@@ -91,9 +92,10 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
                 self.num_proofs += 1;
                 return ProofNode::new_leaf(
                     format!(
-                        "Direct merge to complex possible [bought = {}, sold = {}]",
+                        "Direct merge to complex possible [bought = {}, sold = {}, new = {}]",
                         merge.bought_edges.iter().join(", "),
-                        merge.sold_edges.iter().join(", ")
+                        merge.sold_edges.iter().join(", "),
+                        merge.new_comp_credit
                     ),
                     true,
                 );

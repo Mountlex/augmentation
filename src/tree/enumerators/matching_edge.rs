@@ -43,14 +43,18 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
         let mut right_fix = 0;
         if last_idx == 1 {
             // left is leaf
-            if !left_matched.contains(&left.fixed_node()) {
-                left_matched.push(left.fixed_node());
-                left_fix += 1;
+            if let Some(fixed) = left.fixed_node() {
+                if !left_matched.contains(&fixed) {
+                    left_matched.push(fixed);
+                    left_fix += 1;
+                }
             }
         }
-        if !right_matched.contains(&right.fixed_node()) {
-            right_matched.push(right.fixed_node());
-            right_fix += 1;
+        if let Some(fixed) = right.fixed_node() {
+            if !right_matched.contains(&fixed) {
+                right_matched.push(fixed);
+                right_fix += 1;
+            }
         }
 
         let left_free: Box<dyn Iterator<Item = &Node>> = if let Component::Large(n) = left {
@@ -88,15 +92,17 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
                         let mut instance_clone = instance.clone();
                         for (l, r) in lefts
                             .iter()
-                            .chain(std::iter::once(&&left.fixed_node()).take(left_fix))
+                            .copied()
+                            .copied()
+                            .chain(std::iter::once(left.fixed_node()).take(left_fix).map(|n| n.unwrap()))
                             .zip(
                                 rights
                                     .into_iter()
-                                    .chain(std::iter::once(right.fixed_node()).take(right_fix)),
+                                    .chain(std::iter::once(right.fixed_node()).take(right_fix).map(|n| n.unwrap())),
                             )
                         {
                             instance_clone.edges.push(Edge::new(
-                                **l,
+                                l,
                                 Pidx::N(last_idx - 1),
                                 r,
                                 Pidx::N(last_idx),

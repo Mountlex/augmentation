@@ -26,7 +26,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for MatchingHitEnumerato
             .instance
             .unmatched_nodes(Pidx::Last)
             .into_iter()
-            .filter(|n| comp.is_large() || n != &comp.fixed_node())
+            .filter(|n| comp.is_large() || *n != self.instance[Pidx::Last].get_zoomed().in_node.unwrap())
             .flat_map(move |source| {
                 let instance_clone = instance.clone();
                 targets.clone().into_iter().map(move |hit| {

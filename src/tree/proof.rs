@@ -23,7 +23,6 @@ pub fn prove_tree_case(
     output_dir: PathBuf,
     output_depth: usize,
     sc: bool,
-    parallel: bool,
 ) {
     std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
 
@@ -150,6 +149,7 @@ struct CountTactic {
 }
 
 impl CountTactic {
+    #[allow(dead_code)]
     fn new(name: String) -> Self {
         Self { name, num_calls: 0 }
     }

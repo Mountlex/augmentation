@@ -11,7 +11,7 @@ pub trait EnumeratorTactic<I, O, C> {
     fn msg(&self, data_in: &I) -> String;
     fn get_enumerator<'a>(&'a self, data: &'a I) -> Self::Enumer<'a>;
     fn item_msg(&self, item: &O) -> String;
-    fn precondition(&self, data: &I, context: &C) -> bool {
+    fn precondition(&self, _data: &I, _context: &C) -> bool {
         true
     }
 }
@@ -21,7 +21,7 @@ pub trait Enumerator<O, C> {
 }
 
 pub trait Tactic<I, C> {
-    fn precondition(&self, data: &I, context: &C) -> bool {
+    fn precondition(&self, _data: &I, _context: &C) -> bool {
         true
     }
 
@@ -137,6 +137,7 @@ pub fn or6<I, A1, A2, A3, A4, A5, A6>(
     or5(tactic1, tactic2, tactic3, tactic4, or(tactic5, tactic6))
 }
 
+#[allow(dead_code)]
 pub fn or7<I, A1, A2, A3, A4, A5, A6, A7>(
     tactic1: A1,
     tactic2: A2,

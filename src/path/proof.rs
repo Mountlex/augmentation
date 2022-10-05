@@ -179,51 +179,57 @@ fn prove_last_node(
 fn get_path_tactic(sc: bool) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics {
     all_sc(
         sc,
-        MatchingHitEnum,
+        ExpandLastEnum,
         all_sc(
             sc,
-            ExpandLastEnum,
-            or3(
-                LongerPathTactic::new(),
-                any(
-                    PseudoCyclesEnum,
-                    or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
-                ),
-                all_sc(
-                    sc,
-                    MatchingHitEnum,
+            MatchingHitEnum,
+            all_sc(
+                sc,
+                ExpandLastEnum,
+                or3(
+                    LongerPathTactic::new(),
+                    any(
+                        PseudoCyclesEnum,
+                        or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
+                    ),
                     all_sc(
                         sc,
-                        ExpandLastEnum,
-                        or6(
-                            CountTactic::new("AugmentedPathInstances".into()),
-                            LongerPathTactic::new(),
-                            ContractabilityTactic::new(),
-                            any(
-                                PseudoCyclesEnum,
-                                or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
-                            ),
-                            any(
-                                ComponentHitEnum,
-                                all(
-                                    MatchingNodesEnum,
+                        MatchingHitEnum,
+                        all_sc(
+                            sc,
+                            ExpandLastEnum,
+                            or6(
+                                CountTactic::new("AugmentedPathInstances".into()),
+                                LongerPathTactic::new(),
+                                ContractabilityTactic::new(),
+                                any(
+                                    PseudoCyclesEnum,
+                                    or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
+                                ),
+                                any(
+                                    ComponentHitEnum,
                                     all(
-                                        ExpandEnum,
-                                        or6(
-                                            PendantRewireTactic::new(),
-                                            LocalMergeTactic::new(true),
-                                            any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                            LongerPathTactic::new(),
-                                            CycleMergeViaSwap::new(),
-                                            ifcond(
-                                                |instance: &SelectedHitInstance| instance.last_hit,
-                                                tryhard_mode(),
+                                        MatchingNodesEnum,
+                                        all(
+                                            ExpandEnum,
+                                            or6(
+                                                PendantRewireTactic::new(),
+                                                LocalMergeTactic::new(true),
+                                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                                                LongerPathTactic::new(),
+                                                CycleMergeViaSwap::new(),
+                                                ifcond(
+                                                    |instance: &SelectedHitInstance| {
+                                                        instance.last_hit
+                                                    },
+                                                    tryhard_mode(),
+                                                ),
                                             ),
                                         ),
                                     ),
                                 ),
+                                TacticsExhausted::new(),
                             ),
-                            TacticsExhausted::new(),
                         ),
                     ),
                 ),

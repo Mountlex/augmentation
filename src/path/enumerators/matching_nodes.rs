@@ -86,15 +86,19 @@ pub fn matching_nodes_iter(
         let iter = hit_comp
             .matching_permutations(matching_edges.len())
             .into_iter()
-            .filter(move |left_matched| {
-                left_matched
+            .filter(move |prelast_matched| {
+                if let Some(future_out) = hit_comp.fixed_node() {
+                    prelast_matched
                     .iter()
-                    .all(|matched| *matched != hit_comp.fixed_node())
+                    .all(|matched| *matched != future_out)
+                } else {
+                    true
+                }
             })
-            .map(move |left_matched| {
+            .map(move |prelast_matched| {
                 let mut instance = instance.clone();
-                for (left, right) in left_matched.into_iter().zip(matching_edges.iter()) {
-                    instance.fix_matching_edge(&right, hit_comp_idx, left);
+                for (prelast, right) in prelast_matched.into_iter().zip(matching_edges.iter()) {
+                    instance.fix_matching_edge(&right, hit_comp_idx, prelast);
                 }
                 instance
             });

@@ -12,31 +12,33 @@ impl Outcome {
         !matches!(self, Outcome::False)
     }
 
+
+    #[allow(dead_code)]
     pub fn tight(&self) -> bool {
         matches!(self, Outcome::Tight)
     }
 }
 
 #[derive(Clone)]
-struct InnerNode {
+pub struct InnerNode {
     msg: String,
     outcome: Option<Outcome>,
     childs: Vec<ProofNode>,
 }
 #[derive(Clone)]
-struct OrNode {
+pub struct OrNode {
     outcome: Option<Outcome>,
     child1: Box<ProofNode>,
     child2: Box<ProofNode>,
 }
 #[derive(Clone)]
-struct InfoNode {
+pub struct InfoNode {
     msg: String,
     outcome: Option<Outcome>,
     child: Box<ProofNode>,
 }
 #[derive(Clone)]
-struct LeafNode {
+pub struct LeafNode {
     msg: String,
     outcome: Outcome,
 }
@@ -120,6 +122,7 @@ impl ProofNode {
         }
     }
 
+    #[allow(dead_code)]
     pub fn success(&self) -> bool {
         match self {
             ProofNode::Leaf(node) => node.outcome.success(),

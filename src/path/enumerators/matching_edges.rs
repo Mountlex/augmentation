@@ -33,7 +33,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
             instance[Pidx::N(2)].get_comp().matching_nodes(),
         ]
         .concat();
-        left_nodes.drain_filter(|node| *node == instance[Pidx::N(2)].get_comp().fixed_node());
+        left_nodes.drain_filter(|node| *node == instance[Pidx::N(2)].get_zoomed().out_node.unwrap());
 
         let prelast_nodes = instance[Pidx::Prelast].get_comp().matching_nodes();
         let last_nodes = instance[Pidx::Last].get_comp().possible_in_out_nodes();
@@ -97,10 +97,15 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
                         .filter(move |left| {
                             let c = instance[Pidx::N(2)].get_comp();
 
-                            !(left_used_nodes
-                                .iter()
-                                .all(|u| c.is_adjacent(u, &c.fixed_node()))
-                                && c.is_adjacent(left, &c.fixed_node()))
+                            !(left_used_nodes.iter().all(|u| {
+                                c.is_adjacent(
+                                    u,
+                                    &instance[Pidx::N(2)].get_zoomed().out_node.unwrap(),
+                                )
+                            }) && c.is_adjacent(
+                                left,
+                                &instance[Pidx::N(2)].get_zoomed().out_node.unwrap(),
+                            ))
                         })
                         .map(|left| Hit::Node(left)),
                 );
