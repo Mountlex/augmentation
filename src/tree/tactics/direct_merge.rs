@@ -14,20 +14,22 @@ use crate::{
 pub struct DirectMerge {
     num_calls: usize,
     num_proofs: usize,
+    name: String,
 }
 
 impl DirectMerge {
-    pub fn new() -> Self {
+    pub fn new(name: String) -> Self {
         Self {
             num_calls: 0,
             num_proofs: 0,
+            name,
         }
     }
 }
 
 impl Statistics for DirectMerge {
     fn print_stats(&self) {
-        println!("Direct merge {} / {}", self.num_proofs, self.num_calls);
+        println!("{} {} / {}", self.name, self.num_proofs, self.num_calls);
     }
 }
 
