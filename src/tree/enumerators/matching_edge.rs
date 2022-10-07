@@ -57,14 +57,14 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
             }
         }
 
-        let left_free: Box<dyn Iterator<Item = &Node>> = if let Component::Large(n) = left {
-            Box::new(std::iter::repeat(n).take(self.size))
+        let left_free: Vec<Node> = if let Component::Large(n) = left {
+            vec![*n; self.size]
         } else {
-            Box::new(
-                left.matching_nodes()
-                    .into_iter()
-                    .filter(move |n| !left_matched.contains(n)),
-            )
+            left.matching_nodes()
+                .into_iter()
+                .filter(move |n| !left_matched.contains(n))
+                .cloned()
+                .collect()
         };
 
         let right_free: Vec<Node> = if let Component::Large(n) = right {
@@ -78,42 +78,173 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
                 .collect_vec()
         };
 
-        let instance = self.instance.clone();
+        let iter_data = IterData {
+            left_fixed: left.fixed_node(),
+            left_free: left_free,
+            left_fix,
+            right_fixed: right.fixed_node(),
+            right_free: right_free,
+            right_fix,
+            instance: self.instance.clone(),
+        };
 
-        let iter = left_free
-            .permutations(self.size - left_fix)
-            .flat_map(move |lefts| {
-                let right_free = right_free.clone();
-                let instance = instance.clone();
-                right_free
-                    .into_iter()
-                    .permutations(self.size - right_fix)
-                    .map(move |rights| {
-                        let mut instance_clone = instance.clone();
-                        for (l, r) in lefts
-                            .iter()
-                            .copied()
-                            .copied()
-                            .chain(std::iter::once(left.fixed_node()).take(left_fix).map(|n| n.unwrap()))
-                            .zip(
-                                rights
-                                    .into_iter()
-                                    .chain(std::iter::once(right.fixed_node()).take(right_fix).map(|n| n.unwrap())),
-                            )
-                        {
-                            instance_clone.edges.push(Edge::new(
-                                l,
-                                Pidx::N(last_idx - 1),
-                                r,
-                                Pidx::N(last_idx),
-                            ));
-                        }
-                        instance_clone
-                    })
-            });
+        let iter = match (left, right, left_fix == 1, right_fix == 1) {
+            (Component::Large(_), Component::Large(_), _, _) => {
+                self.construct_iter(IterType::Fixed, IterType::Fixed, iter_data)
+            }
+            (Component::Large(_), _, _, _) => {
+                self.construct_iter(IterType::Fixed, IterType::Comb, iter_data)
+            }
+            (_, Component::Large(_), _, _) => {
+                self.construct_iter(IterType::Comb, IterType::Fixed, iter_data)
+            }
+            (_, _, true, false) => self.construct_iter(IterType::Comb, IterType::Perm, iter_data),
+            (_, _, false, true) => self.construct_iter(IterType::Perm, IterType::Comb, iter_data),
+            (_, _, _, _) => self.construct_iter(IterType::Perm, IterType::Comb, iter_data),
+        };
 
         Box::new(iter)
     }
+}
+
+enum IterType {
+    Fixed,
+    Perm,
+    Comb,
+}
+
+#[derive(Clone)]
+struct IterData {
+    left_fixed: Option<Node>,
+    left_free: Vec<Node>,
+    left_fix: usize,
+    right_fixed: Option<Node>,
+    right_free: Vec<Node>,
+    right_fix: usize,
+    instance: TreeCaseInstance,
+}
+
+impl MatchingEnumerator<'_> {
+    fn construct_iter(
+        &self,
+        left_type: IterType,
+        right_type: IterType,
+        data: IterData,
+    ) -> Box<dyn Iterator<Item = TreeCaseInstance>> {
+        match (left_type, right_type) {
+            (IterType::Fixed, IterType::Fixed) => {
+                assert!(data.left_free.len() == self.size);
+                assert!(data.right_free.len() == self.size);
+                Box::new(
+                    std::iter::once(
+                        construct_instance(data.left_free.clone(), data.right_free.clone(), data)
+                    )
+                )
+            }
+            (IterType::Fixed, IterType::Comb) => {
+                assert!(data.left_free.len() == self.size);
+                let right_free = data.right_free.clone();
+                let size = self.size;
+                Box::new(
+                    right_free
+                        .into_iter()
+                        .combinations(size - data.right_fix)
+                        .map(move |rights| {
+                            construct_instance(data.left_free.to_vec(), rights, data.clone())
+                        }),
+                )
+            }
+            (IterType::Comb, IterType::Fixed) => {
+                assert!(data.right_free.len() == self.size);
+                let left_free = data.left_free.clone();
+                let size = self.size;
+                Box::new(
+                    left_free
+                        .into_iter()
+                        .combinations(size - data.left_fix)
+                        .map(move |lefts| {
+                            construct_instance(lefts, data.right_free.to_vec(), data.clone())
+                        }),
+                )
+            }
+            (IterType::Comb, IterType::Perm) => {
+                let left_free = data.left_free.clone();
+                let right_free = data.right_free.clone();
+                let left_fix = data.left_fix;
+                let right_fix = data.right_fix;
+                let size = self.size;
+                Box::new(
+                    left_free
+                        .into_iter()
+                        .combinations(size - left_fix)
+                        .flat_map(move |lefts| {
+                            let data_clone = data.clone();
+                            right_free
+                                .clone()
+                                .into_iter()
+                                .permutations(size - right_fix)
+                                .map(move |rights| {
+                                    construct_instance(lefts.clone(), rights,data_clone.clone())
+                                })
+                        }),
+                )
+            },
+            (IterType::Perm, IterType::Comb) => {
+                let left_free = data.left_free.clone();
+                let right_free = data.right_free.clone();
+                let left_fix = data.left_fix;
+                let right_fix = data.right_fix;
+                let size = self.size;
+                Box::new(
+                    left_free
+                        .into_iter()
+                        .permutations(size - left_fix)
+                        .flat_map(move |lefts| {
+                            let data_clone = data.clone();
+                            right_free
+                                .clone()
+                                .into_iter()
+                                .combinations(size - right_fix)
+                                .map(move |rights| {
+                                    construct_instance(lefts.clone(), rights,data_clone.clone())
+                                })
+                        }),
+                )
+            }
+            _ => {
+                panic!()
+            }
+        }
+    }
+}
+
+fn construct_instance(
+    lefts: Vec<Node>,
+    rights: Vec<Node>,
+    iter_data: IterData,
+) -> TreeCaseInstance {
+    let last_idx = iter_data.instance.comps.len() - 1;
+    let mut instance_clone = iter_data.instance;
+    for (l, r) in lefts
+        .into_iter()
+        .chain(
+            std::iter::once(iter_data.left_fixed)
+                .take(iter_data.left_fix)
+                .map(|n| n.unwrap()),
+        )
+        .zip(
+            rights.iter().cloned().chain(
+                std::iter::once(iter_data.right_fixed)
+                    .take(iter_data.right_fix)
+                    .map(|n| n.unwrap()),
+            ),
+        )
+    {
+        instance_clone
+            .edges
+            .push(Edge::new(l, Pidx::N(last_idx - 1), r, Pidx::N(last_idx)));
+    }
+    instance_clone
 }
 
 impl EnumeratorTactic<TreeCaseInstance, TreeCaseInstance, TreeContext> for MatchingEnum {

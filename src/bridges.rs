@@ -18,7 +18,10 @@ where
     Empty,
 }
 
-impl  <G> ComplexCheckResult<G> where G: NodeIndexable {
+impl<G> ComplexCheckResult<G>
+where
+    G: NodeIndexable,
+{
     pub fn has_bridges(&self) -> bool {
         matches!(self, ComplexCheckResult::Complex(_, _))
     }
@@ -110,7 +113,11 @@ impl Frame {
 
 //https://stackoverflow.com/questions/23179579/finding-bridges-in-graph-without-recursion
 
-pub fn is_complex<G>(g: G, white_vertices: &[G::NodeId], any_bridge_sc: bool) -> ComplexCheckResult<G>
+pub fn is_complex<G>(
+    g: G,
+    white_vertices: &[G::NodeId],
+    any_bridge_sc: bool,
+) -> ComplexCheckResult<G>
 where
     G: IntoNeighbors + Visitable + IntoNodeIdentifiers + NodeIndexable + NodeCount,
     G::NodeId: std::fmt::Debug + Eq + Hash,
@@ -129,11 +136,7 @@ where
         return ComplexCheckResult::Empty;
     }
 
-    let mut neighbors = vec![Vec::new(); g.node_bound()];
-    neighbors
-        .iter_mut()
-        .enumerate()
-        .for_each(|(n, neigbs)| *neigbs = g.neighbors(g.from_index(n)).collect_vec());
+    let mut neighbors: Vec<Option<Vec<G::NodeId>>> = vec![None; g.node_bound()];
 
     while let Some(top) = stack.pop() {
         let i = top.i;
@@ -149,7 +152,9 @@ where
 
         let v_nodeid = g.from_index(v);
         // First part works befor DFS call
-        let v_neighbors = neighbors[v].as_slice();
+        let v_neighbors = neighbors[v]
+            .get_or_insert_with(|| g.neighbors(g.from_index(v)).collect_vec())
+            .as_slice();
 
         if i < v_neighbors.len() {
             let to = v_neighbors[i];
@@ -165,8 +170,7 @@ where
         }
 
         if i > 0 && i <= v_neighbors.len() {
-            let to = v_neighbors[i - 1]
-            ;
+            let to = v_neighbors[i - 1];
             let to_idx = g.to_index(to);
             if Some(to_idx) != p {
                 ret[v] = ret[v].min(ret[to_idx]);
@@ -330,18 +334,14 @@ mod test_bridge_detection {
     #[test]
     fn line_has_bridges() {
         let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (1, 2), (2, 3)]);
-        assert!(
-            is_complex(&g, &vec![], true).has_bridges()
-        );
+        assert!(is_complex(&g, &vec![], true).has_bridges());
     }
 
     #[test]
     fn tree_has_bridges() {
         let g: UnGraph<(), ()> =
             UnGraph::from_edges(&[(0, 1), (1, 2), (2, 3), (2, 4), (4, 5), (4, 6)]);
-        assert!(
-            is_complex(&g, &vec![], true).has_bridges()
-        );
+        assert!(is_complex(&g, &vec![], true).has_bridges());
     }
 
     #[test]

@@ -36,40 +36,29 @@ pub fn prove_tree_case(
         CompEnum,
         all_sc(
             sc,
-            MatchingEnum::new(2),
-            or(
+            MatchingEnum::new(3),
+            or4(
                 DirectMerge::new(),
-                all_sc(
-                    sc,
-                    MatchingEnum::new(1),
-                    or4(
-                        DirectMerge::new(),
-                        any(
-                            ContractableCompsEnum,
-                            all(ContractableEdgesEnum, DirectMerge::new()),
-                        ),
-                        all(
-                            CompEnum,
-                            all(
-                                MatchingEnum::new(2),
-                                or(
-                                    DirectMerge::new(),
-                                    all(
-                                        MatchingEnum::new(1),
-                                        or(
-                                            DirectMerge::new(),
-                                            any(
-                                                ContractableCompsEnum,
-                                                all(ContractableEdgesEnum, DirectMerge::new()),
-                                            ),
-                                        ),
-                                    ),
-                                ),
+                any(
+                    ContractableCompsEnum,
+                    all(ContractableEdgesEnum, DirectMerge::new()),
+                ),
+                ifcond(|instance: &TreeCaseInstance| true,
+                all(
+                    CompEnum,
+                    all(
+                        MatchingEnum::new(3),
+                        or(
+                            DirectMerge::new(),
+                            any(
+                                ContractableCompsEnum,
+                                all(ContractableEdgesEnum, DirectMerge::new()),
                             ),
                         ),
-                        TacticsExhausted::new(),
                     ),
-                ),
+                )
+            ),
+                TacticsExhausted::new(),
             ),
         ),
     );
