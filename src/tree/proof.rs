@@ -43,21 +43,22 @@ pub fn prove_tree_case(
                     ContractableCompsEnum,
                     all(ContractableEdgesEnum, DirectMerge::new()),
                 ),
-                ifcond(|instance: &TreeCaseInstance| true,
-                all(
-                    CompEnum,
+                ifcond(
+                    |_instance: &TreeCaseInstance| true,
                     all(
-                        MatchingEnum::new(3),
-                        or(
-                            DirectMerge::new(),
-                            any(
-                                ContractableCompsEnum,
-                                all(ContractableEdgesEnum, DirectMerge::new()),
+                        CompEnum,
+                        all(
+                            MatchingEnum::new(3),
+                            or(
+                                DirectMerge::new(),
+                                any(
+                                    ContractableCompsEnum,
+                                    all(ContractableEdgesEnum, DirectMerge::new()),
+                                ),
                             ),
                         ),
                     ),
-                )
-            ),
+                ),
                 TacticsExhausted::new(),
             ),
         ),

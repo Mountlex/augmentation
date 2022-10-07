@@ -20,12 +20,16 @@ pub struct TreeCaseInstance {
 }
 
 impl TreeCaseInstance {
+    #[allow(dead_code)]
     pub fn has_c3(&self) -> bool {
         self.comps.iter().any(|c| c.is_c3())
     }
 
+    #[allow(dead_code)]
     pub fn all_small(&self) -> bool {
-        self.comps.iter().all(|c| c.is_c3() || c.is_c4() || c.is_c5() || c.is_c6())
+        self.comps
+            .iter()
+            .all(|c| c.is_c3() || c.is_c4() || c.is_c5() || c.is_c6())
     }
 
     pub fn edges_between(&self, idx: usize) -> Vec<Edge> {

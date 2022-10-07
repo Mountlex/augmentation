@@ -135,11 +135,11 @@ impl MatchingEnumerator<'_> {
             (IterType::Fixed, IterType::Fixed) => {
                 assert!(data.left_free.len() == self.size);
                 assert!(data.right_free.len() == self.size);
-                Box::new(
-                    std::iter::once(
-                        construct_instance(data.left_free.clone(), data.right_free.clone(), data)
-                    )
-                )
+                Box::new(std::iter::once(construct_instance(
+                    data.left_free.clone(),
+                    data.right_free.clone(),
+                    data,
+                )))
             }
             (IterType::Fixed, IterType::Comb) => {
                 assert!(data.left_free.len() == self.size);
@@ -184,11 +184,11 @@ impl MatchingEnumerator<'_> {
                                 .into_iter()
                                 .permutations(size - right_fix)
                                 .map(move |rights| {
-                                    construct_instance(lefts.clone(), rights,data_clone.clone())
+                                    construct_instance(lefts.clone(), rights, data_clone.clone())
                                 })
                         }),
                 )
-            },
+            }
             (IterType::Perm, IterType::Comb) => {
                 let left_free = data.left_free.clone();
                 let right_free = data.right_free.clone();
@@ -206,7 +206,7 @@ impl MatchingEnumerator<'_> {
                                 .into_iter()
                                 .combinations(size - right_fix)
                                 .map(move |rights| {
-                                    construct_instance(lefts.clone(), rights,data_clone.clone())
+                                    construct_instance(lefts.clone(), rights, data_clone.clone())
                                 })
                         }),
                 )

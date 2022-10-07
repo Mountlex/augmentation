@@ -107,7 +107,6 @@ pub fn expand_iter(
             }
         };
 
-
         let in_nodes = if !node_idx.is_last() {
             comp.possible_in_out_nodes().to_vec()
         } else {
@@ -118,16 +117,15 @@ pub fn expand_iter(
             }
         };
 
-        
         let iter: Box<dyn Iterator<Item = AugmentedPathInstance>> =
-        Box::new(in_nodes.into_iter().flat_map(move |in_node| {
-            let iter: Box<dyn Iterator<Item = AugmentedPathInstance>> = if !node_idx.is_last() {
+            Box::new(in_nodes.into_iter().flat_map(move |in_node| {
+                let iter: Box<dyn Iterator<Item = AugmentedPathInstance>> = if !node_idx.is_last() {
                     let comp_filter = comp.clone();
                     let node_filter = node.clone();
                     let node_map = node.clone();
                     let comp_map = comp.clone();
                     let instance = instance.clone();
-                    let nodes =  updated_nodes_with_edges.clone();
+                    let nodes = updated_nodes_with_edges.clone();
 
                     Box::new(
                         // case where we not consider the last node --> we need an out node
@@ -144,7 +142,6 @@ pub fn expand_iter(
                                 )
                             })
                             .flat_map(move |out_node| {
-                                
                                 let instance = instance.clone();
 
                                 let mut nodes = nodes.clone();

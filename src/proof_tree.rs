@@ -12,7 +12,6 @@ impl Outcome {
         !matches!(self, Outcome::False)
     }
 
-
     #[allow(dead_code)]
     pub fn tight(&self) -> bool {
         matches!(self, Outcome::Tight)

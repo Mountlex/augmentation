@@ -88,16 +88,16 @@ pub fn matching_nodes_iter(
             .into_iter()
             .filter(move |prelast_matched| {
                 if let Some(future_out) = hit_comp.fixed_node() {
-                    prelast_matched
-                    .iter()
-                    .all(|matched| *matched != future_out)
+                    prelast_matched.iter().all(|matched| *matched != future_out)
                 } else {
                     true
                 }
             })
             .map(move |prelast_matched| {
                 let mut instance = instance.clone();
-                for (prelast, matching_edge) in prelast_matched.into_iter().zip(matching_edges.iter()) {
+                for (prelast, matching_edge) in
+                    prelast_matched.into_iter().zip(matching_edges.iter())
+                {
                     instance.fix_matching_edge(&matching_edge, hit_comp_idx, prelast);
                 }
                 instance
@@ -112,7 +112,8 @@ pub fn matching_nodes_iter(
             .into_iter()
             .map(move |hit_matched| {
                 let mut instance = instance.clone();
-                for (hit_node, matching_edge) in hit_matched.into_iter().zip(matching_edges.iter()) {
+                for (hit_node, matching_edge) in hit_matched.into_iter().zip(matching_edges.iter())
+                {
                     instance.fix_matching_edge(&matching_edge, hit_comp_idx, hit_node);
                 }
                 instance

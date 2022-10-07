@@ -33,7 +33,8 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
             instance[Pidx::N(2)].get_comp().matching_nodes(),
         ]
         .concat();
-        left_nodes.drain_filter(|node| *node == instance[Pidx::N(2)].get_zoomed().out_node.unwrap());
+        left_nodes
+            .drain_filter(|node| *node == instance[Pidx::N(2)].get_zoomed().out_node.unwrap());
 
         let prelast_nodes = instance[Pidx::Prelast].get_comp().matching_nodes();
         let last_nodes = instance[Pidx::Last].get_comp().possible_in_out_nodes();
