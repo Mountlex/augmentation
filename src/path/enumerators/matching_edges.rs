@@ -27,6 +27,28 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
         );
 
         let instance = self.instance;
+        let prelast_nodes = instance[Pidx::Prelast].get_comp().matching_nodes();
+
+
+        // first prelast 3-matching
+        let prelast_matching_endpoints = self
+            .instance
+            .nodes_with_fixed_edges(Pidx::Prelast)
+            .into_iter()
+            .chain(self.instance.outside_edges_on(Pidx::Prelast).into_iter())
+            .unique()
+            .collect_vec();
+
+        let mut free_prelast = prelast_nodes
+            .into_iter()
+            .filter(|n| !prelast_matching_endpoints.contains(n))
+            .collect_vec();
+        if let Component::Large(n) = instance[Pidx::Prelast].get_comp() {
+                free_prelast.push(n);
+            }
+
+
+
 
         let mut left_nodes = vec![
             instance[Pidx::N(3)].get_comp().matching_nodes(),
@@ -36,7 +58,6 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
         left_nodes
             .drain_filter(|node| *node == instance[Pidx::N(2)].get_zoomed().out_node.unwrap());
 
-        let prelast_nodes = instance[Pidx::Prelast].get_comp().matching_nodes();
         let last_nodes = instance[Pidx::Last].get_comp().possible_in_out_nodes();
 
         let left_last_edges = self
@@ -77,16 +98,10 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
             .unique()
             .collect_vec();
 
-        let mut free_prelast = prelast_nodes
-            .into_iter()
-            .filter(|n| !prelast_matching_endpoints.contains(n))
-            .collect_vec();
-        if let Component::Large(n) = instance[Pidx::Prelast].get_comp() {
-            free_prelast.push(n);
-        }
+        
+        
 
-        if (num_left_last_crossing + self.instance.outside_hits_from(Pidx::Last).len() <= 1
-            && left_prelast_edges.len() + self.instance.outside_hits_from(Pidx::Prelast).len() <= 1)
+        if (num_left_last_crossing + left_prelast_edges.len() + self.instance.outside_hits_from(Pidx::Last).len() + self.instance.outside_hits_from(Pidx::Prelast).len() <= 2)
             || prelast_matching_endpoints.len() < 3
         {
             let iter = free_prelast.into_iter().flat_map(move |right_matched| {
