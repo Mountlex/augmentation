@@ -367,6 +367,7 @@ pub struct PseudoCycleInstance {
     pub path_matching: AugmentedPathInstance,
     pub cycle_edge: CycleEdge,
     pub pseudo_cycle: PseudoCycle,
+    pub path_hit_idx: Pidx,
 }
 
 #[derive(Clone, Debug)]

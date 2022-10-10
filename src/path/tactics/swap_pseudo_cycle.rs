@@ -73,11 +73,13 @@ impl Tactic<SelectedHitInstance, PathContext> for CycleMergeViaSwap {
             .find(|e| matches!(e.hit(), PathHit::Path(i) if i >= 2.into()))
             .unwrap();
 
+        let hit_idx = path_hit.hits_path().unwrap();
+
         // Build new cycle
         let mut pseudo_nodes = new_instance
             .instance
             .nodes
-            .split_at(path_hit.hits_path().unwrap().raw() + 1)
+            .split_at(hit_idx.raw() + 1)
             .0
             .to_vec();
 
@@ -104,6 +106,7 @@ impl Tactic<SelectedHitInstance, PathContext> for CycleMergeViaSwap {
             cycle_edge: CycleEdge::Matching(path_hit.clone()),
             path_matching: new_instance.instance,
             pseudo_cycle: cycle,
+            path_hit_idx: hit_idx,
         };
 
         let mut proof = or(CycleMergeTactic::new(), CycleRearrangeTactic::new())
