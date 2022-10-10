@@ -101,7 +101,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
         
         
 
-        if (num_left_last_crossing + left_prelast_edges.len() + self.instance.outside_hits_from(Pidx::Last).len() + self.instance.outside_hits_from(Pidx::Prelast).len() <= 2)
+        if (num_left_last_crossing + left_prelast_edges.len() + self.instance.outside_hits_from(Pidx::Last).len() + self.instance.outside_hits_from(Pidx::Prelast).len() <= 1)
             || prelast_matching_endpoints.len() < 3
         {
             let iter = free_prelast.into_iter().flat_map(move |right_matched| {
