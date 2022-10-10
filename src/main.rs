@@ -190,10 +190,10 @@ fn prove_path(path: Path) {
     ];
 
     let last_comps = vec![
-        complex_path(),
-        complex_tree(),
         c3(),
         c4(),
+        complex_path(),
+        complex_tree(),
         c5(),
         c6(),
         large(),

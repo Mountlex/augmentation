@@ -243,7 +243,10 @@ fn tryhard_mode() -> impl Tactic<SelectedHitInstance, PathContext> + Statistics 
         ExpandAllEnum,
         or3(
             CountTactic::new("Fully expanded AugmentedPathInstances".into()),
-            any(PseudoCyclesEnum, CycleMergeTactic::new()),
+            any(
+                PseudoCyclesEnum,
+                or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
+            ),
             all(
                 FindMatchingEdgesEnum,
                 all(
