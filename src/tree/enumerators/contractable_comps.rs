@@ -88,6 +88,6 @@ impl EnumeratorTactic<TreeCaseInstance, ContractableCompInstance, TreeContext>
         data.comps
             .iter()
             .take(data.comps.len() - 1)
-            .any(|c| c.is_c6())
+            .any(|c| c.is_c6() || c.is_c5())
     }
 }
