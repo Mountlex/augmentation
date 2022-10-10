@@ -25,7 +25,7 @@ impl<'a> Enumerator<ContractableCompInstance, TreeContext> for ContractableComps
             .iter()
             .enumerate()
             .take(num_comps - 1)
-            .filter(|(_, c)| c.is_c6())
+            .filter(|(_, c)| c.is_c6() || c.is_c5())
             .flat_map(move |(idx, comp)| {
                 let comp_graph = comp.graph();
                 // comp is H
@@ -48,7 +48,7 @@ impl<'a> Enumerator<ContractableCompInstance, TreeContext> for ContractableComps
                     }
                 }
 
-                if necessary_edges == 6 {
+                if 5 * necessary_edges >= 4 * comp.num_edges() {
                     Some(ContractableCompInstance {
                         instance: self.instance.clone(),
                         contr_idx: idx,
