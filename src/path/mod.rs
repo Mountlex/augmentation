@@ -141,6 +141,13 @@ impl SuperNode {
         }
     }
 
+    pub fn path_idx(&self) -> Pidx {
+        match self {
+            SuperNode::Zoomed(n) => n.path_idx,
+            SuperNode::Abstract(n) => n.path_idx,
+        }
+    }
+
     pub fn is_zoomed(&self) -> bool {
         matches!(self, Self::Zoomed(_))
     }
@@ -195,6 +202,7 @@ pub struct AbstractNode {
     pub in_not_out: bool,
     pub nice_pair: bool,
     pub used: bool,
+    pub path_idx: Pidx,
 }
 
 impl AbstractNode {
@@ -256,6 +264,7 @@ pub struct ZoomedNode {
     out_node: Option<Node>,
     pub connected_nodes: Vec<Node>,
     pub used: bool,
+    pub path_idx: Pidx,
 }
 
 impl ZoomedNode {
@@ -367,7 +376,6 @@ pub struct PseudoCycleInstance {
     pub path_matching: AugmentedPathInstance,
     pub cycle_edge: CycleEdge,
     pub pseudo_cycle: PseudoCycle,
-    pub path_hit_idx: Pidx,
 }
 
 #[derive(Clone, Debug)]

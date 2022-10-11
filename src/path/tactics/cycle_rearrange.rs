@@ -29,26 +29,73 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleRearrangeTactic {
     fn action(&mut self, data: &PseudoCycleInstance, _context: &PathContext) -> ProofNode {
         self.num_calls += 1;
 
-        let last_node = data.pseudo_cycle.nodes.first().unwrap().get_zoomed();
-        let last_comp = last_node.get_comp();
-        let last_np = last_node
-            .npc
-            .is_nice_pair(last_node.in_node.unwrap(), last_node.out_node.unwrap());
+        let (cycle_idx, hit) = data.pseudo_cycle.nodes.iter().enumerate().max_by_key(|(_,n)| n.path_idx()).unwrap();
 
-        let new_last = &data.pseudo_cycle.nodes[data.pseudo_cycle.nodes.len() - 2];
+        // [hit,last,....,new_last]
+        let extension = vec![data.pseudo_cycle.nodes.split_at(cycle_idx).1, data.pseudo_cycle.nodes.split_at(cycle_idx).0].concat();
+
+
+        let old_last_node = extension[1].get_zoomed();
+        let old_last_comp = old_last_node.get_comp();
+        let old_last_np = old_last_node
+            .npc
+            .is_nice_pair(old_last_node.in_node.unwrap(), old_last_node.out_node.unwrap());
+
+        let new_last = extension.last().unwrap();
         let new_last_comp = new_last.get_comp();
 
-        if (last_comp.is_c3() || last_comp.is_c4()) && !last_np {
+        let new_prelast = &extension[extension.len() - 2];
+        let new_prelast_comp = new_prelast.get_comp();
+
+
+        if new_prelast_comp.is_c5() {
+            if let SuperNode::Zoomed(prelast) = new_prelast {
+                let valid_in_out = prelast.valid_in_out(prelast.in_node.unwrap(), prelast.out_node.unwrap(), true);
+                if !valid_in_out {
+                    return ProofNode::new_leaf(
+                        format!(
+                            "New prelast is C5 but does not fulfill nice path properties",
+                        ),
+                        false,
+                    );
+                }
+
+            } else {
+                return ProofNode::new_leaf(
+                    format!(
+                        "New prelast is C5 but we cannot check nice path properties",
+                    ),
+                    false,
+                );
+            }
+            
+        }
+
+
+        if (old_last_comp.is_c3() || old_last_comp.is_c4()) && !old_last_np {
             return ProofNode::new_leaf(
                 format!(
                     "Cannot rearrange cycle: last comp is {} but has no nice pair!",
-                    last_comp
+                    old_last_comp
                 ),
                 false,
             );
         }
 
-        if let SuperNode::Abstract(hit_node) = data.pseudo_cycle.nodes.last().unwrap() {
+        
+
+
+        // Case 2
+        // let mut part1 = data.pseudo_cycle.nodes.split_at(cycle_idx + 1).0.to_vec();
+        // let mut part2 = data.pseudo_cycle.nodes.split_at(cycle_idx + 1).1.to_vec();
+        // part1.reverse();
+        // part2.reverse();
+        // let path2 = vec![part1, part2].concat();
+
+
+
+
+        if let SuperNode::Abstract(hit_node) = hit {
             let hit_comp = hit_node.get_comp();
             let hit_np = hit_node.nice_pair;
 
@@ -56,33 +103,26 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleRearrangeTactic {
                 // Note that for aided C5 we dont have to ensure a nice pair, because it is not prelast.
                 return ProofNode::new_leaf(format!("Cannot rearrange cycle: hit comp is {} but has nice pair in cycle, so we cannot guarantee nice pair on path!", hit_comp), false);
             }
-        } else if let SuperNode::Zoomed(cycle_hit_node) = data.pseudo_cycle.nodes.last().unwrap() {
+        } else if let SuperNode::Zoomed(cycle_hit_node) = hit {
             let hit_comp = cycle_hit_node.get_comp();
-            if let SuperNode::Zoomed(path_hit_node) = &data.path_matching[data.path_hit_idx] {
+            if let SuperNode::Zoomed(path_hit_node) = &data.path_matching[hit.path_idx()] {
                 if let CycleEdge::Fixed(cycle_edge) = data.cycle_edge {
-                    let cycle_hit_endpoint = cycle_edge.endpoint_at(data.path_hit_idx).unwrap();
+                    let cycle_hit_endpoint = cycle_edge.endpoint_at(hit.path_idx()).unwrap();
 
                     let hit_np = path_hit_node.valid_out(cycle_hit_endpoint, false);
 
                     if (hit_comp.is_c3() || hit_comp.is_c4()) && !hit_np {
                         // Note that for aided C5 we dont have to ensure a nice pair, because it is not prelast.
-                        return ProofNode::new_leaf(format!("Cannot rearrange cycle: hit comp is {} but has no nice pair in new instance!", last_comp), false);
+                        return ProofNode::new_leaf(format!("Cannot rearrange cycle: hit comp is {} but has no nice pair in new instance!", old_last_comp), false);
                     }
                 }
             }
         }
 
-        // Reduce C6 to anything except C3 and C6
-        if last_comp.is_c6() && !new_last_comp.is_c3() && !new_last_comp.is_c6() {
-            self.num_proofs += 1;
-            return ProofNode::new_leaf(
-                format!("Rearrange cycle: now ends with {}!", new_last_comp),
-                true,
-            );
-        }
+        // Complex > C5 > C4 > Large > C6 > C3
 
         // Reduce C3 to anything except C3
-        if last_comp.is_c3() && !new_last_comp.is_c3() {
+        if old_last_comp.is_c3() && !new_last_comp.is_c3() {
             self.num_proofs += 1;
             return ProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),
@@ -90,8 +130,26 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleRearrangeTactic {
             );
         }
 
-        // Reduce C4 to C5
-        if last_comp.is_c4() && new_last_comp.is_c5() {
+         // Reduce C6 to anything except C3 and C6
+         if old_last_comp.is_c6() && !new_last_comp.is_c3() && !new_last_comp.is_c6() {
+            self.num_proofs += 1;
+            return ProofNode::new_leaf(
+                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                true,
+            );
+        }
+
+         // Reduce Large to anything except C3 and C6 and Large
+         if old_last_comp.is_large() && !new_last_comp.is_large() && !new_last_comp.is_c3() && !new_last_comp.is_c6() {
+            self.num_proofs += 1;
+            return ProofNode::new_leaf(
+                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                true,
+            );
+        }
+
+        // Reduce C4 to anything except Large, C6 or C3
+        if old_last_comp.is_c4() && !new_last_comp.is_large() && !new_last_comp.is_c6() && !new_last_comp.is_c3() && !new_last_comp.is_c4() {
             self.num_proofs += 1;
             return ProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),
@@ -100,7 +158,7 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleRearrangeTactic {
         }
 
         // Reduce anything that is not complex to complex
-        if !last_comp.is_complex() && new_last_comp.is_complex() {
+        if !old_last_comp.is_complex() && new_last_comp.is_complex() {
             self.num_proofs += 1;
             return ProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),
@@ -118,3 +176,4 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleRearrangeTactic {
         }
     }
 }
+

@@ -71,7 +71,6 @@ impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator
                         path_matching: self.input.clone(),
                         cycle_edge: CycleEdge::Matching(cycle_edge.clone()),
                         pseudo_cycle: cycle,
-                        path_hit_idx: j,
                     }
                 })
             });
@@ -128,7 +127,6 @@ impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator
                         path_matching: self.input.clone(),
                         cycle_edge: CycleEdge::Fixed(cycle_edge.clone()),
                         pseudo_cycle: cycle,
-                        path_hit_idx: j,
                     }
                 })
             });

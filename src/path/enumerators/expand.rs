@@ -179,6 +179,7 @@ pub fn expand_iter(
                                         out_node: Some(out_node),
                                         connected_nodes: nodes.clone(),
                                         used: node_map_map.get_abstract().used,
+                                        path_idx: node_idx,
                                     });
 
                                     instance_clone
@@ -207,6 +208,7 @@ pub fn expand_iter(
                             out_node: None,
                             connected_nodes: nodes.clone(),
                             used: node.get_abstract().used,
+                            path_idx: node_idx,
                         });
 
                         instance_clone

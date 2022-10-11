@@ -106,7 +106,6 @@ impl Tactic<SelectedHitInstance, PathContext> for CycleMergeViaSwap {
             cycle_edge: CycleEdge::Matching(path_hit.clone()),
             path_matching: new_instance.instance,
             pseudo_cycle: cycle,
-            path_hit_idx: hit_idx,
         };
 
         let mut proof = or(CycleMergeTactic::new(), CycleRearrangeTactic::new())

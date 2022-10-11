@@ -4,7 +4,7 @@ use crate::{
     comps::CompType,
     path::{
         proof::{PathContext, PathNode},
-        AbstractNode, AugmentedPathInstance, SuperNode,
+        AbstractNode, AugmentedPathInstance, SuperNode, Pidx,
     },
     proof_logic::{Enumerator, EnumeratorTactic},
     util::relabels_nodes_sequentially,
@@ -71,6 +71,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for PathEnumerator<'a> {
                             nice_pair,
                             used: c.is_used(),
                             in_not_out,
+                            path_idx: Pidx::from(i),
                         })
                     })
                     .collect();
