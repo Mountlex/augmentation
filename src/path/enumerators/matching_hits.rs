@@ -11,8 +11,8 @@ pub struct MatchingHitEnumerator<'a> {
 }
 
 impl<'a> Enumerator<AugmentedPathInstance, PathContext> for MatchingHitEnumerator<'a> {
-    fn iter(&self, context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
-        let path_len = context.path_len;
+    fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+        let path_len = self.instance.path_len();
         let comp = self.instance[Pidx::Last].get_comp();
 
         let mut targets = vec![PathHit::Outside];

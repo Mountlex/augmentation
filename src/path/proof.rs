@@ -6,6 +6,7 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::path::enumerators::expand::{ExpandEnum, ExpandLastEnum};
 use crate::path::enumerators::expand_all::ExpandAllEnum;
+use crate::path::enumerators::iter_comp::IterCompEnum;
 use crate::path::enumerators::matching_edges::FindMatchingEdgesEnum;
 use crate::path::enumerators::pseudo_cycles::PseudoCyclesEnum;
 use crate::path::tactics::cycle_rearrange::CycleRearrangeTactic;
@@ -30,7 +31,6 @@ use crate::comps::Component;
 #[derive(Clone)]
 pub struct PathContext {
     pub credit_inv: CreditInv,
-    pub path_len: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -124,14 +124,18 @@ fn prove_last_node(
     output_depth: usize,
     sc: bool,
 ) {
-    let path_length = 4;
-
     let mut context = PathContext {
         credit_inv: credit_inv.clone(),
-        path_len: path_length,
     };
 
-    let mut proof_tactic = all_sc(sc, PathEnum, get_path_tactic(sc));
+    let mut proof_tactic = all_sc(
+        sc,
+        PathEnum,
+        or(
+            get_path_tactic(sc),
+            all_sc(sc, IterCompEnum::new(nodes.clone()), get_path_tactic(sc)),
+        ),
+    );
 
     let mut proof = proof_tactic.action(
         &PathEnumeratorInput::new(last_node.clone(), nodes),

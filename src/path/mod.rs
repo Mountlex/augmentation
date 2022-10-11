@@ -497,6 +497,10 @@ impl AugmentedPathInstance {
         Pidx::from(raw)
     }
 
+    pub fn path_len(&self) -> usize {
+        self.nodes.len()
+    }
+
     pub fn all_outside_hits(&self) -> Vec<MatchingEdge> {
         self.non_path_matching_edges
             .iter()

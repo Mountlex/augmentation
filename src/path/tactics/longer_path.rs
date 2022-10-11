@@ -112,6 +112,43 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
                         }
                     }
                 }
+            } else if outside_hit.source_path() == Pidx::N(2) {
+                //   -------------------  <-- cycle_edge
+                //   |                 |
+                //   0 --- 1 --- 2 --- 3 ---
+                //               |
+                //            outside
+                for cycle_edge in data.fixed_edges_between(Pidx::Last, Pidx::N(3)) {
+                    for e12 in data.fixed_edges_between(Pidx::Prelast, Pidx::N(2)) {
+                        for e01 in data.fixed_edges_between(Pidx::Prelast, Pidx::Last) {
+                            if data[Pidx::N(3)]
+                                .get_zoomed()
+                                .valid_out(cycle_edge.endpoint_at(Pidx::N(3)).unwrap(), false)
+                                && data[Pidx::Last].get_zoomed().valid_in_out(
+                                    cycle_edge.endpoint_at(Pidx::Last).unwrap(),
+                                    e01.endpoint_at(Pidx::Last).unwrap(),
+                                    false,
+                                )
+                                && data[Pidx::Prelast].get_zoomed().valid_in_out(
+                                    e01.endpoint_at(Pidx::Prelast).unwrap(),
+                                    e12.endpoint_at(Pidx::Prelast).unwrap(),
+                                    false,
+                                )
+                                && data[Pidx::N(2)].get_zoomed().valid_in_out(
+                                    e12.endpoint_at(Pidx::N(2)).unwrap(),
+                                    outside_hit.source(),
+                                    true,
+                                )
+                            {
+                                self.num_proofs += 1;
+                                return ProofNode::new_leaf(
+                                    format!("Longer nice path found via edge ({})!", outside_hit),
+                                    true,
+                                );
+                            }
+                        }
+                    }
+                }
             }
         }
         ProofNode::new_leaf(format!("No longer nice path possible!"), false)

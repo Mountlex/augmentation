@@ -6,3 +6,4 @@ pub mod matching_hits;
 pub mod matching_nodes;
 pub mod nice_paths;
 pub mod pseudo_cycles;
+pub mod iter_comp;
