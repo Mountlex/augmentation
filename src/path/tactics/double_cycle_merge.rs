@@ -40,75 +40,69 @@ impl Tactic<AugmentedPathInstance, PathContext> for DoubleCycleMergeTactic {
         self.num_calls += 1;
 
         if data.path_len() == 5 {
-            for perm in Pidx::range(data.path_len())
-            .into_iter()
-            .permutations(5)
-        {
-            let first = perm[0];
-            let edges = vec![perm.clone(), vec![first]]
-                .concat()
-                .windows(2)
-                .map(|e| data.fixed_edges_between(e[0], e[1]))
-                .collect_vec();
+            for perm in Pidx::range(data.path_len()).into_iter().permutations(5) {
+                let first = perm[0];
+                let edges = vec![perm.clone(), vec![first]]
+                    .concat()
+                    .windows(2)
+                    .map(|e| data.fixed_edges_between(e[0], e[1]))
+                    .collect_vec();
 
-            for (e1, e2, e3, e4, e5) in iproduct!(&edges[0], &edges[1], &edges[2], &edges[3], &edges[4]) {
-                let mut cycle_nodes = perm.iter().map(|i| data[*i].clone()).collect_vec();
+                for (e1, e2, e3, e4, e5) in
+                    iproduct!(&edges[0], &edges[1], &edges[2], &edges[3], &edges[4])
+                {
+                    let mut cycle_nodes = perm.iter().map(|i| data[*i].clone()).collect_vec();
 
-                cycle_nodes[0]
-                    .get_zoomed_mut()
-                    .set_in(e5.endpoint_at(perm[0]).unwrap());
-                cycle_nodes[0]
-                    .get_zoomed_mut()
-                    .set_out(e1.endpoint_at(perm[0]).unwrap());
+                    cycle_nodes[0]
+                        .get_zoomed_mut()
+                        .set_in(e5.endpoint_at(perm[0]).unwrap());
+                    cycle_nodes[0]
+                        .get_zoomed_mut()
+                        .set_out(e1.endpoint_at(perm[0]).unwrap());
 
-                cycle_nodes[1]
-                    .get_zoomed_mut()
-                    .set_in(e1.endpoint_at(perm[1]).unwrap());
-                cycle_nodes[1]
-                    .get_zoomed_mut()
-                    .set_out(e2.endpoint_at(perm[1]).unwrap());
+                    cycle_nodes[1]
+                        .get_zoomed_mut()
+                        .set_in(e1.endpoint_at(perm[1]).unwrap());
+                    cycle_nodes[1]
+                        .get_zoomed_mut()
+                        .set_out(e2.endpoint_at(perm[1]).unwrap());
 
-                cycle_nodes[2]
-                    .get_zoomed_mut()
-                    .set_in(e2.endpoint_at(perm[2]).unwrap());
-                cycle_nodes[2]
-                    .get_zoomed_mut()
-                    .set_out(e3.endpoint_at(perm[2]).unwrap());
+                    cycle_nodes[2]
+                        .get_zoomed_mut()
+                        .set_in(e2.endpoint_at(perm[2]).unwrap());
+                    cycle_nodes[2]
+                        .get_zoomed_mut()
+                        .set_out(e3.endpoint_at(perm[2]).unwrap());
 
-                cycle_nodes[3]
-                    .get_zoomed_mut()
-                    .set_in(e3.endpoint_at(perm[3]).unwrap());
-                cycle_nodes[3]
-                    .get_zoomed_mut()
-                    .set_out(e4.endpoint_at(perm[3]).unwrap());
+                    cycle_nodes[3]
+                        .get_zoomed_mut()
+                        .set_in(e3.endpoint_at(perm[3]).unwrap());
+                    cycle_nodes[3]
+                        .get_zoomed_mut()
+                        .set_out(e4.endpoint_at(perm[3]).unwrap());
 
-                cycle_nodes[4]
-                    .get_zoomed_mut()
-                    .set_in(e4.endpoint_at(perm[4]).unwrap());
-                cycle_nodes[4]
-                    .get_zoomed_mut()
-                    .set_out(e5.endpoint_at(perm[4]).unwrap());
+                    cycle_nodes[4]
+                        .get_zoomed_mut()
+                        .set_in(e4.endpoint_at(perm[4]).unwrap());
+                    cycle_nodes[4]
+                        .get_zoomed_mut()
+                        .set_out(e5.endpoint_at(perm[4]).unwrap());
 
-                let cycle = PseudoCycle { nodes: cycle_nodes };
+                    let cycle = PseudoCycle { nodes: cycle_nodes };
 
-                let cycle_value = cycle.value(&context.credit_inv);
-                if cycle_value >= Credit::from_integer(2) {
-                    self.num_proofs += 1;
-                    return ProofNode::new_leaf_success(
-                        format!("Merged double pseudo"),
-                        cycle_value == Credit::from_integer(2),
-                    );
+                    let cycle_value = cycle.value(&context.credit_inv);
+                    if cycle_value >= Credit::from_integer(2) {
+                        self.num_proofs += 1;
+                        return ProofNode::new_leaf_success(
+                            format!("Merged double pseudo"),
+                            cycle_value == Credit::from_integer(2),
+                        );
+                    }
                 }
             }
         }
-        }
 
-
-
-        for perm in Pidx::range(data.path_len())
-            .into_iter()
-            .permutations(4)
-        {
+        for perm in Pidx::range(data.path_len()).into_iter().permutations(4) {
             let first = perm[0];
             let edges = vec![perm.clone(), vec![first]]
                 .concat()
@@ -160,10 +154,7 @@ impl Tactic<AugmentedPathInstance, PathContext> for DoubleCycleMergeTactic {
             }
         }
 
-        for perm in Pidx::range(data.path_len())
-            .into_iter()
-            .permutations(3)
-        {
+        for perm in Pidx::range(data.path_len()).into_iter().permutations(3) {
             let first = perm[0];
             let edges = vec![perm.clone(), vec![first]]
                 .concat()

@@ -1,6 +1,12 @@
-use crate::{proof_logic::{EnumeratorTactic, Enumerator}, path::{AugmentedPathInstance, proof::{PathContext, PathNode}, SuperNode, AbstractNode, Pidx}, comps::CompType, util::relabels_nodes_sequentially};
-
-
+use crate::{
+    comps::CompType,
+    path::{
+        proof::{PathContext, PathNode},
+        AbstractNode, AugmentedPathInstance, Pidx, SuperNode,
+    },
+    proof_logic::{Enumerator, EnumeratorTactic},
+    util::relabels_nodes_sequentially,
+};
 
 #[derive(Clone)]
 pub struct IterCompEnum {
@@ -13,7 +19,6 @@ impl IterCompEnum {
     }
 }
 
-
 pub struct IterCompEnumerator<'a> {
     input: &'a AugmentedPathInstance,
     comps: Vec<PathNode>,
@@ -23,7 +28,12 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for IterCompEnumerator<'
     fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let iter = self.comps.iter().map(|node| {
             let comp = node.get_comp().clone();
-            let num_used_labels = self.input.nodes.iter().map(|c| c.get_comp().num_labels()).sum::<usize>() as u32;
+            let num_used_labels = self
+                .input
+                .nodes
+                .iter()
+                .map(|c| c.get_comp().num_labels())
+                .sum::<usize>() as u32;
             let mut new_comps = vec![comp];
             relabels_nodes_sequentially(&mut new_comps, num_used_labels);
             let comp = new_comps.remove(0);
@@ -42,7 +52,6 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for IterCompEnumerator<'
             };
 
             let in_not_out = nice_pair;
-            
 
             let super_node = SuperNode::Abstract(AbstractNode {
                 comp: new_node.get_comp().clone(),
@@ -50,7 +59,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for IterCompEnumerator<'
                 used: new_node.is_used(),
                 in_not_out,
                 path_idx: Pidx::from(instance.path_len()),
-        });
+            });
 
             instance.nodes.push(super_node);
             instance
@@ -74,9 +83,10 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
     }
 
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
-        format!("Enumerate {}th component {}", item.nodes.len(), item.nodes.last().unwrap())
+        format!(
+            "Enumerate {}th component {}",
+            item.nodes.len(),
+            item.nodes.last().unwrap()
+        )
     }
-
-    
-
 }

@@ -70,7 +70,9 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
                     p.len() >= 2 * (data.comps.len() - 1)
                 }
             }),
-            sellable.powerset().filter(|p| p.len() <= 2 * (data.comps.len() -1)),
+            sellable
+                .powerset()
+                .filter(|p| p.len() <= 2 * (data.comps.len() - 1)),
             total_component_credits,
             data.comps.iter().map(|c| c.num_edges()).sum(),
             &context.credit_inv,

@@ -4,7 +4,7 @@ use crate::{
     comps::CompType,
     path::{
         proof::{PathContext, PathNode},
-        AbstractNode, AugmentedPathInstance, SuperNode, Pidx,
+        AbstractNode, AugmentedPathInstance, Pidx, SuperNode,
     },
     proof_logic::{Enumerator, EnumeratorTactic},
     util::relabels_nodes_sequentially,

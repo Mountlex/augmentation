@@ -192,7 +192,6 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
             left_nodes
                 .drain_filter(|node| *node == instance[Pidx::N(3)].get_zoomed().out_node.unwrap());
 
-            
             let last_nodes = instance[Pidx::Last].get_comp().possible_in_out_nodes();
             let left_last_edges = self
                 .instance
@@ -214,14 +213,11 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
                 .collect_vec();
             let num_left_prelast_crossing = left_prelast_edges.len();
 
-
             let left_n2_edges = self
                 .instance
                 .fixed_edge
                 .iter()
-                .filter(|edge| {
-                    edge.nodes_incident(&left_nodes) && edge.nodes_incident(&n2_nodes)
-                })
+                .filter(|edge| edge.nodes_incident(&left_nodes) && edge.nodes_incident(&n2_nodes))
                 .collect_vec();
 
             let left_used_nodes = left_nodes
