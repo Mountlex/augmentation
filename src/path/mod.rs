@@ -413,6 +413,10 @@ impl Pidx {
         matches!(self, Pidx::Prelast)
     }
 
+    pub fn range(len: usize) -> Vec<Pidx> {
+        (0..len).map(|i| Pidx::from(i)).collect_vec()
+    }
+
     pub fn raw(&self) -> usize {
         match self {
             Pidx::Last => 0,
