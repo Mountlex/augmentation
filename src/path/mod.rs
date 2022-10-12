@@ -285,6 +285,10 @@ impl ZoomedNode {
         }
     }
 
+    pub fn valid_in(&self, new_in: Node, prelast: bool) -> bool {
+        self.valid_in_out(new_in, self.out_node.unwrap(), prelast)
+    }
+
     pub fn valid_out(&self, new_out: Node, prelast: bool) -> bool {
         self.valid_in_out(self.in_node.unwrap(), new_out, prelast)
     }
@@ -380,14 +384,14 @@ pub struct PseudoCycleInstance {
 
 #[derive(Clone, Debug)]
 pub enum CycleEdge {
-    Fixed(Edge),
+    Fixed,
     Matching(MatchingEdge),
 }
 
 impl Display for CycleEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CycleEdge::Fixed(e) => write!(f, "{}", e),
+            CycleEdge::Fixed => write!(f, "Fixed edges"),
             CycleEdge::Matching(e) => write!(f, "{}", e),
         }
     }
@@ -396,6 +400,14 @@ impl Display for CycleEdge {
 #[derive(Clone, Debug)]
 pub struct PseudoCycle {
     nodes: Vec<SuperNode>,
+}
+
+impl PseudoCycle {
+    pub fn consecutive_end(&self) -> bool {
+        let mut indices = self.nodes.iter().map(|n| n.path_idx().raw()).collect_vec();
+        indices.sort();
+        indices.contains(&0) && *indices.last().unwrap() == indices.len() - 1
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

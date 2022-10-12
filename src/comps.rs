@@ -198,8 +198,8 @@ impl Component {
             Component::C4(_) => format!("C4"),
             Component::C3(_) => format!("C3"),
             Component::Large(_) => format!("Large"),
-            Component::ComplexPath(_, _) => format!("Complex Path"),
-            Component::ComplexTree(_, _) => format!("Complex Tree"),
+            Component::ComplexPath(_, _) => format!("Complex-Path"),
+            Component::ComplexTree(_, _) => format!("Complex-Tree"),
         }
     }
 
