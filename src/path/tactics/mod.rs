@@ -2,8 +2,8 @@
 pub mod contract;
 pub mod cycle_merge;
 pub mod cycle_rearrange;
-pub mod double_cycle_merge;
+//pub mod double_cycle_merge;
 pub mod local_merge;
 pub mod longer_path;
 pub mod pendant_rewire;
-pub mod swap_pseudo_cycle;
+//pub mod swap_pseudo_cycle;

@@ -76,61 +76,7 @@ impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator
                 })
             });
 
-        // let fixed_edges_iter = instance
-        //     .fixed_edge
-        //     .iter()
-        //     .filter(|m_edge| m_edge.path_distance() >= 2)
-        //     .flat_map(move |cycle_edge| {
-        //         let (i, j) = cycle_edge.path_indices();
-        //         assert!(i < j);
-        //         let mut pseudo_nodes = instance.nodes.as_slice()[i.raw()..=j.raw()].to_vec();
-
-        //         pseudo_nodes
-        //             .first_mut()
-        //             .unwrap()
-        //             .get_zoomed_mut()
-        //             .set_out(cycle_edge.endpoint_at(i).unwrap());
-        //         pseudo_nodes
-        //             .last_mut()
-        //             .unwrap()
-        //             .get_zoomed_mut()
-        //             .set_in(cycle_edge.endpoint_at(j).unwrap());
-
-        //         let mut path_iter: Box<dyn Iterator<Item = Vec<SuperNode>>> =
-        //             Box::new(vec![pseudo_nodes].into_iter());
-        //         for (k, l) in (i.raw()..=j.raw()).tuple_windows() {
-        //             path_iter = Box::new(path_iter.into_iter().flat_map(move |nodes| {
-        //                 let pk = k - i.raw();
-        //                 let pl = l - i.raw();
-        //                 let nodes_clone = nodes.clone();
-
-        //                 instance
-        //                     .fixed_edges_between(k.into(), l.into())
-        //                     .into_iter()
-        //                     .map(move |path_edge| {
-        //                         let mut nodes = nodes.clone();
-        //                         nodes[pk]
-        //                             .get_zoomed_mut()
-        //                             .set_in(path_edge.endpoint_at(k.into()).unwrap());
-        //                         nodes[pl]
-        //                             .get_zoomed_mut()
-        //                             .set_out(path_edge.endpoint_at(l.into()).unwrap());
-        //                         nodes
-        //                     })
-        //                     .chain(vec![nodes_clone].into_iter())
-        //             }));
-        //         }
-
-        //         path_iter.map(move |nodes| {
-        //             let cycle = PseudoCycle { nodes };
-
-        //             PseudoCycleInstance {
-        //                 path_matching: self.input.clone(),
-        //                 cycle_edge: CycleEdge::Fixed(cycle_edge.clone()),
-        //                 pseudo_cycle: cycle,
-        //             }
-        //         })
-        //     });
+        
 
         let fixed_edges_three = pseudo_cycles_of_length(instance.clone(), 3);
         let fixed_edges_four = pseudo_cycles_of_length(instance.clone(), 4);
@@ -149,7 +95,9 @@ fn product_of_first(
     mut edges: Vec<Vec<Edge>>,
     length: usize,
 ) -> Box<dyn Iterator<Item = Vec<Edge>>> {
+    assert_eq!(length, edges.len());
     if length == 5 {
+
         let edges0 = edges.remove(0);
         let edges1 = edges.remove(0);
         let edges2 = edges.remove(0);
@@ -158,7 +106,7 @@ fn product_of_first(
 
         Box::new(
             iproduct!(edges0, edges1, edges2, edges3, edges4).map(|(e1, e2, e3, e4, e5)| {
-                vec![e1.clone(), e2.clone(), e3.clone(), e4.clone(), e5.clone()]
+                vec![e1, e2, e3, e4, e5]
             }),
         )
     } else if length == 4 {
@@ -169,7 +117,7 @@ fn product_of_first(
 
         Box::new(
             iproduct!(edges0, edges1, edges2, edges3)
-                .map(|(e1, e2, e3, e4)| vec![e1.clone(), e2.clone(), e3.clone(), e4.clone()]),
+                .map(|(e1, e2, e3, e4)| vec![e1, e2, e3, e4]),
         )
     } else if length == 3 {
         let edges0 = edges.remove(0);
@@ -178,7 +126,7 @@ fn product_of_first(
 
         Box::new(
             iproduct!(edges0, edges1, edges2)
-                .map(|(e1, e2, e3)| vec![e1.clone(), e2.clone(), e3.clone()]),
+                .map(|(e1, e2, e3)| vec![e1, e2, e3]),
         )
     } else {
         panic!()

@@ -30,6 +30,7 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleRearrangeTactic {
     fn action(&mut self, data: &PseudoCycleInstance, _context: &PathContext) -> ProofNode {
         self.num_calls += 1;
 
+        // find path index of last node in cycle       [...,hit,remaining_path]
         let (cycle_idx, _) = data
             .pseudo_cycle
             .nodes
@@ -79,12 +80,15 @@ fn check_feasible_path(
 
     let new_last = extension.last().unwrap();
     let new_last_comp = new_last.get_comp();
+
     let hit = extension.first().unwrap();
 
     if matches!(cycle_edge, CycleEdge::Fixed) {
+
+        // check for inner nodes of extension that they fullfil nice path properties
         for i in 1..extension.len() - 1 {
-            let node = &extension[i];
-            if let SuperNode::Zoomed(node) = node {
+            let inner_node = &extension[i];
+            if let SuperNode::Zoomed(node) = inner_node {
                 let valid_in_out = node.valid_in_out(
                     node.in_node.unwrap(),
                     node.out_node.unwrap(),
@@ -97,22 +101,34 @@ fn check_feasible_path(
                     );
                 }
             } else {
+                // if we are in the fixed cycle case, all nodes should be expanded!
                 panic!()
             }
         }
 
+        // check that connection between hit and remaining path is feasible
         if let SuperNode::Zoomed(hit_node) = hit {
             if let SuperNode::Zoomed(path_hit_node) = &instance[hit.path_idx()] {
                 let path_hit_in = path_hit_node.in_node.unwrap();
                 if !hit_node.valid_in(path_hit_in, false) {
-                    // Note that for aided C5 we dont have to ensure a nice pair, because it is not prelast.
                     return ProofNode::new_leaf(format!("Cannot rearrange cycle: hit comp is {} but has no nice pair in new instance!", hit_node.get_comp()), false);
                 }
             }
         } else {
+
+            // if we are in the fixed cycle case, all nodes should be expanded!
             panic!()
         }
     } else {
+        // this is the case where we have an unexpanded matching edge
+
+        // old_last --- ... --- new_prelast --- new_last --- hit --- rem_path
+        //     |                                              |  
+        //     -----------------------------------------------|
+        //                               matching edge
+
+
+
         let new_prelast = &extension[extension.len() - 2];
         let new_prelast_comp = new_prelast.get_comp();
 

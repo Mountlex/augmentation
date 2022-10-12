@@ -684,21 +684,21 @@ impl AugmentedPathInstance {
         }
     }
 
-    pub fn swap_path_edge(&mut self, new_path_edge: Edge, path_edge_idx: Pidx) {
-        assert!(self[path_edge_idx.right()].is_zoomed() && self[path_edge_idx].is_zoomed());
-        assert!(self.fixed_edge.contains(&new_path_edge));
+    // pub fn swap_path_edge(&mut self, new_path_edge: Edge, path_edge_idx: Pidx) {
+    //     assert!(self[path_edge_idx.right()].is_zoomed() && self[path_edge_idx].is_zoomed());
+    //     assert!(self.fixed_edge.contains(&new_path_edge));
 
-        let old_path_edge = self.path_edge(path_edge_idx).unwrap();
-        self[path_edge_idx.right()]
-            .get_zoomed_mut()
-            .set_out(new_path_edge.endpoint_at(path_edge_idx.right()).unwrap());
-        self[path_edge_idx]
-            .get_zoomed_mut()
-            .set_in(new_path_edge.endpoint_at(path_edge_idx).unwrap());
+    //     let old_path_edge = self.path_edge(path_edge_idx).unwrap();
+    //     self[path_edge_idx.right()]
+    //         .get_zoomed_mut()
+    //         .set_out(new_path_edge.endpoint_at(path_edge_idx.right()).unwrap());
+    //     self[path_edge_idx]
+    //         .get_zoomed_mut()
+    //         .set_in(new_path_edge.endpoint_at(path_edge_idx).unwrap());
 
-        self.fixed_edge.drain_filter(|e| *e == new_path_edge);
-        self.fixed_edge.push(old_path_edge);
-    }
+    //     self.fixed_edge.drain_filter(|e| *e == new_path_edge);
+    //     self.fixed_edge.push(old_path_edge);
+    // }
 
     pub fn fixed_edges_between(&self, idx1: Pidx, idx2: Pidx) -> Vec<Edge> {
         let mut edges = self
