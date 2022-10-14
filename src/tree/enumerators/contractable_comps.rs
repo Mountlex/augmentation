@@ -17,6 +17,7 @@ impl ContractableCompsEnum {
 
 pub struct ContractableCompsEnumerator<'a> {
     instance: &'a TreeCaseInstance,
+    last_is_leaf: bool,
 }
 
 impl<'a> Enumerator<ContractableCompInstance, TreeContext> for ContractableCompsEnumerator<'a> {
@@ -24,15 +25,15 @@ impl<'a> Enumerator<ContractableCompInstance, TreeContext> for ContractableComps
         &self,
         _context: &TreeContext,
     ) -> Box<dyn Iterator<Item = ContractableCompInstance> + '_> {
-        let num_comps = self.instance.comps.len();
         let graph = get_merge_graph(&self.instance.comps, &self.instance.edges);
+        let take = if self.last_is_leaf { self.instance.comps.len() } else { self.instance.comps.len() - 1 };
 
         let iter = self
             .instance
             .comps
             .iter()
             .enumerate()
-            .take(num_comps - 1)
+            .take(take)
             .filter(|(_, c)| c.is_c6() || c.is_c5())
             .flat_map(move |(idx, comp)| {
                 let comp_graph = comp.graph();
@@ -81,7 +82,7 @@ impl EnumeratorTactic<TreeCaseInstance, ContractableCompInstance, TreeContext>
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a TreeCaseInstance) -> Self::Enumer<'a> {
-        ContractableCompsEnumerator { instance: data }
+        ContractableCompsEnumerator { instance: data, last_is_leaf: self.last_is_leaf }
     }
 
     fn item_msg(&self, item: &ContractableCompInstance) -> String {
@@ -93,16 +94,13 @@ impl EnumeratorTactic<TreeCaseInstance, ContractableCompInstance, TreeContext>
     }
 
     fn precondition(&self, data: &TreeCaseInstance, _context: &TreeContext) -> bool {
-        if self.last_is_leaf {
+        let take = if self.last_is_leaf { data.comps.len() } else { data.comps.len() - 1 };
+            
             data.comps
             .iter()
+            .take(take)
             .any(|c| c.is_c6() || c.is_c5())
-        } else {
-            data.comps
-            .iter()
-            .take(data.comps.len() - 1)
-            .any(|c| c.is_c6() || c.is_c5())
-        }
+        
         
     }
 }
