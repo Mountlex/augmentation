@@ -112,6 +112,14 @@ impl ProofNode {
         })
     }
 
+    pub fn new_and(child1: ProofNode, child2: ProofNode) -> Self {
+        ProofNode::All(InnerNode {
+            msg: "and".into(),
+            outcome: None,
+            childs: vec![child1.into(), child2.into()],
+        })
+    }
+
     pub fn outcome(&self) -> Outcome {
         match self {
             ProofNode::Leaf(node) => node.outcome,

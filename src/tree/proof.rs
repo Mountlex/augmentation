@@ -46,7 +46,7 @@ pub fn prove_tree_case(
                         DirectMerge::new("2-Comp Merge via Contractability".into()),
                     ),
                 ),
-                or(
+                and(
                     any(
                         ContractableCompsEnum::new(true),
                         all(

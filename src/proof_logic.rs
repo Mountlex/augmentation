@@ -78,6 +78,53 @@ where
 }
 
 #[derive(Clone)]
+pub struct And<I, A1, A2> {
+    tactic1: A1,
+    tactic2: A2,
+    _phantom_data: PhantomData<I>,
+}
+
+impl<I, A1, A2> Statistics for And<I, A1, A2>
+where
+    A1: Statistics,
+    A2: Statistics,
+{
+    fn print_stats(&self) {
+        self.tactic1.print_stats();
+        self.tactic2.print_stats();
+    }
+}
+
+pub fn and<I, A1, A2>(tactic1: A1, tactic2: A2) -> And<I, A1, A2> {
+    And {
+        tactic1,
+        tactic2,
+        _phantom_data: PhantomData,
+    }
+}
+
+impl<I, A1, A2, C> Tactic<I, C> for And<I, A1, A2>
+where
+    A1: Tactic<I, C>,
+    A2: Tactic<I, C>,
+{
+    fn action(&mut self, data: &I, context: &C) -> ProofNode {
+        let mut proof1 = self.tactic1.action(data, context);
+        let outcome = proof1.eval();
+        if !outcome.success() {
+            return proof1;
+        } else {
+            let proof2 = self.tactic2.action(data, context);
+            return ProofNode::new_and(proof1, proof2);
+        }
+    }
+
+    fn precondition(&self, data: &I, context: &C) -> bool {
+        self.tactic1.precondition(data, context) && self.tactic2.precondition(data, context)
+    }
+}
+
+#[derive(Clone)]
 pub struct Or<I, A1, A2> {
     tactic1: A1,
     tactic2: A2,
