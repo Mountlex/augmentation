@@ -5,7 +5,15 @@ use crate::{
     tree::{utils::get_merge_graph, ContractableCompInstance, TreeCaseInstance, TreeContext},
 };
 
-pub struct ContractableCompsEnum;
+pub struct ContractableCompsEnum {
+    last_is_leaf: bool
+}
+
+impl ContractableCompsEnum {
+    pub fn new(last_is_leaf: bool) -> Self {
+        Self { last_is_leaf }
+    }
+}
 
 pub struct ContractableCompsEnumerator<'a> {
     instance: &'a TreeCaseInstance,
@@ -85,9 +93,16 @@ impl EnumeratorTactic<TreeCaseInstance, ContractableCompInstance, TreeContext>
     }
 
     fn precondition(&self, data: &TreeCaseInstance, _context: &TreeContext) -> bool {
-        data.comps
+        if self.last_is_leaf {
+            data.comps
+            .iter()
+            .any(|c| c.is_c6() || c.is_c5())
+        } else {
+            data.comps
             .iter()
             .take(data.comps.len() - 1)
             .any(|c| c.is_c6() || c.is_c5())
+        }
+        
     }
 }

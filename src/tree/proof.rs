@@ -40,14 +40,22 @@ pub fn prove_tree_case(
             or4(
                 DirectMerge::new("2-Comp Merge".into()),
                 any(
-                    ContractableCompsEnum,
+                    ContractableCompsEnum::new(false),
                     all(
                         ContractableEdgesEnum,
                         DirectMerge::new("2-Comp Merge via Contractability".into()),
                     ),
                 ),
-                ifcond(
-                    |_instance: &TreeCaseInstance| true,
+                or(
+                    any(
+                        ContractableCompsEnum::new(true),
+                        all(
+                            ContractableEdgesEnum,
+                            DirectMerge::new(
+                                "2-Comp Merge (double leaf) via Contractability".into(),
+                            ),
+                        ),
+                    ),
                     all(
                         CompEnum,
                         all(
@@ -55,7 +63,7 @@ pub fn prove_tree_case(
                             or(
                                 DirectMerge::new("3-Comp Merge".into()),
                                 any(
-                                    ContractableCompsEnum,
+                                    ContractableCompsEnum::new(false),
                                     all(
                                         ContractableEdgesEnum,
                                         DirectMerge::new("3-Comp Merge via Contractability".into()),
