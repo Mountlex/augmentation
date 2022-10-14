@@ -1,4 +1,5 @@
 pub mod comp_hits;
+pub mod cycle_rearrangements;
 pub mod expand;
 pub mod expand_all;
 pub mod iter_comp;

@@ -16,6 +16,7 @@ use crate::proof_tree::ProofNode;
 use crate::{proof_logic::*, CreditInv};
 
 use super::enumerators::comp_hits::ComponentHitEnum;
+use super::enumerators::cycle_rearrangements::PathRearrangementEnum;
 use super::enumerators::matching_hits::MatchingHitEnum;
 use super::enumerators::matching_nodes::MatchingNodesEnum;
 use super::enumerators::nice_paths::{PathEnum, PathEnumeratorInput};
@@ -192,7 +193,10 @@ fn get_path_tactic(sc: bool) -> impl Tactic<AugmentedPathInstance, PathContext> 
                     LongerPathTactic::new(),
                     any(
                         PseudoCyclesEnum,
-                        or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
+                        or(
+                            CycleMergeTactic::new(),
+                            any(PathRearrangementEnum, CycleRearrangeTactic::new()),
+                        ),
                     ),
                     all_sc(
                         sc,
@@ -206,7 +210,10 @@ fn get_path_tactic(sc: bool) -> impl Tactic<AugmentedPathInstance, PathContext> 
                                 ContractabilityTactic::new(),
                                 any(
                                     PseudoCyclesEnum,
-                                    or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
+                                    or(
+                                        CycleMergeTactic::new(),
+                                        any(PathRearrangementEnum, CycleRearrangeTactic::new()),
+                                    ),
                                 ),
                                 any(
                                     ComponentHitEnum,
@@ -217,9 +224,8 @@ fn get_path_tactic(sc: bool) -> impl Tactic<AugmentedPathInstance, PathContext> 
                                             or5(
                                                 PendantRewireTactic::new(),
                                                 LocalMergeTactic::new(true),
-                                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                 LongerPathTactic::new(),
-                                                //CycleMergeViaSwap::new(),
+                                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                 ifcond(
                                                     |instance: &SelectedHitInstance| {
                                                         instance.last_hit
@@ -247,26 +253,49 @@ fn tryhard_mode() -> impl Tactic<SelectedHitInstance, PathContext> + Statistics 
             CountTactic::new("Fully expanded AugmentedPathInstances".into()),
             any(
                 PseudoCyclesEnum,
-                or(CycleMergeTactic::new(), CycleRearrangeTactic::new()),
+                or(
+                    CycleMergeTactic::new(),
+                    any(
+                        PathRearrangementEnum,
+                        or(CycleRearrangeTactic::new(), LongerPathTactic::new()),
+                    ),
+                ),
             ),
             all(
                 FindMatchingEdgesEnum,
                 all(
                     ExpandAllEnum,
-                    or4(
-                        //DoubleCycleMergeTactic::new(),
+                    or3(
                         LocalMergeTactic::new(false),
-                        LongerPathTactic::new(),
-                        any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                        any(
+                            PseudoCyclesEnum,
+                            or(
+                                CycleMergeTactic::new(),
+                                any(
+                                    PathRearrangementEnum,
+                                    or(CycleRearrangeTactic::new(), LongerPathTactic::new()),
+                                ),
+                            ),
+                        ),
                         all(
                             FindMatchingEdgesEnum,
                             all(
                                 ExpandAllEnum,
-                                or3(
-                                    //DoubleCycleMergeTactic::new(),
+                                or(
                                     LocalMergeTactic::new(false),
-                                    LongerPathTactic::new(),
-                                    any(PseudoCyclesEnum, CycleMergeTactic::new()),
+                                    any(
+                                        PseudoCyclesEnum,
+                                        or(
+                                            CycleMergeTactic::new(),
+                                            any(
+                                                PathRearrangementEnum,
+                                                or(
+                                                    CycleRearrangeTactic::new(),
+                                                    LongerPathTactic::new(),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
                                 ),
                             ),
                         ),

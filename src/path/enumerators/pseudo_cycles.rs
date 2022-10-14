@@ -76,8 +76,6 @@ impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator
                 })
             });
 
-        
-
         let fixed_edges_three = pseudo_cycles_of_length(instance.clone(), 3);
         let fixed_edges_four = pseudo_cycles_of_length(instance.clone(), 4);
         let fixed_edges_five = pseudo_cycles_of_length(instance.clone(), 5);
@@ -97,7 +95,6 @@ fn product_of_first(
 ) -> Box<dyn Iterator<Item = Vec<Edge>>> {
     assert_eq!(length, edges.len());
     if length == 5 {
-
         let edges0 = edges.remove(0);
         let edges1 = edges.remove(0);
         let edges2 = edges.remove(0);
@@ -105,9 +102,8 @@ fn product_of_first(
         let edges4 = edges.remove(0);
 
         Box::new(
-            iproduct!(edges0, edges1, edges2, edges3, edges4).map(|(e1, e2, e3, e4, e5)| {
-                vec![e1, e2, e3, e4, e5]
-            }),
+            iproduct!(edges0, edges1, edges2, edges3, edges4)
+                .map(|(e1, e2, e3, e4, e5)| vec![e1, e2, e3, e4, e5]),
         )
     } else if length == 4 {
         let edges0 = edges.remove(0);
@@ -116,18 +112,14 @@ fn product_of_first(
         let edges3 = edges.remove(0);
 
         Box::new(
-            iproduct!(edges0, edges1, edges2, edges3)
-                .map(|(e1, e2, e3, e4)| vec![e1, e2, e3, e4]),
+            iproduct!(edges0, edges1, edges2, edges3).map(|(e1, e2, e3, e4)| vec![e1, e2, e3, e4]),
         )
     } else if length == 3 {
         let edges0 = edges.remove(0);
         let edges1 = edges.remove(0);
         let edges2 = edges.remove(0);
 
-        Box::new(
-            iproduct!(edges0, edges1, edges2)
-                .map(|(e1, e2, e3)| vec![e1, e2, e3]),
-        )
+        Box::new(iproduct!(edges0, edges1, edges2).map(|(e1, e2, e3)| vec![e1, e2, e3]))
     } else {
         panic!()
     }
@@ -140,6 +132,7 @@ fn pseudo_cycles_of_length(
     Pidx::range(instance.path_len())
         .into_iter()
         .permutations(length)
+        .filter(|perm| perm.iter().min() == perm.first()) // TODO improve
         .flat_map(move |perm| {
             let first = perm[0];
             let cons_edges = vec![perm.clone(), vec![first]]
@@ -162,6 +155,8 @@ fn pseudo_cycles_of_length(
                         .set_out(e[i].endpoint_at(perm[i]).unwrap());
                 }
 
+                // cycle nodes:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in:3.out -- 0.in]
+
                 let cycle = PseudoCycle { nodes: cycle_nodes };
 
                 PseudoCycleInstance {
@@ -183,7 +178,14 @@ impl EnumeratorTactic<AugmentedPathInstance, PseudoCycleInstance, PathContext>
     }
 
     fn item_msg(&self, item: &PseudoCycleInstance) -> String {
-        format!("Pseudo cycle via cycle edge {}", item.cycle_edge)
+        format!(
+            "Pseudo cycle via cycle edge [{}]",
+            item.pseudo_cycle
+                .nodes
+                .iter()
+                .map(|n| n.path_idx())
+                .join(", ")
+        )
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a AugmentedPathInstance) -> Self::Enumer<'a> {
@@ -199,7 +201,14 @@ impl EnumeratorTactic<SelectedHitInstance, PseudoCycleInstance, PathContext> for
     }
 
     fn item_msg(&self, item: &PseudoCycleInstance) -> String {
-        format!("Pseudo cycle via cycle edge {}", item.cycle_edge)
+        format!(
+            "Pseudo cycle via cycle edge [{}]",
+            item.pseudo_cycle
+                .nodes
+                .iter()
+                .map(|n| n.path_idx())
+                .join(", ")
+        )
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a SelectedHitInstance) -> Self::Enumer<'a> {

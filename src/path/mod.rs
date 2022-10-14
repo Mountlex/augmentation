@@ -383,6 +383,14 @@ pub struct PseudoCycleInstance {
 }
 
 #[derive(Clone, Debug)]
+pub struct PathRearrangementInstance {
+    pub instance: AugmentedPathInstance,
+    pub cycle_edge: CycleEdge,
+    pub start_idx: Pidx,
+    pub extension: Vec<SuperNode>,
+}
+
+#[derive(Clone, Debug)]
 pub enum CycleEdge {
     Fixed,
     Matching(MatchingEdge),
