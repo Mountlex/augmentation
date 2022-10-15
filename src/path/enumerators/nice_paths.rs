@@ -78,8 +78,8 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for PathEnumerator<'a> {
 
                 AugmentedPathInstance {
                     nodes,
-                    non_path_matching_edges: vec![],
-                    fixed_edge: vec![],
+                    abstract_edges: vec![],
+                    fixed_edges: vec![],
                 }
             },
         );

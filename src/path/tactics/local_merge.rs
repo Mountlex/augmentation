@@ -64,13 +64,13 @@ fn merge(
         for sell in edges_of_type(&graph_with_matching, EdgeType::Sellable)
             .into_iter()
             .powerset()
+            .filter(|s| s.len() <= 2)
         {
             let sell_credits = Credit::from_integer(sell.len() as i64);
             let mut total_plus_sell = total_comp_credit + sell_credits;
 
             for buy in edges_between
                 .iter()
-                .cloned()
                 .powerset()
                 .filter(|p| !p.is_empty())
             {
@@ -82,7 +82,7 @@ fn merge(
                     {
                         false
                     } else if t == &EdgeType::Buyable
-                        && !buy.contains(&Edge::new(v1, Pidx::Last, v2, Pidx::Last))
+                        && !buy.contains(&&Edge::new(v1, Pidx::Last, v2, Pidx::Last))
                     {
                         false
                     } else {

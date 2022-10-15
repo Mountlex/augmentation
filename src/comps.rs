@@ -147,15 +147,12 @@ impl Component {
         }
     }
 
-    pub fn possible_in_out_nodes(&self) -> &[Node] {
+    pub fn matching_nodes(&self) -> &[Node] {
         match self {
-            Component::C6(nodes) => nodes,
-            Component::C5(nodes) => nodes,
-            Component::C4(nodes) => nodes,
-            Component::C3(nodes) => nodes,
             Component::Large(n) => std::slice::from_ref(n),
-            Component::ComplexPath(_, nodes) => nodes,
             Component::ComplexTree(_, nodes) => nodes,
+            Component::ComplexPath(_, nodes) => nodes,
+            _ => self.nodes(),
         }
     }
 
@@ -299,14 +296,7 @@ impl Component {
         }
     }
 
-    pub fn matching_nodes(&self) -> &[Node] {
-        match self {
-            Component::Large(n) => std::slice::from_ref(n),
-            Component::ComplexTree(_, nodes) => nodes,
-            Component::ComplexPath(_, nodes) => nodes,
-            _ => self.nodes(),
-        }
-    }
+    
 
     pub fn contains(&self, node: &Node) -> bool {
         if let Component::Large(n) = self {

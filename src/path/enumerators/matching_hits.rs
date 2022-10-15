@@ -1,5 +1,5 @@
 use crate::{
-    path::{proof::PathContext, AugmentedPathInstance, MatchingEdge, PathHit, Pidx},
+    path::{proof::PathContext, AugmentedPathInstance, AbstractEdge, PathHit, Pidx},
     proof_logic::{Enumerator, EnumeratorTactic},
 };
 
@@ -34,8 +34,8 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for MatchingHitEnumerato
                 targets.clone().into_iter().map(move |hit| {
                     let mut instance_clone = instance_clone.clone();
                     instance_clone
-                        .non_path_matching_edges
-                        .push(MatchingEdge::new(Pidx::Last, source, hit));
+                        .abstract_edges
+                        .push(AbstractEdge::new(Pidx::Last, source, hit));
                     instance_clone
                 })
             });
@@ -54,7 +54,7 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
     }
 
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
-        format!("{:?}", item.non_path_matching_edges)
+        format!("{:?}", item.abstract_edges)
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a AugmentedPathInstance) -> Self::Enumer<'a> {

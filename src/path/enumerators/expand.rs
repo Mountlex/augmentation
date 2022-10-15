@@ -97,23 +97,23 @@ pub fn expand_iter(
                     .flat_map(|e| e.endpoint_at(node_idx))
                     .collect_vec();
 
-                comp.possible_in_out_nodes()
+                comp.matching_nodes()
                     .into_iter()
                     .filter(|&n| !matching_endpoints_from_right.contains(n))
                     .cloned()
                     .collect_vec()
             } else {
-                comp.possible_in_out_nodes().to_vec()
+                comp.matching_nodes().to_vec()
             }
         };
 
         let in_nodes = if !node_idx.is_last() {
-            comp.possible_in_out_nodes().to_vec()
+            comp.matching_nodes().to_vec()
         } else {
             if let Some(fixed) = comp.fixed_node() {
                 vec![fixed]
             } else {
-                comp.possible_in_out_nodes().to_vec()
+                comp.matching_nodes().to_vec()
             }
         };
 

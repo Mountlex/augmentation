@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::{
     comps::Component,
-    path::{proof::PathContext, AugmentedPathInstance, MatchingEdge, PathHit, Pidx},
+    path::{proof::PathContext, AbstractEdge, AugmentedPathInstance, PathHit, Pidx},
     proof_logic::{Enumerator, EnumeratorTactic},
     types::Edge,
     Node,
@@ -22,292 +22,129 @@ enum Hit {
 
 impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnumerator<'a> {
     fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
-        assert!(
-            self.instance.non_path_matching_edges.len() == self.instance.all_outside_hits().len()
-        );
+        assert!(self.instance.abstract_edges.len() == self.instance.all_outside_hits().len());
 
         let instance = self.instance;
-        let prelast_nodes = instance[Pidx::Prelast].get_comp().matching_nodes();
 
-        // first prelast 3-matching
-        let prelast_matching_endpoints = self
-            .instance
-            .nodes_with_fixed_edges(Pidx::Prelast)
-            .into_iter()
-            .chain(self.instance.outside_edges_on(Pidx::Prelast).into_iter())
-            .unique()
-            .collect_vec();
-
-        let mut free_prelast = prelast_nodes
-            .into_iter()
-            .filter(|n| !prelast_matching_endpoints.contains(n))
-            .collect_vec();
-        if let Component::Large(n) = instance[Pidx::Prelast].get_comp() {
-            free_prelast.push(n);
-        }
-
-        let mut left_nodes = instance
-            .nodes
-            .split_at(2)
-            .1
-            .iter()
-            .flat_map(|n| n.get_comp().matching_nodes())
-            .cloned()
-            .collect_vec();
-        left_nodes
-            .drain_filter(|node| *node == instance[Pidx::N(2)].get_zoomed().out_node.unwrap());
-
-        let last_nodes = instance[Pidx::Last].get_comp().possible_in_out_nodes();
-
-        let left_last_edges = self
-            .instance
-            .fixed_edge
-            .iter()
-            .filter(|edge| edge.nodes_incident(&left_nodes) && edge.nodes_incident(&last_nodes))
-            .collect_vec();
-
-        let num_left_last_crossing = left_last_edges.len();
-
-        let left_prelast_edges = self
-            .instance
-            .fixed_edge
-            .iter()
-            .filter(|edge| edge.nodes_incident(&left_nodes) && edge.nodes_incident(&prelast_nodes))
-            .collect_vec();
-
-        let left_used_nodes = left_nodes
-            .iter()
-            .filter(|n| {
-                left_prelast_edges.iter().any(|e| e.node_incident(n))
-                    || left_last_edges.iter().any(|e| e.node_incident(n))
-            })
-            .cloned()
-            .collect_vec();
-
-        let free_left = left_nodes
-            .into_iter()
-            .filter(|n| !left_used_nodes.contains(n))
-            .collect_vec();
-
-        let prelast_matching_endpoints = self
-            .instance
-            .nodes_with_fixed_edges(Pidx::Prelast)
-            .into_iter()
-            .chain(self.instance.outside_edges_on(Pidx::Prelast).into_iter())
-            .unique()
-            .collect_vec();
-
-        if (num_left_last_crossing
-            + left_prelast_edges.len()
-            + self.instance.outside_hits_from(Pidx::Last).len()
-            + self.instance.outside_hits_from(Pidx::Prelast).len()
-            <= 1)
-            || prelast_matching_endpoints.len() < 3
-        {
-            let iter = free_prelast.into_iter().flat_map(move |right_matched| {
-                let left_used_nodes = left_used_nodes.clone();
-                let mut left_iter: Box<dyn Iterator<Item = Hit>> = Box::new(
-                    free_left
-                        .clone()
-                        .into_iter()
-                        .filter(move |left| {
-                            let c = instance[Pidx::N(2)].get_comp();
-
-                            !(left_used_nodes.iter().all(|u| {
-                                c.is_adjacent(
-                                    u,
-                                    &instance[Pidx::N(2)].get_zoomed().out_node.unwrap(),
-                                )
-                            }) && c.is_adjacent(
-                                left,
-                                &instance[Pidx::N(2)].get_zoomed().out_node.unwrap(),
-                            ))
-                        })
-                        .map(|left| Hit::Node(left)),
-                );
-                if let Component::Large(n) = instance[Pidx::N(3)].get_comp() {
-                    left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Node(*n))));
-                }
-                if let Component::Large(n) = instance[Pidx::N(2)].get_comp() {
-                    left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Node(*n))));
-                }
-
-                if prelast_matching_endpoints.len() < 3 {
-                    left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Outside)));
-                };
-
-                left_iter.map(|left| {
-                    let mut new_instance = self.instance.clone();
-
-                    match left {
-                        Hit::Outside => new_instance.non_path_matching_edges.push(
-                            MatchingEdge::new(Pidx::Prelast, *right_matched, PathHit::Outside),
-                        ),
-                        Hit::Node(left) => {
-                            let left_idx = instance.index_of_super_node(left);
-                            new_instance.fixed_edge.push(Edge::new(
-                                left,
-                                left_idx,
-                                *right_matched,
-                                Pidx::Prelast,
-                            ))
-                        }
-                    }
-
-                    new_instance
-                })
-            });
-            return Box::new(iter);
-        }
-
-        if self.instance.path_len() == 5 {
-            let instance = self.instance;
-            let n2_nodes = instance[Pidx::N(2)].get_comp().matching_nodes();
-
-            // first prelast 3-matching
-            let n2_matching_endpoints = self
+        for i in 1..instance.path_len() - 2 {
+            let node_idx = Pidx::from(i);
+            let node_matching_endpoints = self
                 .instance
-                .nodes_with_fixed_edges(Pidx::N(2))
+                .nodes_with_fixed_edges(node_idx)
                 .into_iter()
-                .chain(self.instance.outside_edges_on(Pidx::N(2)).into_iter())
+                .chain(self.instance.outside_edges_on(node_idx).into_iter())
                 .unique()
                 .collect_vec();
-
-            let mut free_n2 = n2_nodes
+            let mut node_free = instance[node_idx]
+                .get_comp()
+                .matching_nodes()
                 .into_iter()
-                .filter(|n| !n2_matching_endpoints.contains(n))
+                .filter(|n| !node_matching_endpoints.contains(n))
                 .collect_vec();
-            if let Component::Large(n) = instance[Pidx::N(2)].get_comp() {
-                free_n2.push(n);
+            if let Component::Large(n) = instance[node_idx].get_comp() {
+                node_free.push(n);
             }
 
-            let mut left_nodes = instance
+            let rem_nodes = instance
                 .nodes
-                .split_at(3)
+                .split_at(i + 1)
                 .1
                 .iter()
                 .flat_map(|n| n.get_comp().matching_nodes())
                 .cloned()
-                .collect_vec();
-            left_nodes
-                .drain_filter(|node| *node == instance[Pidx::N(3)].get_zoomed().out_node.unwrap());
-
-            let last_nodes = instance[Pidx::Last].get_comp().possible_in_out_nodes();
-            let left_last_edges = self
-                .instance
-                .fixed_edge
-                .iter()
-                .filter(|edge| edge.nodes_incident(&left_nodes) && edge.nodes_incident(&last_nodes))
+                .filter(|n| *n != instance[Pidx::from(i + 1)].get_zoomed().out_node.unwrap())
                 .collect_vec();
 
-            let num_left_last_crossing = left_last_edges.len();
-
-            let prelast_nodes = instance[Pidx::Prelast].get_comp().possible_in_out_nodes();
-            let left_prelast_edges = self
-                .instance
-                .fixed_edge
+            let prefix_nodes = instance
+                .nodes
+                .split_at(i)
+                .0
                 .iter()
-                .filter(|edge| {
-                    edge.nodes_incident(&left_nodes) && edge.nodes_incident(&prelast_nodes)
-                })
-                .collect_vec();
-            let num_left_prelast_crossing = left_prelast_edges.len();
-
-            let left_n2_edges = self
-                .instance
-                .fixed_edge
-                .iter()
-                .filter(|edge| edge.nodes_incident(&left_nodes) && edge.nodes_incident(&n2_nodes))
-                .collect_vec();
-
-            let left_used_nodes = left_nodes
-                .iter()
-                .filter(|n| {
-                    left_prelast_edges.iter().any(|e| e.node_incident(n))
-                        || left_last_edges.iter().any(|e| e.node_incident(n))
-                        || left_n2_edges.iter().any(|e| e.node_incident(n))
-                })
+                .flat_map(|n| n.get_comp().matching_nodes())
                 .cloned()
                 .collect_vec();
 
-            let free_left = left_nodes
-                .into_iter()
-                .filter(|n| !left_used_nodes.contains(n))
+            let prefix_rem_crossing = instance
+                .fixed_edges
+                .iter()
+                .filter(|edge| {
+                    edge.nodes_incident(&rem_nodes) && edge.nodes_incident(&prefix_nodes)
+                })
                 .collect_vec();
 
-            let n2_matching_endpoints = self
-                .instance
-                .nodes_with_fixed_edges(Pidx::N(2))
-                .into_iter()
-                .chain(self.instance.outside_edges_on(Pidx::N(2)).into_iter())
-                .unique()
+            let rem_used_nodes = rem_nodes
+                .iter()
+                .filter(|n| prefix_rem_crossing.iter().any(|e| e.node_incident(n)))
+                .cloned()
                 .collect_vec();
 
-            if (num_left_last_crossing
-                + num_left_prelast_crossing
-                + left_n2_edges.len()
-                + self.instance.outside_hits_from(Pidx::Last).len()
-                + self.instance.outside_hits_from(Pidx::Prelast).len()
-                + self.instance.outside_hits_from(Pidx::N(2)).len()
-                <= 1)
-                || n2_matching_endpoints.len() < 3
+            let rem_free = rem_nodes
+                .into_iter()
+                .filter(|n| !rem_used_nodes.contains(n))
+                .collect_vec();
+
+            let prefix_outside: usize = Pidx::range(i)
+                .iter()
+                .map(|idx| instance.outside_hits_from(*idx).len())
+                .sum();
+
+            if (prefix_rem_crossing.len() + prefix_outside <= 1)
+                || node_matching_endpoints.len() < 3
             {
-                let iter = free_n2.into_iter().flat_map(move |right_matched| {
-                    let left_used_nodes = left_used_nodes.clone();
-                    let mut left_iter: Box<dyn Iterator<Item = Hit>> = Box::new(
-                        free_left
-                            .clone()
-                            .into_iter()
-                            .filter(move |left| {
-                                let c = instance[Pidx::N(2)].get_comp();
+                let iter =
+                    node_free.into_iter().flat_map(move |node_matched| {
+                        let rem_used_nodes = rem_used_nodes.clone();
+                        let mut rem_iter: Box<dyn Iterator<Item = Hit>> = Box::new(
+                            rem_free
+                                .clone()
+                                .into_iter()
+                                .filter(move |left| {
+                                    let c = instance[node_idx].get_comp();
 
-                                !(left_used_nodes.iter().all(|u| {
-                                    c.is_adjacent(
-                                        u,
-                                        &instance[Pidx::N(2)].get_zoomed().out_node.unwrap(),
-                                    )
-                                }) && c.is_adjacent(
-                                    left,
-                                    &instance[Pidx::N(2)].get_zoomed().out_node.unwrap(),
-                                ))
-                            })
-                            .map(|left| Hit::Node(left)),
-                    );
-                    if let Component::Large(n) = instance[Pidx::N(4)].get_comp() {
-                        left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Node(*n))));
-                    }
-                    if let Component::Large(n) = instance[Pidx::N(3)].get_comp() {
-                        left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Node(*n))));
-                    }
-                    if let Component::Large(n) = instance[Pidx::N(2)].get_comp() {
-                        left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Node(*n))));
-                    }
+                                    !(rem_used_nodes.iter().all(|u| {
+                                        c.is_adjacent(
+                                            u,
+                                            &instance[node_idx].get_zoomed().out_node.unwrap(),
+                                        )
+                                    }) && c.is_adjacent(
+                                        left,
+                                        &instance[node_idx].get_zoomed().out_node.unwrap(),
+                                    ))
+                                })
+                                .map(|left| Hit::Node(left)),
+                        );
 
-                    if prelast_matching_endpoints.len() < 3 {
-                        left_iter = Box::new(left_iter.chain(std::iter::once(Hit::Outside)));
-                    };
-
-                    left_iter.map(|left| {
-                        let mut new_instance = self.instance.clone();
-
-                        match left {
-                            Hit::Outside => new_instance.non_path_matching_edges.push(
-                                MatchingEdge::new(Pidx::N(2), *right_matched, PathHit::Outside),
-                            ),
-                            Hit::Node(left) => {
-                                let left_idx = instance.index_of_super_node(left);
-                                new_instance.fixed_edge.push(Edge::new(
-                                    left,
-                                    left_idx,
-                                    *right_matched,
-                                    Pidx::N(2),
-                                ))
+                        for i_rem in i + 1..instance.path_len() {
+                            if let Component::Large(n) = instance[Pidx::N(i_rem)].get_comp() {
+                                rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Node(*n))));
                             }
                         }
 
-                        new_instance
-                    })
-                });
+                        if node_matching_endpoints.len() < 3 {
+                            rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
+                        };
+
+                        rem_iter.map(move |rem_hit| {
+                            let mut new_instance = instance.clone();
+
+                            match rem_hit {
+                                Hit::Outside => new_instance.abstract_edges.push(
+                                    AbstractEdge::new(node_idx, *node_matched, PathHit::Outside),
+                                ),
+                                Hit::Node(left) => {
+                                    let left_idx = new_instance.index_of_super_node(left);
+                                    new_instance.fixed_edges.push(Edge::new(
+                                        left,
+                                        left_idx,
+                                        *node_matched,
+                                        node_idx,
+                                    ))
+                                }
+                            }
+
+                            new_instance
+                        })
+                    });
                 return Box::new(iter);
             }
         }
@@ -332,8 +169,8 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
     fn item_msg(&self, item: &AugmentedPathInstance) -> String {
         format!(
             "Enumerate more edges: [{}] and [{}]",
-            item.fixed_edge.iter().join(", "),
-            item.non_path_matching_edges.iter().join(", "),
+            item.fixed_edges.iter().join(", "),
+            item.abstract_edges.iter().join(", "),
         )
     }
 

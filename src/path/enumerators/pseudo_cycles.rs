@@ -22,7 +22,7 @@ impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator
 
         let matching_edges_iter = self
             .input
-            .non_path_matching_edges
+            .abstract_edges
             .iter()
             .filter(|m_edge| m_edge.is_cycle_edge().is_some())
             .flat_map(move |cycle_edge| {
@@ -69,23 +69,19 @@ impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator
                     let cycle = PseudoCycle { nodes };
 
                     PseudoCycleInstance {
-                        path_matching: self.input.clone(),
+                        instance: self.input.clone(),
                         cycle_edge: CycleEdge::Matching(cycle_edge.clone()),
                         pseudo_cycle: cycle,
                     }
                 })
             });
 
-        let fixed_edges_three = pseudo_cycles_of_length(instance.clone(), 3);
-        let fixed_edges_four = pseudo_cycles_of_length(instance.clone(), 4);
-        let fixed_edges_five = pseudo_cycles_of_length(instance.clone(), 5);
-
-        Box::new(
-            matching_edges_iter
-                .chain(fixed_edges_three)
-                .chain(fixed_edges_four)
-                .chain(fixed_edges_five),
-        )
+        let mut iter: Box<dyn Iterator<Item = PseudoCycleInstance>> = Box::new(matching_edges_iter);
+        for i in 3..=instance.path_len() {
+            let fixed_edge_iter = pseudo_cycles_of_length(instance.clone(), i);
+            iter = Box::new(iter.chain(fixed_edge_iter))
+        }
+        iter
     }
 }
 
@@ -132,7 +128,7 @@ fn pseudo_cycles_of_length(
     Pidx::range(instance.path_len())
         .into_iter()
         .permutations(length)
-        .filter(|perm| perm.iter().min() == perm.first()) // TODO improve
+        .filter(|perm| perm.iter().min() == perm.first()) 
         .flat_map(move |perm| {
             let first = perm[0];
             let cons_edges = vec![perm.clone(), vec![first]]
@@ -160,7 +156,7 @@ fn pseudo_cycles_of_length(
                 let cycle = PseudoCycle { nodes: cycle_nodes };
 
                 PseudoCycleInstance {
-                    path_matching: instance.clone(),
+                    instance: instance.clone(),
                     cycle_edge: CycleEdge::Fixed,
                     pseudo_cycle: cycle,
                 }

@@ -17,7 +17,7 @@ use crate::{path::utils::complex_cycle_value_base, Credit, CreditInv, Node};
 use crate::{comps::*, types::Edge};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct MatchingEdge {
+pub struct AbstractEdge {
     source_path: Pidx,
     source: Node,
     hit: PathHit,
@@ -29,7 +29,7 @@ pub enum PathHit {
     Outside,
 }
 
-impl MatchingEdge {
+impl AbstractEdge {
     // source_path < hit !!!!
     pub fn new(source_path: Pidx, source: Node, hit: PathHit) -> Self {
         Self {
@@ -71,7 +71,7 @@ impl MatchingEdge {
     }
 }
 
-impl Display for MatchingEdge {
+impl Display for AbstractEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.hit {
             PathHit::Path(j) => write!(f, "({}--path[{}])", self.source, j),
@@ -377,7 +377,7 @@ pub struct SelectedHitInstance {
 
 #[derive(Clone, Debug)]
 pub struct PseudoCycleInstance {
-    pub path_matching: AugmentedPathInstance,
+    pub instance: AugmentedPathInstance,
     pub cycle_edge: CycleEdge,
     pub pseudo_cycle: PseudoCycle,
 }
@@ -393,7 +393,7 @@ pub struct PathRearrangementInstance {
 #[derive(Clone, Debug)]
 pub enum CycleEdge {
     Fixed,
-    Matching(MatchingEdge),
+    Matching(AbstractEdge),
 }
 
 impl Display for CycleEdge {
@@ -504,8 +504,8 @@ impl Display for Pidx {
 #[derive(Clone, Debug)]
 pub struct AugmentedPathInstance {
     nodes: Vec<SuperNode>,
-    pub non_path_matching_edges: Vec<MatchingEdge>,
-    pub fixed_edge: Vec<Edge>,
+    pub abstract_edges: Vec<AbstractEdge>,
+    pub fixed_edges: Vec<Edge>,
 }
 
 impl AugmentedPathInstance {
@@ -525,16 +525,16 @@ impl AugmentedPathInstance {
         self.nodes.len()
     }
 
-    pub fn all_outside_hits(&self) -> Vec<MatchingEdge> {
-        self.non_path_matching_edges
+    pub fn all_outside_hits(&self) -> Vec<AbstractEdge> {
+        self.abstract_edges
             .iter()
             .filter(|e| e.hits_outside())
             .cloned()
             .collect_vec()
     }
 
-    pub fn outside_hits_from(&self, path_idx: Pidx) -> Vec<MatchingEdge> {
-        self.non_path_matching_edges
+    pub fn outside_hits_from(&self, path_idx: Pidx) -> Vec<AbstractEdge> {
+        self.abstract_edges
             .iter()
             .filter(|e| e.hits_outside() && e.source_path() == path_idx)
             .cloned()
@@ -542,7 +542,7 @@ impl AugmentedPathInstance {
     }
 
     pub fn outside_edges_on(&self, path_idx: Pidx) -> Vec<Node> {
-        self.non_path_matching_edges
+        self.abstract_edges
             .iter()
             .filter(|e| e.hits_outside() && e.source_path() == path_idx)
             .map(|e| e.source())
@@ -557,7 +557,7 @@ impl AugmentedPathInstance {
             return vec![*n];
         }
         let fixed_incident = self.fixed_incident_edges(path_idx);
-        let matching_sources = self.nodes_with_matching_edges(path_idx);
+        let matching_sources = self.nodes_with_abstract_edges(path_idx);
 
         comp.matching_nodes()
             .into_iter()
@@ -576,7 +576,7 @@ impl AugmentedPathInstance {
 
     pub fn nodes_with_fixed_edges(&self, path_idx: Pidx) -> Vec<Node> {
         let mut edge_endpoints = self
-            .fixed_edge
+            .fixed_edges
             .iter()
             .flat_map(|e| e.endpoint_at(path_idx))
             .collect_vec();
@@ -597,9 +597,9 @@ impl AugmentedPathInstance {
         edge_endpoints
     }
 
-    pub fn nodes_with_matching_edges(&self, path_idx: Pidx) -> Vec<Node> {
+    pub fn nodes_with_abstract_edges(&self, path_idx: Pidx) -> Vec<Node> {
         let endpoints = self
-            .non_path_matching_edges
+            .abstract_edges
             .iter()
             .filter(|e| e.source_path() == path_idx)
             .map(|e| e.source())
@@ -613,7 +613,7 @@ impl AugmentedPathInstance {
 
     pub fn nodes_with_edges(&self, path_idx: Pidx) -> Vec<Node> {
         vec![
-            self.nodes_with_matching_edges(path_idx),
+            self.nodes_with_abstract_edges(path_idx),
             self.nodes_with_fixed_edges(path_idx),
         ]
         .into_iter()
@@ -633,8 +633,8 @@ impl AugmentedPathInstance {
             .collect_vec()
     }
 
-    pub fn matching_edges_hit(&self, path_idx: Pidx) -> Vec<MatchingEdge> {
-        self.non_path_matching_edges
+    pub fn matching_edges_hit(&self, path_idx: Pidx) -> Vec<AbstractEdge> {
+        self.abstract_edges
             .iter()
             .filter(|e| e.hits_path() == Some(path_idx))
             .cloned()
@@ -643,14 +643,14 @@ impl AugmentedPathInstance {
 
     pub fn fix_matching_edge(
         &mut self,
-        matching_edge: &MatchingEdge,
+        matching_edge: &AbstractEdge,
         hit_idx: Pidx,
         new_target: Node,
     ) {
-        self.non_path_matching_edges
+        self.abstract_edges
             .drain_filter(|e| matching_edge == e);
 
-        self.fixed_edge.push(Edge::new(
+        self.fixed_edges.push(Edge::new(
             new_target,
             hit_idx,
             matching_edge.source(),
@@ -660,7 +660,7 @@ impl AugmentedPathInstance {
 
     /// Returns fixed edges incident on `idx`
     pub fn fixed_incident_edges(&self, idx: Pidx) -> Vec<Edge> {
-        self.fixed_edge
+        self.fixed_edges
             .iter()
             .filter(|e| e.path_incident(idx))
             .cloned()
@@ -676,7 +676,7 @@ impl AugmentedPathInstance {
     }
 
     /// Returns path edge between `idx` and `idx + 1`
-    pub fn path_edge(&self, idx: Pidx) -> Option<Edge> {
+    fn path_edge(&self, idx: Pidx) -> Option<Edge> {
         if idx.raw() >= self.nodes.len() {
             return None;
         }
@@ -692,25 +692,9 @@ impl AugmentedPathInstance {
         }
     }
 
-    // pub fn swap_path_edge(&mut self, new_path_edge: Edge, path_edge_idx: Pidx) {
-    //     assert!(self[path_edge_idx.right()].is_zoomed() && self[path_edge_idx].is_zoomed());
-    //     assert!(self.fixed_edge.contains(&new_path_edge));
-
-    //     let old_path_edge = self.path_edge(path_edge_idx).unwrap();
-    //     self[path_edge_idx.right()]
-    //         .get_zoomed_mut()
-    //         .set_out(new_path_edge.endpoint_at(path_edge_idx.right()).unwrap());
-    //     self[path_edge_idx]
-    //         .get_zoomed_mut()
-    //         .set_in(new_path_edge.endpoint_at(path_edge_idx).unwrap());
-
-    //     self.fixed_edge.drain_filter(|e| *e == new_path_edge);
-    //     self.fixed_edge.push(old_path_edge);
-    // }
-
     pub fn fixed_edges_between(&self, idx1: Pidx, idx2: Pidx) -> Vec<Edge> {
         let mut edges = self
-            .fixed_edge
+            .fixed_edges
             .iter()
             .filter(|&edge| edge.between_path_nodes(idx1, idx2))
             .cloned()

@@ -55,13 +55,13 @@ impl<'a> Enumerator<PathRearrangementInstance, PathContext> for PathRearrangemen
 
         let iter = vec![
             PathRearrangementInstance {
-                instance: self.input.path_matching.clone(),
+                instance: self.input.instance.clone(),
                 start_idx: node.path_idx(),
                 cycle_edge: self.input.cycle_edge.clone(),
                 extension: path1,
             },
             PathRearrangementInstance {
-                instance: self.input.path_matching.clone(),
+                instance: self.input.instance.clone(),
                 start_idx: node.path_idx(),
                 cycle_edge: self.input.cycle_edge.clone(),
                 extension: path2,
