@@ -47,12 +47,16 @@ pub fn prove_tree_case(
                     ),
                 ),
                 and(
-                    any(
-                        ContractableCompsEnum::new(true),
-                        all(
-                            ContractableEdgesEnum,
-                            DirectMerge::new(
-                                "2-Comp Merge (double leaf) via Contractability".into(),
+                    or3(
+                        CoreTriangle::new(),
+                        FiniteInstance::new(),
+                        any(
+                            ContractableCompsEnum::new(true),
+                            all(
+                                ContractableEdgesEnum,
+                                DirectMerge::new(
+                                    "2-Comp Merge (double leaf) via Contractability".into(),
+                                ),
                             ),
                         ),
                     ),
@@ -143,6 +147,72 @@ impl Tactic<TreeCaseInstance, TreeContext> for TacticsExhausted {
 impl Statistics for TacticsExhausted {
     fn print_stats(&self) {
         println!("Unproved tree matching instances {}", self.num_calls)
+    }
+}
+
+#[derive(Clone)]
+struct CoreTriangle {
+    num_calls: usize,
+}
+
+impl CoreTriangle {
+    fn new() -> Self {
+        Self { num_calls: 0 }
+    }
+}
+
+impl Tactic<TreeCaseInstance, TreeContext> for CoreTriangle {
+    fn precondition(&self, _data: &TreeCaseInstance, _context: &TreeContext) -> bool {
+        true
+    }
+
+    fn action(&mut self, data: &TreeCaseInstance, _context: &TreeContext) -> ProofNode {
+        self.num_calls += 1;
+        let res = if data.comps.len() == 2 {
+            data.comps.iter().any(|c| c.is_c3()) && data.comps.iter().any(|c| c.is_large())
+        } else {
+            data.comps[0].is_c3() && data.comps[1].is_large() && data.comps[2].is_c3()
+        };
+
+        if res {
+            ProofNode::new_leaf("Core triangle configuration!".into(), true)
+        } else {
+            ProofNode::new_leaf("No core triangle configuration!".into(), false)
+        }
+    }
+}
+
+impl Statistics for CoreTriangle {
+    fn print_stats(&self) {
+        println!("Core triangle configurations {}", self.num_calls)
+    }
+}
+
+#[derive(Clone)]
+struct FiniteInstance {
+    num_calls: usize,
+}
+
+impl FiniteInstance {
+    fn new() -> Self {
+        Self { num_calls: 0 }
+    }
+}
+
+impl Tactic<TreeCaseInstance, TreeContext> for FiniteInstance {
+    fn precondition(&self, data: &TreeCaseInstance, _context: &TreeContext) -> bool {
+        data.all_small()
+    }
+
+    fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> ProofNode {
+        self.num_calls += 1;
+        ProofNode::new_leaf("Only small components!".into(), true)
+    }
+}
+
+impl Statistics for FiniteInstance {
+    fn print_stats(&self) {
+        println!("Finite instances {}", self.num_calls)
     }
 }
 
