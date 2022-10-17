@@ -127,16 +127,15 @@ fn prove_last_node(
         credit_inv: credit_inv.clone(),
     };
 
-    let mut proof_tactic = all_sc(
-        sc,
-        PathEnum,
-        and(
-            get_path_tactic(sc, true),
-            all_sc(
-                sc,
-                IterCompEnum::new(nodes.clone()),
-                or(
-                    get_path_tactic(sc, false),
+    let mut proof = if last_node.get_comp().is_complex() {
+        let mut proof_tactic = all_sc(
+            sc,
+            PathEnum,
+            and(
+                get_path_tactic(sc, true),
+                all_sc(
+                    sc,
+                    IterCompEnum::new(nodes.clone()),
                     and(
                         get_path_tactic(sc, true),
                         all_sc(
@@ -147,21 +146,38 @@ fn prove_last_node(
                     ),
                 ),
             ),
-        ),
-    );
+        );
 
-    let mut proof = proof_tactic.action(
-        &PathEnumeratorInput::new(last_node.clone(), nodes),
-        &mut context,
-    );
+        let proof = proof_tactic.action(
+            &PathEnumeratorInput::new(last_node.clone(), nodes),
+            &mut context,
+        );
+        proof_tactic.print_stats();
+
+        proof
+    } else {
+        let mut proof_tactic = all_sc(
+            sc,
+            PathEnum,
+            and(
+                get_path_tactic(sc, true),
+                all_sc(
+                    sc,
+                    IterCompEnum::new(nodes.clone()),
+                    get_path_tactic(sc, false),
+                ),
+            ),
+        );
+
+        let proof = proof_tactic.action(
+            &PathEnumeratorInput::new(last_node.clone(), nodes),
+            &mut context,
+        );
+        proof_tactic.print_stats();
+        proof
+    };
 
     let outcome = proof.eval();
-
-    println!(
-        "Results for nice paths ending with {}",
-        last_node.short_name()
-    );
-    proof_tactic.print_stats();
 
     let filename = if outcome.success() {
         println!(
