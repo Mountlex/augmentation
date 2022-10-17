@@ -138,6 +138,8 @@ fn main() -> anyhow::Result<()> {
 
 fn prove_local(tree: Tree) {
     let inv = CreditInv::new(Rational64::new(tree.c_numer, tree.c_demon));
+    
+    let leaf_comps = vec![large(), complex_tree(), complex_path()];
 
     let comps = vec![
         complex_path(),
@@ -148,8 +150,6 @@ fn prove_local(tree: Tree) {
         c5(),
         c6(),
     ];
-
-    let leaf_comps = vec![c4(), c5(), c6(), large(), complex_tree(), complex_path()];
 
     if tree.parallel {
         leaf_comps.into_par_iter().for_each(|leaf_comp| {

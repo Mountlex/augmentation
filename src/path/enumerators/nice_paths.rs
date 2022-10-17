@@ -33,9 +33,9 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for PathEnumerator<'a> {
     fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
         let comps = &self.input.comps;
 
-        let iter = itertools::iproduct!(comps.clone(), comps.clone(), comps.clone()).map(
-            move |(c1, c2, c3)| {
-                let path = vec![self.input.last_comp.clone(), c1, c2, c3];
+        let iter = itertools::iproduct!(comps.clone(), comps.clone()).map(
+            move |(c1, c2)| {
+                let path = vec![self.input.last_comp.clone(), c1, c2];
 
                 let mut path_updated = path.iter().map(|n| n.get_comp().clone()).collect_vec();
                 relabels_nodes_sequentially(&mut path_updated, 0);

@@ -11,22 +11,45 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct ExpandEnum;
+pub struct ExpandEnum {
+    finite_path: bool
+}
+
+impl ExpandEnum {
+    pub fn new(finite_path: bool) -> Self {
+        Self {
+            finite_path
+        }
+    }
+}
+
 #[derive(Clone)]
-pub struct ExpandLastEnum;
+pub struct ExpandLastEnum {
+    finite_path: bool
+}
+
+impl ExpandLastEnum {
+    pub fn new(finite_path: bool) -> Self {
+        Self {
+            finite_path
+        }
+    }
+}
 
 pub struct ExpandEnumerator<'a> {
     pub instance: &'a AugmentedPathInstance,
     pub hit_comp_idx: Pidx,
     pub last_hit: bool,
+    pub finite_path: bool,
 }
 
 impl<'a> ExpandEnumerator<'a> {
-    pub fn _new(instance: &'a AugmentedPathInstance, hit_comp_idx: Pidx, last_hit: bool) -> Self {
+    pub fn _new(instance: &'a AugmentedPathInstance, hit_comp_idx: Pidx, last_hit: bool, finite_path: bool) -> Self {
         Self {
             instance,
             hit_comp_idx,
             last_hit,
+            finite_path
         }
     }
 }
@@ -90,7 +113,7 @@ pub fn expand_iter(
         let out_nodes = if let Some(fixed) = comp.fixed_node() {
             vec![fixed] // we assume here that if comp has a fixed node it was not used for any matching hit node.
         } else {
-            if let Some(left) = node_idx.left() {
+            if let Some(left) = node_idx.succ() {
                 let matching_endpoints_from_right = instance
                     .fixed_edges_between(node_idx, left)
                     .into_iter()
@@ -216,7 +239,15 @@ pub fn expand_iter(
                 };
                 iter
             }));
-        Box::new(iter)
+
+        
+        Box::new(iter.map(|instance| {
+            let mut instance = instance;
+            if let Some(SuperNode::Zoomed(last)) = instance.nodes.last_mut() {
+                last.in_node = None;
+            }
+            instance
+        }))
     }
 }
 
@@ -248,6 +279,7 @@ impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
             instance: data,
             hit_comp_idx: Pidx::Last,
             last_hit: false,
+            finite_path: self.finite_path
         }
     }
 
@@ -268,6 +300,7 @@ impl EnumeratorTactic<SelectedHitInstance, SelectedHitInstance, PathContext> for
             instance: &data.instance,
             hit_comp_idx: data.hit_comp_idx,
             last_hit: data.last_hit,
+            finite_path: self.finite_path
         }
     }
 

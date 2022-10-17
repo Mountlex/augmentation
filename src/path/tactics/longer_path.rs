@@ -13,13 +13,15 @@ use super::cycle_rearrange::check_fixed_extension_feasible;
 pub struct LongerPathTactic {
     num_calls: usize,
     num_proofs: usize,
+    finite_path: bool
 }
 
 impl LongerPathTactic {
-    pub fn new() -> Self {
+    pub fn new(finite_path: bool) -> Self {
         Self {
             num_calls: 0,
             num_proofs: 0,
+            finite_path
         }
     }
 }
@@ -119,10 +121,54 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
                 }
             }
         }
+
+        if self.finite_path {
+            let start_idx = Pidx::from(data.path_len() - 1);
+            let outside_hits = data.outside_hits_from(start_idx);
+
+            for outside_hit in outside_hits {
+                //   0 --- 1 --- 2
+                //               |
+                //               out
+                if data[start_idx.succ().unwrap()]
+                    .get_zoomed()
+                    .valid_out(outside_hit.source, true)
+                {
+                    self.num_proofs += 1;
+                    return ProofNode::new_leaf(
+                        format!("Longer nice path found via edge ({})!", outside_hit),
+                        true,
+                    );
+                }
+    
+                for prelast_edge in data.fixed_edges_between(start_idx, start_idx.succ().unwrap()) {
+                    let prelast_cond = if let SuperNode::Zoomed(prelast) = &data[start_idx.succ().unwrap()] {
+                        prelast.valid_in(prelast_edge.endpoint_at(start_idx.succ().unwrap()).unwrap(), false)
+                    } else {
+                        true
+                    };
+    
+                    if prelast_cond
+                        && data[start_idx].get_zoomed().valid_in_out(
+                            outside_hit.source,
+                            prelast_edge.endpoint_at(start_idx).unwrap(),
+                            true,
+                        )
+                    {
+                        self.num_proofs += 1;
+                        return ProofNode::new_leaf(
+                            format!("Longer nice path found via edge ({})!", outside_hit),
+                            true,
+                        );
+                    }
+                }
+            }
+        }
+
         ProofNode::new_leaf(format!("No longer nice path possible!"), false)
     }
 
     fn precondition(&self, data: &AugmentedPathInstance, _context: &PathContext) -> bool {
-        !data.outside_edges_on(Pidx::Last).is_empty()
+        !(data.outside_edges_on(Pidx::Last).is_empty() && data.outside_edges_on(Pidx::from(data.path_len() - 1)).is_empty() )
     }
 }

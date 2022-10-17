@@ -139,9 +139,10 @@ pub fn check_fixed_extension_feasible(
     // check that connection between hit and remaining path is feasible
     if let Some(SuperNode::Zoomed(hit_node)) = extension.first() {
         if let SuperNode::Zoomed(path_hit_node) = &instance[hit_node.path_idx] {
-            let path_hit_in = path_hit_node.in_node.unwrap();
-            if !hit_node.valid_in(path_hit_in, false) {
-                return ProofNode::new_leaf(format!("Cannot rearrange cycle: hit comp is {} but has no nice pair in new instance!", hit_node.get_comp()), false).into();
+            if let Some(path_hit_in) = path_hit_node.in_node {
+                if !hit_node.valid_in(path_hit_in, false) {
+                    return ProofNode::new_leaf(format!("Cannot rearrange cycle: hit comp is {} but has no nice pair in new instance!", hit_node.get_comp()), false).into();
+                }
             }
         }
     } else {

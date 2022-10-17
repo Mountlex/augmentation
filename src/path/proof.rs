@@ -130,9 +130,23 @@ fn prove_last_node(
     let mut proof_tactic = all_sc(
         sc,
         PathEnum,
-        or(
-            get_path_tactic(sc),
-            all_sc(sc, IterCompEnum::new(nodes.clone()), get_path_tactic(sc)),
+        and(
+            get_path_tactic(sc, true),
+            all_sc(
+                sc,
+                IterCompEnum::new(nodes.clone()),
+                or(
+                    get_path_tactic(sc, false),
+                    and(
+                        get_path_tactic(sc, true),
+                        all_sc(
+                            sc,
+                            IterCompEnum::new(nodes.clone()),
+                            get_path_tactic(sc, false),
+                        ),
+                    ),
+                ),
+            ),
         ),
     );
 
@@ -179,18 +193,21 @@ fn prove_last_node(
     std::fs::write(filename, buf).expect("Unable to write file");
 }
 
-fn get_path_tactic(sc: bool) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics {
+fn get_path_tactic(
+    sc: bool,
+    path_finite: bool,
+) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics {
     all_sc(
         sc,
-        ExpandLastEnum,
+        ExpandLastEnum::new(path_finite),
         all_sc(
             sc,
             MatchingHitEnum,
             all_sc(
                 sc,
-                ExpandLastEnum,
+                ExpandLastEnum::new(path_finite),
                 or3(
-                    LongerPathTactic::new(),
+                    LongerPathTactic::new(path_finite),
                     any(
                         PseudoCyclesEnum,
                         or(
@@ -203,10 +220,10 @@ fn get_path_tactic(sc: bool) -> impl Tactic<AugmentedPathInstance, PathContext> 
                         MatchingHitEnum,
                         all_sc(
                             sc,
-                            ExpandLastEnum,
+                            ExpandLastEnum::new(path_finite),
                             or6(
                                 CountTactic::new("AugmentedPathInstances".into()),
-                                LongerPathTactic::new(),
+                                LongerPathTactic::new(path_finite),
                                 ContractabilityTactic::new(),
                                 any(
                                     PseudoCyclesEnum,
@@ -220,17 +237,17 @@ fn get_path_tactic(sc: bool) -> impl Tactic<AugmentedPathInstance, PathContext> 
                                     all(
                                         MatchingNodesEnum,
                                         all(
-                                            ExpandEnum,
+                                            ExpandEnum::new(path_finite),
                                             or5(
                                                 PendantRewireTactic::new(),
                                                 LocalMergeTactic::new(true),
-                                                LongerPathTactic::new(),
+                                                LongerPathTactic::new(path_finite),
                                                 any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                 ifcond(
                                                     |instance: &SelectedHitInstance| {
                                                         instance.last_hit
                                                     },
-                                                    tryhard_mode(),
+                                                    tryhard_mode(path_finite),
                                                 ),
                                             ),
                                         ),
@@ -246,42 +263,51 @@ fn get_path_tactic(sc: bool) -> impl Tactic<AugmentedPathInstance, PathContext> 
     )
 }
 
-fn tryhard_mode() -> impl Tactic<SelectedHitInstance, PathContext> + Statistics {
+fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathContext> + Statistics {
     all(
         ExpandAllEnum,
-        or3(
+        or4(
             CountTactic::new("Fully expanded AugmentedPathInstances".into()),
+            LongerPathTactic::new(path_finite),
             any(
                 PseudoCyclesEnum,
                 or(
                     CycleMergeTactic::new(),
                     any(
                         PathRearrangementEnum,
-                        or(CycleRearrangeTactic::new(), LongerPathTactic::new()),
+                        or(
+                            CycleRearrangeTactic::new(),
+                            LongerPathTactic::new(path_finite),
+                        ),
                     ),
                 ),
             ),
             all(
-                FindMatchingEdgesEnum,
+                FindMatchingEdgesEnum::new(path_finite),
                 all(
                     ExpandAllEnum,
-                    or3(
+                    or4(
                         LocalMergeTactic::new(false),
+                        LongerPathTactic::new(path_finite),
                         any(
                             PseudoCyclesEnum,
                             or(
                                 CycleMergeTactic::new(),
                                 any(
                                     PathRearrangementEnum,
-                                    or(CycleRearrangeTactic::new(), LongerPathTactic::new()),
+                                    or(
+                                        CycleRearrangeTactic::new(),
+                                        LongerPathTactic::new(path_finite),
+                                    ),
                                 ),
                             ),
                         ),
                         all(
-                            FindMatchingEdgesEnum,
+                            FindMatchingEdgesEnum::new(path_finite),
                             all(
                                 ExpandAllEnum,
-                                or(
+                                or4(
+                                    LongerPathTactic::new(path_finite),
                                     LocalMergeTactic::new(false),
                                     any(
                                         PseudoCyclesEnum,
@@ -291,7 +317,30 @@ fn tryhard_mode() -> impl Tactic<SelectedHitInstance, PathContext> + Statistics 
                                                 PathRearrangementEnum,
                                                 or(
                                                     CycleRearrangeTactic::new(),
-                                                    LongerPathTactic::new(),
+                                                    LongerPathTactic::new(path_finite),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                    all(
+                                        FindMatchingEdgesEnum::new(path_finite),
+                                        all(
+                                            ExpandAllEnum,
+                                            or3(
+                                                LongerPathTactic::new(path_finite),
+                                                LocalMergeTactic::new(false),
+                                                any(
+                                                    PseudoCyclesEnum,
+                                                    or(
+                                                        CycleMergeTactic::new(),
+                                                        any(
+                                                            PathRearrangementEnum,
+                                                            or(
+                                                                CycleRearrangeTactic::new(),
+                                                                LongerPathTactic::new(path_finite),
+                                                            ),
+                                                        ),
+                                                    ),
                                                 ),
                                             ),
                                         ),

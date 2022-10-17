@@ -445,7 +445,7 @@ impl Pidx {
         }
     }
 
-    pub fn right(&self) -> Pidx {
+    pub fn prec(&self) -> Pidx {
         if let Pidx::Last = self {
             Pidx::Prelast
         } else {
@@ -453,7 +453,7 @@ impl Pidx {
         }
     }
 
-    pub fn left(&self) -> Option<Pidx> {
+    pub fn succ(&self) -> Option<Pidx> {
         match self {
             Pidx::Last => None,
             Pidx::Prelast => Some(Pidx::Last),
@@ -667,7 +667,7 @@ impl AugmentedPathInstance {
             .chain(
                 vec![
                     self.path_edge(idx),
-                    idx.left().and_then(|left| self.path_edge(left)),
+                    idx.succ().and_then(|left| self.path_edge(left)),
                 ]
                 .into_iter()
                 .flatten(),
@@ -680,10 +680,10 @@ impl AugmentedPathInstance {
         if idx.raw() >= self.nodes.len() {
             return None;
         }
-        if self[idx].is_zoomed() && self[idx.right()].is_zoomed() {
+        if self[idx].is_zoomed() && self[idx.prec()].is_zoomed() {
             Some(Edge::new(
-                self[idx.right()].get_zoomed().out_node.unwrap(),
-                idx.right(),
+                self[idx.prec()].get_zoomed().out_node.unwrap(),
+                idx.prec(),
                 self[idx].get_zoomed().in_node.unwrap(),
                 idx,
             ))
