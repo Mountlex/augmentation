@@ -131,21 +131,21 @@ fn prove_last_node(
         let mut proof_tactic = all_sc(
             sc,
             PathEnum,
-            //and(
-                //get_path_tactic(sc, true),
+            and(
+                get_path_tactic(sc, true),
                 all_sc(
                     sc,
                     IterCompEnum::new(nodes.clone()),
-             //       and(
+                    and(
                         get_path_tactic(sc, true),
-              //          all_sc(
-              //              sc,
-               //             IterCompEnum::new(nodes.clone()),
-               //             get_path_tactic(sc, false),
-                //        ),
-                   // ),
+                        all_sc(
+                            sc,
+                            IterCompEnum::new(nodes.clone()),
+                            get_path_tactic(sc, false),
+                        ),
+                    ),
                 ),
-          //  ),
+            ),
         );
 
         let proof = proof_tactic.action(
