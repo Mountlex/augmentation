@@ -256,7 +256,7 @@ fn get_path_tactic(
                                             ExpandEnum::new(path_finite),
                                             or5(
                                                 PendantRewireTactic::new(),
-                                                LocalMergeTactic::new(true),
+                                                LocalMergeTactic::new(),
                                                 LongerPathTactic::new(path_finite),
                                                 any(PseudoCyclesEnum, CycleMergeTactic::new()),
                                                 ifcond(
@@ -303,7 +303,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                 all(
                     ExpandAllEnum,
                     or4(
-                        LocalMergeTactic::new(path_finite),
+                        LocalMergeTactic::new(),
                         LongerPathTactic::new(path_finite),
                         any(
                             PseudoCyclesEnum,
@@ -324,7 +324,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                 ExpandAllEnum,
                                 or4(
                                     LongerPathTactic::new(path_finite),
-                                    LocalMergeTactic::new(path_finite),
+                                    LocalMergeTactic::new(),
                                     any(
                                         PseudoCyclesEnum,
                                         or(
@@ -344,7 +344,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                             ExpandAllEnum,
                                             or3(
                                                 LongerPathTactic::new(path_finite),
-                                                LocalMergeTactic::new(path_finite),
+                                                LocalMergeTactic::new(),
                                                 any(
                                                     PseudoCyclesEnum,
                                                     or(

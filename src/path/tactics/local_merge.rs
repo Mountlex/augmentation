@@ -1,11 +1,8 @@
 use itertools::Itertools;
-use petgraph::{algo::connected_components, visit::EdgeFiltered};
 
 use crate::{
-    bridges::{is_complex, ComplexCheckResult},
-    comps::{edges_of_type, EdgeType},
     path::{
-        proof::PathContext, utils::get_local_merge_graph, AugmentedPathInstance, Pidx,
+        proof::PathContext, AugmentedPathInstance, 
         SelectedHitInstance, ZoomedNode,
     },
     proof_logic::{Statistics, Tactic},
@@ -18,15 +15,13 @@ use crate::{
 pub struct LocalMergeTactic {
     num_calls: usize,
     num_proofs: usize,
-    do_complex: bool,
 }
 
 impl LocalMergeTactic {
-    pub fn new(do_complex: bool) -> Self {
+    pub fn new() -> Self {
         Self {
             num_calls: 0,
             num_proofs: 0,
-            do_complex,
         }
     }
 }
@@ -42,154 +37,71 @@ fn merge(
     right: &ZoomedNode,
     edges_between: &[Edge],
     context: &PathContext,
-    do_complex: bool,
 ) -> ProofNode {
     let left_comp = left.get_comp();
     let right_comp = right.get_comp();
+
+    if left_comp.is_complex() && right_comp.is_complex() {
+        return ProofNode::new_leaf("Merge two complex components".into(), true);
+    }
 
     let total_comp_credit =
         context.credit_inv.credits(&left_comp) + context.credit_inv.credits(&right_comp);
 
     if left_comp.is_complex() || right_comp.is_complex() {
-        if !do_complex {
-            return ProofNode::new_leaf("No complex local merge".into(), false);
-        }
+        let (_, complex_comp) = if left_comp.is_complex() {
+            (left, left_comp)
+        } else {
+            (right, right_comp)
+        };
+        let (other, other_comp) = if !left_comp.is_complex() {
+            (left, left_comp)
+        } else {
+            (right, right_comp)
+        };
 
-        let graph_with_matching = get_local_merge_graph(
-            &left_comp,
-            &right_comp,
-            &edges_between.iter().map(|e| e.to_tuple()).collect_vec(),
-        );
+        for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
+            let mut total_block_merge = total_comp_credit;
+            let other1 = other_comp.incident(&buy[0]).unwrap();
+            let other2 = other_comp.incident(&buy[1]).unwrap();
+            let complex1 = complex_comp.incident(&buy[0]).unwrap();
+            let complex2 = complex_comp.incident(&buy[1]).unwrap();
 
-        let buyable_endpoints = edges_between.iter().flat_map(|e| e.to_vec()).collect_vec();
+            if other.npc.is_nice_pair(other1, other2) {
+                total_block_merge += Credit::from_integer(1)
+            }
 
-        for sell in edges_of_type(&graph_with_matching, EdgeType::Sellable)
-            .into_iter()
-            .filter(|(u, v)| buyable_endpoints.contains(u) && buyable_endpoints.contains(v)) // only consider edges to sell between buyable endpoints
-            .powerset()
-            .filter(|s| s.len() <= 2)
-        {
-            let sell_credits = Credit::from_integer(sell.len() as i64);
-            let mut total_plus_sell = total_comp_credit + sell_credits;
+            let gained_complex_deg = complex_comp.complex_degree_between(&complex1, &complex2);
 
-            let sold_endpoints = sell.iter().flat_map(|e| vec![e.0, e.1]).collect_vec();
+            total_block_merge += context.credit_inv.complex_black(gained_complex_deg as i64);
 
-            for buy in edges_between
-                .iter()
-                .filter(|e| e.nodes_incident(&sold_endpoints)) // it only makes sense to buy edges incident to sold edges
-                .powerset()
-                .filter(|p| !p.is_empty())
+            if total_block_merge >= Credit::from_integer(3) {
+                // we have to pay for block credit and two edges
+                return ProofNode::new_leaf_success(
+                    "Local merge to complex".into(),
+                    total_block_merge == Credit::from_integer(3),
+                );
+            }
+
+            if complex_comp.is_adjacent(&complex1, &complex2) && other_comp.is_large() {
+                return ProofNode::new_leaf("Merge complex and large to complex!".into(), true);
+            }
+
+            if complex_comp.is_adjacent(&complex1, &complex2)
+                && !other_comp.is_large()
+                && other.npc.is_nice_pair(other1, other2)
             {
-                let buy_credits = Credit::from_integer(buy.len() as i64);
-
-                let check_graph = EdgeFiltered::from_fn(&graph_with_matching, |(v1, v2, t)| {
-                    if t == &EdgeType::Sellable && sell.contains(&(v1, v2))
-                        || sell.contains(&(v2, v1))
-                    {
-                        false
-                    } else if t == &EdgeType::Buyable
-                        && !buy.contains(&&Edge::new(v1, Pidx::Last, v2, Pidx::Last))
-                    {
-                        false
-                    } else {
-                        true
-                    }
-                });
-
-
-                if !(left_comp.is_complex() && right_comp.is_complex()) {
-                    let complex = if left_comp.is_complex() { left_comp } else {right_comp};
-                    let other = if !left_comp.is_complex() { left_comp } else {right_comp};
-
-                    let complex_nodes = complex.matching_nodes();
-                    if buy.len() == 2 && !sold_endpoints.iter().any(|n| complex_nodes.contains(n)) {
-                        
-                        let other1 = other.incident(&buy[0]).unwrap();
-                        let other2 = other.incident(&buy[1]).unwrap();
-                        let complex1 = complex.incident(&buy[0]).unwrap();
-                        let complex2 = complex.incident(&buy[1]).unwrap();
-
-                        if left.npc.is_nice_pair(other1, other2) {
-                            total_plus_sell += Credit::from_integer(1)
-                        }
-
-                        let gained_complex_deg = complex.complex_degree_between(&complex1, &complex2);
-
-                        total_plus_sell += context.credit_inv.complex_black(gained_complex_deg as i64);
-
-                        if total_plus_sell - buy_credits >= Credit::from_integer(1)  { // we have to pay for block credit
-                            return ProofNode::new_leaf_success(
-                                "Local merge to complex".into(),
-                                total_plus_sell - buy_credits ==Credit::from_integer(1),
-                            );
-                        } else {
-                            continue;
-                        }
-                    }
-                } 
-
-
-
-                // OTHERWISE 
-
-
-                if buy.len() == 2 && !left_comp.is_complex() {
-                    let l1 = left_comp.incident(&buy[0]).unwrap();
-                    let l2 = left_comp.incident(&buy[1]).unwrap();
-
-                    if !left_comp.is_adjacent(&l1, &l2) && left.npc.is_nice_pair(l1, l2) {
-                        total_plus_sell += Credit::from_integer(1)
-                    }
-                }
-
-                if buy.len() == 2 && !right_comp.is_complex() {
-                    let r1 = right_comp.incident(&buy[0]).unwrap();
-                    let r2 = right_comp.incident(&buy[1]).unwrap();
-
-                    if !right_comp.is_adjacent(&r1, &r2) && right.npc.is_nice_pair(r1, r2) {
-                        total_plus_sell += Credit::from_integer(1)
-                    }
-                }
-
-                
-                let white_vertices =
-                    vec![left_comp.white_nodes(), right_comp.white_nodes()].concat();
-
-                match is_complex(&check_graph, &white_vertices, false) {
-                    ComplexCheckResult::Complex(bridges, black_vertices) => {
-                        let blocks_graph = EdgeFiltered::from_fn(&check_graph, |(v, u, _)| {
-                            !bridges.contains(&(v, u)) && !bridges.contains(&(u, v))
-                        });
-                        let num_blocks = connected_components(&blocks_graph) - black_vertices.len();
-                        let black_deg: usize = black_vertices
-                            .iter()
-                            .map(|v| bridges.iter().filter(|(a, b)| a == v || b == v).count())
-                            .sum();
-                        let new_credits = Credit::from_integer(num_blocks as i64)
-                            * context.credit_inv.complex_block()
-                            + context.credit_inv.complex_black(black_deg as i64)
-                            + context.credit_inv.complex_comp();
-
-                        if total_plus_sell - buy_credits >= new_credits {
-                            return ProofNode::new_leaf_success(
-                                "Local merge to complex".into(),
-                                total_plus_sell - buy_credits == new_credits,
-                            );
-                        }
-                    }
-                    ComplexCheckResult::NoBridges => {
-                        let req_credits = context
-                            .credit_inv
-                            .two_ec_credit(left_comp.num_edges() + right_comp.num_edges());
-                        if total_plus_sell - buy_credits >= req_credits {
-                            return ProofNode::new_leaf_success(
-                                "Local merge".into(),
-                                total_plus_sell - buy_credits == req_credits,
-                            );
-                        }
-                    }
-                    ComplexCheckResult::BlackLeaf => continue,
-                    ComplexCheckResult::NotConnected | ComplexCheckResult::Empty => continue,
+                let mut total_complex_merge = total_comp_credit;
+                total_complex_merge += Credit::from_integer(1); // gain one credit from nice pair
+                total_complex_merge += Credit::from_integer(1); // gain one credit for shortcutting complex
+                let created_black_degree = 2 * other_comp.num_edges() + 2;
+                if total_complex_merge
+                    >= context
+                        .credit_inv
+                        .complex_black(created_black_degree as i64)
+                {
+                    // we have to pay for creation of black vertices
+                    return ProofNode::new_leaf("Local merge to complex".into(), true);
                 }
             }
         }
@@ -235,7 +147,7 @@ impl Tactic<AugmentedPathInstance, PathContext> for LocalMergeTactic {
                     let right = right.get_zoomed();
                     let edges_between = data.fixed_edges_between(left_idx.into(), right_idx.into());
                     if !edges_between.is_empty() {
-                        let mut res = merge(left, right, &edges_between, &context, self.do_complex);
+                        let mut res = merge(left, right, &edges_between, &context);
                         if res.eval().success() {
                             self.num_proofs += 1;
                             return Some(res);

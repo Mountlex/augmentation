@@ -138,26 +138,26 @@ impl Component {
     pub fn complex_degree_between(&self, u: &Node, v: &Node) -> u32 {
         match self {
             Component::ComplexPath(_, _) => {
-                (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex())) * 2
+                (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
             }
             Component::ComplexTree(_, b) => {
                 if b[..5].contains(u) && b[..5].contains(v) {
-                    (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex())) * 2
+                    (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2 + if u.to_vertex().min(v.to_vertex()) <= b[2].to_vertex() && u.to_vertex().max(v.to_vertex()) >= b[2].to_vertex() { 1 } else { 0 }
                 } else if b[5..].contains(u) && b[5..].contains(v) {
-                    (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex())) * 2
+                    (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
                 } else {
                     if b[5..].contains(v) {
                         (u.to_vertex().max(b[2].to_vertex()) - u.to_vertex().min(b[2].to_vertex())
                             + v.to_vertex().max(b[2].to_vertex())
                             - v.to_vertex().min(b[2].to_vertex())
-                            - 3)
+                            - 3 + 1)
                             * 2
                             + 1
                     } else {
                         (v.to_vertex().max(b[2].to_vertex()) - v.to_vertex().min(b[2].to_vertex())
                             + u.to_vertex().max(b[2].to_vertex())
                             - u.to_vertex().min(b[2].to_vertex())
-                            - 3)
+                            - 3 + 1)
                             * 2
                             + 1
                     }
@@ -414,5 +414,33 @@ impl CreditInv {
         self.complex_comp()
             + Credit::from_integer(complex.num_blocks as i64) * self.complex_block()
             + self.complex_black(complex.total_black_deg as i64)
+    }
+}
+
+
+
+#[cfg(test)]
+mod test_complex_degree {
+    use super::*;
+
+    #[test]
+    fn test_complex_path() {
+        let comp = complex_path();
+
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(4)), 8);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(2)), 4);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(1)), 2);
+    }
+
+    fn test_complex_tree() {
+        let comp = complex_tree();
+
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(3)), 7);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(2)), 4);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(5)), 9);
+        assert_eq!(comp.complex_degree_between(&Node::n(2), &Node::n(7)), 7);
+        assert_eq!(comp.complex_degree_between(&Node::n(3), &Node::n(7)), 5);
+        assert_eq!(comp.complex_degree_between(&Node::n(4), &Node::n(7)), 7);
+        assert_eq!(comp.complex_degree_between(&Node::n(5), &Node::n(8)), 11);
     }
 }
