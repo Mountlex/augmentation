@@ -55,12 +55,6 @@ fn merge(
             return ProofNode::new_leaf("No complex local merge".into(), false);
         }
 
-        // if (left_comp.is_c4() || right_comp.is_c4())
-        //     && left.path_idx.raw() + right.path_idx.raw() == 5
-        // {
-        //     println!("{} {} {:?}", left, right, edges_between);
-        // }
-
         let graph_with_matching = get_local_merge_graph(
             &left_comp,
             &right_comp,
@@ -102,6 +96,43 @@ fn merge(
                     }
                 });
 
+
+                if !(left_comp.is_complex() && right_comp.is_complex()) {
+                    let complex = if left_comp.is_complex() { left_comp } else {right_comp};
+                    let other = if !left_comp.is_complex() { left_comp } else {right_comp};
+
+                    let complex_nodes = complex.matching_nodes();
+                    if buy.len() == 2 && !sold_endpoints.iter().any(|n| complex_nodes.contains(n)) {
+                        
+                        let other1 = other.incident(&buy[0]).unwrap();
+                        let other2 = other.incident(&buy[1]).unwrap();
+                        let complex1 = complex.incident(&buy[0]).unwrap();
+                        let complex2 = complex.incident(&buy[1]).unwrap();
+
+                        if left.npc.is_nice_pair(other1, other2) {
+                            total_plus_sell += Credit::from_integer(1)
+                        }
+
+                        let gained_complex_deg = complex.complex_degree_between(&complex1, &complex2);
+
+                        total_plus_sell += context.credit_inv.complex_black(gained_complex_deg as i64);
+
+                        if total_plus_sell - buy_credits >= Credit::from_integer(1)  { // we have to pay for block credit
+                            return ProofNode::new_leaf_success(
+                                "Local merge to complex".into(),
+                                total_plus_sell - buy_credits ==Credit::from_integer(1),
+                            );
+                        } else {
+                            continue;
+                        }
+                    }
+                } 
+
+
+
+                // OTHERWISE 
+
+
                 if buy.len() == 2 && !left_comp.is_complex() {
                     let l1 = left_comp.incident(&buy[0]).unwrap();
                     let l2 = left_comp.incident(&buy[1]).unwrap();
@@ -120,6 +151,7 @@ fn merge(
                     }
                 }
 
+                
                 let white_vertices =
                     vec![left_comp.white_nodes(), right_comp.white_nodes()].concat();
 

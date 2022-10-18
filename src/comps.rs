@@ -135,6 +135,38 @@ impl Component {
         matches!(self, Component::Large(_))
     }
 
+    pub fn complex_degree_between(&self, u: &Node, v: &Node) -> u32 {
+        match self {
+            Component::ComplexPath(_, _) => {
+                (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex())) * 2
+            }
+            Component::ComplexTree(_, b) => {
+                if b[..5].contains(u) && b[..5].contains(v) {
+                    (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex())) * 2
+                } else if b[5..].contains(u) && b[5..].contains(v) {
+                    (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex())) * 2
+                } else {
+                    if b[5..].contains(v) {
+                        (u.to_vertex().max(b[2].to_vertex()) - u.to_vertex().min(b[2].to_vertex())
+                            + v.to_vertex().max(b[2].to_vertex())
+                            - v.to_vertex().min(b[2].to_vertex())
+                            - 3)
+                            * 2
+                            + 1
+                    } else {
+                        (v.to_vertex().max(b[2].to_vertex()) - v.to_vertex().min(b[2].to_vertex())
+                            + u.to_vertex().max(b[2].to_vertex())
+                            - u.to_vertex().min(b[2].to_vertex())
+                            - 3)
+                            * 2
+                            + 1
+                    }
+                }
+            }
+            _ => panic!("Component is not complex!"),
+        }
+    }
+
     pub fn nodes(&self) -> &[Node] {
         match self {
             Component::C6(nodes) => nodes,
@@ -295,8 +327,6 @@ impl Component {
                 .collect(),
         }
     }
-
-    
 
     pub fn contains(&self, node: &Node) -> bool {
         if let Component::Large(n) = self {
