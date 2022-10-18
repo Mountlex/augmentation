@@ -303,7 +303,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                 all(
                     ExpandAllEnum,
                     or4(
-                        LocalMergeTactic::new(false),
+                        LocalMergeTactic::new(true),
                         LongerPathTactic::new(path_finite),
                         any(
                             PseudoCyclesEnum,
@@ -324,7 +324,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                 ExpandAllEnum,
                                 or4(
                                     LongerPathTactic::new(path_finite),
-                                    LocalMergeTactic::new(false),
+                                    LocalMergeTactic::new(true),
                                     any(
                                         PseudoCyclesEnum,
                                         or(
@@ -344,7 +344,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                             ExpandAllEnum,
                                             or3(
                                                 LongerPathTactic::new(path_finite),
-                                                LocalMergeTactic::new(false),
+                                                LocalMergeTactic::new(true),
                                                 any(
                                                     PseudoCyclesEnum,
                                                     or(
