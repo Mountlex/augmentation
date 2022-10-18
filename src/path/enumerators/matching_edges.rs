@@ -36,7 +36,11 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnu
         if self.path_finite {
             finite_path_matching_edges(self.instance)
         } else {
-            infinite_path_matching_edges(self.instance)
+            if let Some(iter) = infinite_path_matching_edges(self.instance) {
+                iter
+            } else {
+                Box::new(vec![self.instance.clone()].into_iter())
+            }
         }
     }
 }
@@ -45,6 +49,11 @@ fn finite_path_matching_edges(
     instance: &AugmentedPathInstance,
 ) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
     let instance = instance;
+
+    if let Some(iter) = infinite_path_matching_edges(instance) {
+        return iter
+    }
+
 
     for i in 1..instance.path_len() {
         let node_idx = Pidx::from(i);
@@ -161,12 +170,14 @@ fn finite_path_matching_edges(
         }
     }
 
+    
+
     Box::new(vec![instance.clone()].into_iter())
 }
 
 fn infinite_path_matching_edges(
     instance: &AugmentedPathInstance,
-) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
     let instance = instance;
 
     for i in 1..instance.path_len() - 2 {
@@ -281,11 +292,11 @@ fn infinite_path_matching_edges(
                     new_instance
                 })
             });
-            return Box::new(iter);
+            return Some(Box::new(iter));
         }
     }
 
-    Box::new(vec![instance.clone()].into_iter())
+    None
 }
 
 impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
