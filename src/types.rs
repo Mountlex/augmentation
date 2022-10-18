@@ -50,6 +50,10 @@ impl Edge {
         (self.n1, self.n2)
     }
 
+    pub fn to_vec(&self) -> Vec<Node> {
+        vec![self.n1, self.n2]
+    }
+
     pub fn endpoint_at(&self, path_idx: Pidx) -> Option<Node> {
         if self.path_index_n1 == path_idx {
             Some(self.n1)

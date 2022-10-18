@@ -131,21 +131,21 @@ fn prove_last_node(
         let mut proof_tactic = all_sc(
             sc,
             PathEnum,
-            and(
-                get_path_tactic(sc, true),
+            //and(
+                //get_path_tactic(sc, true),
                 all_sc(
                     sc,
                     IterCompEnum::new(nodes.clone()),
-                    and(
+             //       and(
                         get_path_tactic(sc, true),
-                        all_sc(
-                            sc,
-                            IterCompEnum::new(nodes.clone()),
-                            get_path_tactic(sc, false),
-                        ),
-                    ),
+              //          all_sc(
+              //              sc,
+               //             IterCompEnum::new(nodes.clone()),
+               //             get_path_tactic(sc, false),
+                //        ),
+                   // ),
                 ),
-            ),
+          //  ),
         );
 
         let proof = proof_tactic.action(
@@ -303,7 +303,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                 all(
                     ExpandAllEnum,
                     or4(
-                        LocalMergeTactic::new(true),
+                        LocalMergeTactic::new(path_finite),
                         LongerPathTactic::new(path_finite),
                         any(
                             PseudoCyclesEnum,
@@ -324,7 +324,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                 ExpandAllEnum,
                                 or4(
                                     LongerPathTactic::new(path_finite),
-                                    LocalMergeTactic::new(true),
+                                    LocalMergeTactic::new(path_finite),
                                     any(
                                         PseudoCyclesEnum,
                                         or(
@@ -344,7 +344,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                             ExpandAllEnum,
                                             or3(
                                                 LongerPathTactic::new(path_finite),
-                                                LocalMergeTactic::new(true),
+                                                LocalMergeTactic::new(path_finite),
                                                 any(
                                                     PseudoCyclesEnum,
                                                     or(

@@ -180,19 +180,19 @@ fn prove_path(path: Path) {
     let inv = CreditInv::new(Rational64::new(path.c_numer, path.c_demon));
 
     let comps = vec![
-        complex_path(),
-        complex_tree(),
         c3(),
         c4(),
+        complex_path(),
+        complex_tree(),
         c5(),
         c6(),
         large(),
     ];
 
     let last_comps = vec![
+        complex_path(),
         c3(),
         c4(),
-        complex_path(),
         complex_tree(),
         c5(),
         c6(),

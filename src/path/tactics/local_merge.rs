@@ -55,22 +55,34 @@ fn merge(
             return ProofNode::new_leaf("No complex local merge".into(), false);
         }
 
+        // if (left_comp.is_c4() || right_comp.is_c4())
+        //     && left.path_idx.raw() + right.path_idx.raw() == 5
+        // {
+        //     println!("{} {} {:?}", left, right, edges_between);
+        // }
+
         let graph_with_matching = get_local_merge_graph(
             &left_comp,
             &right_comp,
             &edges_between.iter().map(|e| e.to_tuple()).collect_vec(),
         );
 
+        let buyable_endpoints = edges_between.iter().flat_map(|e| e.to_vec()).collect_vec();
+
         for sell in edges_of_type(&graph_with_matching, EdgeType::Sellable)
             .into_iter()
+            .filter(|(u, v)| buyable_endpoints.contains(u) && buyable_endpoints.contains(v)) // only consider edges to sell between buyable endpoints
             .powerset()
             .filter(|s| s.len() <= 2)
         {
             let sell_credits = Credit::from_integer(sell.len() as i64);
             let mut total_plus_sell = total_comp_credit + sell_credits;
 
+            let sold_endpoints = sell.iter().flat_map(|e| vec![e.0, e.1]).collect_vec();
+
             for buy in edges_between
                 .iter()
+                .filter(|e| e.nodes_incident(&sold_endpoints)) // it only makes sense to buy edges incident to sold edges
                 .powerset()
                 .filter(|p| !p.is_empty())
             {
@@ -90,15 +102,19 @@ fn merge(
                     }
                 });
 
-                if buy.len() == 2 && !(left_comp.is_complex() && right_comp.is_complex()) {
+                if buy.len() == 2 && !left_comp.is_complex() {
                     let l1 = left_comp.incident(&buy[0]).unwrap();
                     let l2 = left_comp.incident(&buy[1]).unwrap();
-                    let r1 = right_comp.incident(&buy[0]).unwrap();
-                    let r2 = right_comp.incident(&buy[1]).unwrap();
 
                     if !left_comp.is_adjacent(&l1, &l2) && left.npc.is_nice_pair(l1, l2) {
                         total_plus_sell += Credit::from_integer(1)
                     }
+                }
+
+                if buy.len() == 2 && !right_comp.is_complex() {
+                    let r1 = right_comp.incident(&buy[0]).unwrap();
+                    let r2 = right_comp.incident(&buy[1]).unwrap();
+
                     if !right_comp.is_adjacent(&r1, &r2) && right.npc.is_nice_pair(r1, r2) {
                         total_plus_sell += Credit::from_integer(1)
                     }
