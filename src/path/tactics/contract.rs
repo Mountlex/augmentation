@@ -40,7 +40,7 @@ impl Tactic<AugmentedPathInstance, PathContext> for ContractabilityTactic {
         let last = data[Pidx::Last].get_zoomed();
         let last_comp = last.get_comp();
 
-        if last_comp.is_complex() || last_comp.is_large() || last_comp.is_c3() {
+        if last_comp.is_complex() || last_comp.is_large() || last_comp.is_c3() || last_comp.is_c4() {
             return ProofNode::new_leaf(
                 "Contractability check not applied: component is C3, Large or Complex".into(),
                 false,

@@ -90,34 +90,59 @@ pub fn prove_nice_path_progress(
         })
         .collect_vec();
 
+    let last_nodes_with_depth = last_nodes
+        .into_iter()
+        .flat_map(|c| {
+            if c.get_comp().is_complex() {
+                vec![
+                    (c.clone(), 3, true),
+                    (c.clone(), 4, true),
+                    (c.clone(), 5, false),
+                ]
+            } else {
+                vec![(c.clone(), 3, true), (c.clone(), 4, false)]
+            }
+        })
+        .collect_vec();
+
     if parallel {
-        last_nodes.into_par_iter().for_each(|last_node| {
-            prove_last_node(
-                nodes.clone(),
-                last_node,
-                credit_inv.clone(),
-                &output_dir,
-                output_depth,
-                sc,
-            )
-        })
+        last_nodes_with_depth
+            .into_par_iter()
+            .for_each(|(last_node, length, finite)| {
+                prove_last_node(
+                    nodes.clone(),
+                    last_node,
+                    length,
+                    finite,
+                    credit_inv.clone(),
+                    &output_dir,
+                    output_depth,
+                    sc,
+                )
+            })
     } else {
-        last_nodes.into_iter().for_each(|last_node| {
-            prove_last_node(
-                nodes.clone(),
-                last_node,
-                credit_inv.clone(),
-                &output_dir,
-                output_depth,
-                sc,
-            )
-        })
+        last_nodes_with_depth
+            .into_iter()
+            .for_each(|(last_node, length, finite)| {
+                prove_last_node(
+                    nodes.clone(),
+                    last_node,
+                    length,
+                    finite,
+                    credit_inv.clone(),
+                    &output_dir,
+                    output_depth,
+                    sc,
+                )
+            })
     };
 }
 
 fn prove_last_node(
     nodes: Vec<PathNode>,
     last_node: PathNode,
+    length: usize,
+    finite: bool,
     credit_inv: CreditInv,
     output_dir: &PathBuf,
     output_depth: usize,
@@ -127,24 +152,24 @@ fn prove_last_node(
         credit_inv: credit_inv.clone(),
     };
 
-    let mut proof = if last_node.get_comp().is_complex() {
+    let mut proof = if length == 3 {
+        let mut proof_tactic = all_sc(sc, PathEnum, get_path_tactic(sc, finite));
+
+        let proof = proof_tactic.action(
+            &PathEnumeratorInput::new(last_node.clone(), nodes),
+            &mut context,
+        );
+        proof_tactic.print_stats();
+
+        proof
+    } else if length == 4 {
         let mut proof_tactic = all_sc(
             sc,
             PathEnum,
-            and(
-                get_path_tactic(sc, true),
-                all_sc(
-                    sc,
-                    IterCompEnum::new(nodes.clone()),
-                    and(
-                        get_path_tactic(sc, true),
-                        all_sc(
-                            sc,
-                            IterCompEnum::new(nodes.clone()),
-                            get_path_tactic(sc, false),
-                        ),
-                    ),
-                ),
+            all_sc(
+                sc,
+                IterCompEnum::new(nodes.clone()),
+                get_path_tactic(sc, finite),
             ),
         );
 
@@ -156,11 +181,13 @@ fn prove_last_node(
 
         proof
     } else {
+        assert!(length == 5);
         let mut proof_tactic = all_sc(
             sc,
             PathEnum,
-            and(
-                get_path_tactic(sc, true),
+            all_sc(
+                sc,
+                IterCompEnum::new(nodes.clone()),
                 all_sc(
                     sc,
                     IterCompEnum::new(nodes.clone()),
@@ -174,6 +201,7 @@ fn prove_last_node(
             &mut context,
         );
         proof_tactic.print_stats();
+
         proof
     };
 
@@ -181,16 +209,20 @@ fn prove_last_node(
 
     let filename = if outcome.success() {
         println!(
-            "✔️ Proved nice path progress ending in {}",
-            last_node.short_name()
+            "✔️ Proved nice path progress ending in {} of length {}, finite={}",
+            last_node.short_name(),
+            length,
+            finite
         );
-        output_dir.join(format!("proof_{}.txt", last_node.short_name()))
+        output_dir.join(format!("proof_{}_{}_{}.txt", last_node.short_name(), length, finite))
     } else {
         println!(
-            "❌ Disproved nice path progress ending in {}",
-            last_node.short_name()
+            "❌ Disproved nice path progress ending in {} of length {}, finite={}",
+            last_node.short_name(),
+            length,
+            finite
         );
-        output_dir.join(format!("wrong_proof_{}.txt", last_node.short_name()))
+        output_dir.join(format!("proof_{}_{}_{}.txt",last_node.short_name(), length, finite))
     };
 
     println!();
