@@ -38,7 +38,7 @@ impl<'a> Enumerator<ContractableCompInstance, TreeContext> for ContractableComps
             .iter()
             .enumerate()
             .take(take)
-            .filter(|(_, c)| c.is_c6() || c.is_c5())
+            .filter(|(_, c)| c.is_c7() || c.is_c6() || c.is_c5())
             .flat_map(move |(idx, comp)| {
                 let comp_graph = comp.graph();
                 // comp is H
