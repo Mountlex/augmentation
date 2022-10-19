@@ -138,7 +138,7 @@ fn main() -> anyhow::Result<()> {
 
 fn prove_local(tree: Tree) {
     let inv = CreditInv::new(Rational64::new(tree.c_numer, tree.c_demon));
-    
+
     let leaf_comps = vec![large(), complex_tree(), complex_path()];
 
     let comps = vec![

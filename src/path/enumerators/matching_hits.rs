@@ -1,5 +1,5 @@
 use crate::{
-    path::{proof::PathContext, AugmentedPathInstance, AbstractEdge, PathHit, Pidx},
+    path::{proof::PathContext, AbstractEdge, AugmentedPathInstance, PathHit, Pidx},
     proof_logic::{Enumerator, EnumeratorTactic},
 };
 

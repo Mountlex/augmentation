@@ -13,7 +13,7 @@ use super::cycle_rearrange::check_fixed_extension_feasible;
 pub struct LongerPathTactic {
     num_calls: usize,
     num_proofs: usize,
-    finite_path: bool
+    finite_path: bool,
 }
 
 impl LongerPathTactic {
@@ -21,7 +21,7 @@ impl LongerPathTactic {
         Self {
             num_calls: 0,
             num_proofs: 0,
-            finite_path
+            finite_path,
         }
     }
 }
@@ -140,14 +140,18 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
                         true,
                     );
                 }
-    
+
                 for prelast_edge in data.fixed_edges_between(start_idx, start_idx.succ().unwrap()) {
-                    let prelast_cond = if let SuperNode::Zoomed(prelast) = &data[start_idx.succ().unwrap()] {
-                        prelast.valid_in(prelast_edge.endpoint_at(start_idx.succ().unwrap()).unwrap(), false)
-                    } else {
-                        true
-                    };
-    
+                    let prelast_cond =
+                        if let SuperNode::Zoomed(prelast) = &data[start_idx.succ().unwrap()] {
+                            prelast.valid_in(
+                                prelast_edge.endpoint_at(start_idx.succ().unwrap()).unwrap(),
+                                false,
+                            )
+                        } else {
+                            true
+                        };
+
                     if prelast_cond
                         && data[start_idx].get_zoomed().valid_in_out(
                             outside_hit.source,
@@ -169,6 +173,9 @@ impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
     }
 
     fn precondition(&self, data: &AugmentedPathInstance, _context: &PathContext) -> bool {
-        !(data.outside_edges_on(Pidx::Last).is_empty() && data.outside_edges_on(Pidx::from(data.path_len() - 1)).is_empty() )
+        !(data.outside_edges_on(Pidx::Last).is_empty()
+            && data
+                .outside_edges_on(Pidx::from(data.path_len() - 1))
+                .is_empty())
     }
 }

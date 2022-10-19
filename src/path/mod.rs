@@ -647,8 +647,7 @@ impl AugmentedPathInstance {
         hit_idx: Pidx,
         new_target: Node,
     ) {
-        self.abstract_edges
-            .drain_filter(|e| matching_edge == e);
+        self.abstract_edges.drain_filter(|e| matching_edge == e);
 
         self.fixed_edges.push(Edge::new(
             new_target,

@@ -1,10 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{
-        proof::PathContext, AugmentedPathInstance, 
-        SelectedHitInstance, ZoomedNode,
-    },
+    path::{proof::PathContext, AugmentedPathInstance, SelectedHitInstance, ZoomedNode},
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
     types::Edge,

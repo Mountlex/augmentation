@@ -142,7 +142,14 @@ impl Component {
             }
             Component::ComplexTree(_, b) => {
                 if b[..5].contains(u) && b[..5].contains(v) {
-                    (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2 + if u.to_vertex().min(v.to_vertex()) <= b[2].to_vertex() && u.to_vertex().max(v.to_vertex()) >= b[2].to_vertex() { 1 } else { 0 }
+                    (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
+                        + if u.to_vertex().min(v.to_vertex()) <= b[2].to_vertex()
+                            && u.to_vertex().max(v.to_vertex()) >= b[2].to_vertex()
+                        {
+                            1
+                        } else {
+                            0
+                        }
                 } else if b[5..].contains(u) && b[5..].contains(v) {
                     (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
                 } else {
@@ -150,14 +157,16 @@ impl Component {
                         (u.to_vertex().max(b[2].to_vertex()) - u.to_vertex().min(b[2].to_vertex())
                             + v.to_vertex().max(b[2].to_vertex())
                             - v.to_vertex().min(b[2].to_vertex())
-                            - 3 + 1)
+                            - 3
+                            + 1)
                             * 2
                             + 1
                     } else {
                         (v.to_vertex().max(b[2].to_vertex()) - v.to_vertex().min(b[2].to_vertex())
                             + u.to_vertex().max(b[2].to_vertex())
                             - u.to_vertex().min(b[2].to_vertex())
-                            - 3 + 1)
+                            - 3
+                            + 1)
                             * 2
                             + 1
                     }
@@ -416,8 +425,6 @@ impl CreditInv {
             + self.complex_black(complex.total_black_deg as i64)
     }
 }
-
-
 
 #[cfg(test)]
 mod test_complex_degree {

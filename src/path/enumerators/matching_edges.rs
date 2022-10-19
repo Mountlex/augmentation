@@ -51,9 +51,8 @@ fn finite_path_matching_edges(
     let instance = instance;
 
     if let Some(iter) = infinite_path_matching_edges(instance) {
-        return iter
+        return iter;
     }
-
 
     for i in 1..instance.path_len() {
         let node_idx = Pidx::from(i);
@@ -63,7 +62,6 @@ fn finite_path_matching_edges(
             .chain(instance.outside_edges_on(node_idx).into_iter())
             .unique()
             .collect_vec();
-
 
         if node_matching_endpoints.len() < 3 {
             let mut node_free = instance[node_idx]
@@ -169,8 +167,6 @@ fn finite_path_matching_edges(
             return Box::new(iter);
         }
     }
-
-    
 
     Box::new(vec![instance.clone()].into_iter())
 }

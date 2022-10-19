@@ -6,7 +6,7 @@ use crate::{
 };
 
 pub struct ContractableCompsEnum {
-    last_is_leaf: bool
+    last_is_leaf: bool,
 }
 
 impl ContractableCompsEnum {
@@ -26,7 +26,11 @@ impl<'a> Enumerator<ContractableCompInstance, TreeContext> for ContractableComps
         _context: &TreeContext,
     ) -> Box<dyn Iterator<Item = ContractableCompInstance> + '_> {
         let graph = get_merge_graph(&self.instance.comps, &self.instance.edges);
-        let take = if self.last_is_leaf { self.instance.comps.len() } else { self.instance.comps.len() - 1 };
+        let take = if self.last_is_leaf {
+            self.instance.comps.len()
+        } else {
+            self.instance.comps.len() - 1
+        };
 
         let iter = self
             .instance
@@ -82,7 +86,10 @@ impl EnumeratorTactic<TreeCaseInstance, ContractableCompInstance, TreeContext>
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a TreeCaseInstance) -> Self::Enumer<'a> {
-        ContractableCompsEnumerator { instance: data, last_is_leaf: self.last_is_leaf }
+        ContractableCompsEnumerator {
+            instance: data,
+            last_is_leaf: self.last_is_leaf,
+        }
     }
 
     fn item_msg(&self, item: &ContractableCompInstance) -> String {
@@ -94,13 +101,12 @@ impl EnumeratorTactic<TreeCaseInstance, ContractableCompInstance, TreeContext>
     }
 
     fn precondition(&self, data: &TreeCaseInstance, _context: &TreeContext) -> bool {
-        let take = if self.last_is_leaf { data.comps.len() } else { data.comps.len() - 1 };
-            
-            data.comps
-            .iter()
-            .take(take)
-            .any(|c| c.is_c6() || c.is_c5())
-        
-        
+        let take = if self.last_is_leaf {
+            data.comps.len()
+        } else {
+            data.comps.len() - 1
+        };
+
+        data.comps.iter().take(take).any(|c| c.is_c6() || c.is_c5())
     }
 }

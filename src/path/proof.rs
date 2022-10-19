@@ -94,16 +94,20 @@ pub fn prove_nice_path_progress(
         .into_iter()
         .map(|c| {
             if c.get_comp().is_complex() {
-                    (c.clone(), 5)
+                (c.clone(), 5)
             } else {
                 (c.clone(), 4)
             }
         })
         .collect_vec();
 
-    let proof_cases = last_nodes_with_depth.into_iter().flat_map(|(node, depth)| {
-        std::iter::once((node.clone(), depth, false)).chain((3..depth).into_iter().map(move |d| (node.clone(), d, true)))
-    }).collect_vec();
+    let proof_cases = last_nodes_with_depth
+        .into_iter()
+        .flat_map(|(node, depth)| {
+            std::iter::once((node.clone(), depth, false))
+                .chain((3..depth).into_iter().map(move |d| (node.clone(), d, true)))
+        })
+        .collect_vec();
 
     if parallel {
         proof_cases
@@ -214,7 +218,12 @@ fn prove_last_node(
             length,
             finite
         );
-        output_dir.join(format!("proof_{}_{}_{}.txt", last_node.short_name(), length, finite))
+        output_dir.join(format!(
+            "proof_{}_{}_{}.txt",
+            last_node.short_name(),
+            length,
+            finite
+        ))
     } else {
         println!(
             "❌ Disproved nice path progress ending in {} of length {}, finite={}",
@@ -222,7 +231,12 @@ fn prove_last_node(
             length,
             finite
         );
-        output_dir.join(format!("proof_{}_{}_{}.txt",last_node.short_name(), length, finite))
+        output_dir.join(format!(
+            "proof_{}_{}_{}.txt",
+            last_node.short_name(),
+            length,
+            finite
+        ))
     };
 
     println!();

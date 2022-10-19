@@ -128,7 +128,7 @@ fn pseudo_cycles_of_length(
     Pidx::range(instance.path_len())
         .into_iter()
         .permutations(length)
-        .filter(|perm| perm.iter().min() == perm.first()) 
+        .filter(|perm| perm.iter().min() == perm.first())
         .flat_map(move |perm| {
             let first = perm[0];
             let cons_edges = vec![perm.clone(), vec![first]]
