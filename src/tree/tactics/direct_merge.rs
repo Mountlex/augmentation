@@ -61,6 +61,10 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
             .sum();
 
         let one_is_complex = data.comps.iter().any(|c| c.is_complex());
+        let buy_endpoints = edges_of_type(&graph, EdgeType::Buyable)
+            .into_iter()
+            .flat_map(|e| vec![e.0, e.1])
+            .collect_vec();
         let result = find_feasible_merge(
             &graph,
             buyable.powerset().filter(|p| {
@@ -71,6 +75,7 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
                 }
             }),
             sellable
+                .filter(|e| e.nodes_incident(&buy_endpoints))
                 .powerset()
                 .filter(|p| p.len() <= 2 * (data.comps.len() - 1)),
             total_component_credits,

@@ -92,21 +92,21 @@ pub fn prove_nice_path_progress(
 
     let last_nodes_with_depth = last_nodes
         .into_iter()
-        .flat_map(|c| {
+        .map(|c| {
             if c.get_comp().is_complex() {
-                vec![
-                    (c.clone(), 3, true),
-                    (c.clone(), 4, true),
-                    (c.clone(), 5, false),
-                ]
+                    (c.clone(), 5)
             } else {
-                vec![(c.clone(), 3, true), (c.clone(), 4, false)]
+                (c.clone(), 4)
             }
         })
         .collect_vec();
 
+    let proof_cases = last_nodes_with_depth.into_iter().flat_map(|(node, depth)| {
+        std::iter::once((node.clone(), depth, false)).chain((3..depth).into_iter().map(move |d| (node.clone(), d, true)))
+    }).collect_vec();
+
     if parallel {
-        last_nodes_with_depth
+        proof_cases
             .into_par_iter()
             .for_each(|(last_node, length, finite)| {
                 prove_last_node(
@@ -121,7 +121,7 @@ pub fn prove_nice_path_progress(
                 )
             })
     } else {
-        last_nodes_with_depth
+        proof_cases
             .into_iter()
             .for_each(|(last_node, length, finite)| {
                 prove_last_node(

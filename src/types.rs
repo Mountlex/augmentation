@@ -67,6 +67,10 @@ impl Edge {
     pub fn nodes_incident(&self, nodes: &[Node]) -> bool {
         nodes.contains(&self.n1) || nodes.contains(&self.n2)
     }
+    pub fn between_sets(&self, nodes1: &[Node], nodes2: &[Node]) -> bool {
+        (nodes1.contains(&self.n1) && nodes2.contains(&self.n2)) ||
+        (nodes2.contains(&self.n1) && nodes1.contains(&self.n2))
+    }
     pub fn node_incident(&self, n: &Node) -> bool {
         n == &self.n1 || n == &self.n2
     }

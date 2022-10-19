@@ -19,6 +19,7 @@ pub fn hamiltonian_paths(v1: Node, v2: Node, nodes: &[Node]) -> Vec<Vec<Node>> {
         .collect_vec()
 }
 
+#[allow(dead_code)]
 pub fn get_local_merge_graph(
     comp1: &Component,
     comp2: &Component,

@@ -432,12 +432,13 @@ mod test_complex_degree {
         assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(1)), 2);
     }
 
+    #[test]
     fn test_complex_tree() {
         let comp = complex_tree();
 
         assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(3)), 7);
         assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(2)), 4);
-        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(5)), 9);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(5)), 11);
         assert_eq!(comp.complex_degree_between(&Node::n(2), &Node::n(7)), 7);
         assert_eq!(comp.complex_degree_between(&Node::n(3), &Node::n(7)), 5);
         assert_eq!(comp.complex_degree_between(&Node::n(4), &Node::n(7)), 7);
