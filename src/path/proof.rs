@@ -13,7 +13,7 @@ use crate::path::tactics::cycle_rearrange::CycleRearrangeTactic;
 use crate::path::tactics::pendant_rewire::PendantRewireTactic;
 use crate::path::SelectedHitInstance;
 use crate::proof_tree::ProofNode;
-use crate::{proof_logic::*, CreditInv};
+use crate::{proof_logic::*, Credit, CreditInv};
 
 use super::enumerators::comp_hits::ComponentHitEnum;
 use super::enumerators::cycle_rearrangements::PathRearrangementEnum;
@@ -90,11 +90,18 @@ pub fn prove_nice_path_progress(
         })
         .collect_vec();
 
+    let k = ((Credit::from_integer(4) - Credit::from_integer(11) * credit_inv.c)
+        / (Credit::from_integer(5) * credit_inv.c - Credit::from_integer(1)))
+    .ceil()
+    .to_integer() as usize;
+
+    println!("k = {}", k);
+
     let last_nodes_with_depth = last_nodes
         .into_iter()
         .map(|c| {
             if c.get_comp().is_complex() {
-                (c.clone(), 5)
+                (c.clone(), k + 3)
             } else {
                 (c.clone(), 4)
             }
@@ -184,8 +191,7 @@ fn prove_last_node(
         proof_tactic.print_stats();
 
         proof
-    } else {
-        assert!(length == 5);
+    } else if length == 5 {
         let mut proof_tactic = all_sc(
             sc,
             PathEnum,
@@ -195,7 +201,34 @@ fn prove_last_node(
                 all_sc(
                     sc,
                     IterCompEnum::new(nodes.clone()),
-                    get_path_tactic(sc, false),
+                    get_path_tactic(sc, finite),
+                ),
+            ),
+        );
+
+        let proof = proof_tactic.action(
+            &PathEnumeratorInput::new(last_node.clone(), nodes),
+            &mut context,
+        );
+        proof_tactic.print_stats();
+
+        proof
+    } else {
+        assert!(length == 6);
+        let mut proof_tactic = all_sc(
+            sc,
+            PathEnum,
+            all_sc(
+                sc,
+                IterCompEnum::new(nodes.clone()),
+                all_sc(
+                    sc,
+                    IterCompEnum::new(nodes.clone()),
+                    all_sc(
+                        sc,
+                        IterCompEnum::new(nodes.clone()),
+                        get_path_tactic(sc, false),
+                    ),
                 ),
             ),
         );
@@ -232,7 +265,7 @@ fn prove_last_node(
             finite
         );
         output_dir.join(format!(
-            "proof_{}_{}_{}.txt",
+            "wrong_proof_{}_{}_{}.txt",
             last_node.short_name(),
             length,
             finite

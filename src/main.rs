@@ -141,15 +141,28 @@ fn prove_local(tree: Tree) {
 
     let leaf_comps = vec![large(), complex_tree(), complex_path()];
 
-    let comps = vec![
-        complex_path(),
-        complex_tree(),
-        large(),
-        c3(),
-        c4(),
-        c5(),
-        c6(),
-    ];
+    let comps = if inv.c < Credit::new(2, 7) {
+        vec![
+            large(),
+            complex_tree(),
+            complex_path(),
+            c3(),
+            c4(),
+            c5(),
+            c6(),
+            c7(),
+        ]
+    } else {
+        vec![
+            large(),
+            complex_tree(),
+            complex_path(),
+            c3(),
+            c4(),
+            c5(),
+            c6(),
+        ]
+    };
 
     if tree.parallel {
         leaf_comps.into_par_iter().for_each(|leaf_comp| {
@@ -179,29 +192,32 @@ fn prove_local(tree: Tree) {
 fn prove_path(path: Path) {
     let inv = CreditInv::new(Rational64::new(path.c_numer, path.c_demon));
 
-    let comps = vec![
-        c3(),
-        c4(),
-        complex_path(),
-        complex_tree(),
-        c5(),
-        c6(),
-        large(),
-    ];
-
-    let last_comps = vec![
-        complex_path(),
-        c3(),
-        c4(),
-        complex_tree(),
-        c5(),
-        c6(),
-        large(),
-    ];
+    let comps = if inv.c < Credit::new(2, 7) {
+        vec![
+            large(),
+            complex_tree(),
+            complex_path(),
+            c3(),
+            c4(),
+            c5(),
+            c6(),
+            c7(),
+        ]
+    } else {
+        vec![
+            large(),
+            complex_tree(),
+            complex_path(),
+            c3(),
+            c4(),
+            c5(),
+            c6(),
+        ]
+    };
 
     prove_nice_path_progress(
+        comps.clone(),
         comps,
-        last_comps,
         &inv,
         path.output_dir,
         path.output_depth,

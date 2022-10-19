@@ -48,7 +48,7 @@ impl Tactic<PathRearrangementInstance, PathContext> for CycleRearrangeTactic {
             let new_last = data.extension.last().unwrap();
             let new_last_comp = new_last.get_comp();
 
-            // Complex > C5 > C4 > Large > C6 > C3
+            // Complex > C5 > C4 > Large > C7 > C6 > C3
 
             // Reduce C3 to anything except C3
             if old_last_comp.is_c3() && !new_last_comp.is_c3() {
@@ -68,11 +68,21 @@ impl Tactic<PathRearrangementInstance, PathContext> for CycleRearrangeTactic {
                 );
             }
 
-            // Reduce Large to anything except C3 and C6 and Large
+            // Reduce C6 to anything except C3 and C6 and C7
+            if old_last_comp.is_c7() && !new_last_comp.is_c3() && !new_last_comp.is_c6()  && !new_last_comp.is_c7() {
+                self.num_proofs += 1;
+                return ProofNode::new_leaf(
+                    format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                    true,
+                );
+            }
+
+            // Reduce Large to anything except C3 and C6 and C7 and Large
             if old_last_comp.is_large()
                 && !new_last_comp.is_large()
                 && !new_last_comp.is_c3()
                 && !new_last_comp.is_c6()
+                && !new_last_comp.is_c7()
             {
                 self.num_proofs += 1;
                 return ProofNode::new_leaf(
@@ -81,12 +91,9 @@ impl Tactic<PathRearrangementInstance, PathContext> for CycleRearrangeTactic {
                 );
             }
 
-            // Reduce C4 to anything except Large, C6 or C3
+            // Reduce C4 to C5
             if old_last_comp.is_c4()
-                && !new_last_comp.is_large()
-                && !new_last_comp.is_c6()
-                && !new_last_comp.is_c3()
-                && !new_last_comp.is_c4()
+                && new_last_comp.is_c5()
             {
                 self.num_proofs += 1;
                 return ProofNode::new_leaf(

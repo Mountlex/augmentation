@@ -28,6 +28,9 @@ pub fn c5() -> Component {
 pub fn c6() -> Component {
     Component::C6([0.into(), 1.into(), 2.into(), 3.into(), 4.into(), 5.into()])
 }
+pub fn c7() -> Component {
+    Component::C7([0.into(), 1.into(), 2.into(), 3.into(), 4.into(), 5.into(), 6.into()])
+}
 pub fn large() -> Component {
     Component::Large(Node::Comp(0))
 }
@@ -101,6 +104,7 @@ pub enum CompType {
 
 #[derive(Clone, Debug)]
 pub enum Component {
+    C7([Node; 7]),
     C6([Node; 6]),
     C5([Node; 5]),
     C4([Node; 4]),
@@ -111,6 +115,9 @@ pub enum Component {
 }
 
 impl Component {
+    pub fn is_c7(&self) -> bool {
+        matches!(self, Component::C7(_))
+    }
     pub fn is_c6(&self) -> bool {
         matches!(self, Component::C6(_))
     }
@@ -178,6 +185,7 @@ impl Component {
 
     pub fn nodes(&self) -> &[Node] {
         match self {
+            Component::C7(nodes) => nodes,
             Component::C6(nodes) => nodes,
             Component::C5(nodes) => nodes,
             Component::C4(nodes) => nodes,
@@ -211,6 +219,7 @@ impl Component {
 
     pub fn edges(&self) -> Vec<(Node, Node)> {
         match self {
+            Component::C7(nodes) => nodes_to_edges(nodes.as_slice()),
             Component::C6(nodes) => nodes_to_edges(nodes.as_slice()),
             Component::C5(nodes) => nodes_to_edges(nodes.as_slice()),
             Component::C4(nodes) => nodes_to_edges(nodes.as_slice()),
@@ -231,6 +240,7 @@ impl Component {
 
     pub fn short_name(&self) -> String {
         match self {
+            Component::C7(_) => format!("C7"),
             Component::C6(_) => format!("C6"),
             Component::C5(_) => format!("C5"),
             Component::C4(_) => format!("C4"),
@@ -243,6 +253,7 @@ impl Component {
 
     pub fn fixed_node(&self) -> Option<Node> {
         match self {
+            Component::C7(nodes) => Some(nodes[0]),
             Component::C6(nodes) => Some(nodes[0]),
             Component::C5(nodes) => Some(nodes[0]),
             Component::C4(nodes) => Some(nodes[0]),
@@ -255,6 +266,7 @@ impl Component {
 
     pub fn num_edges(&self) -> usize {
         match self {
+            Component::C7(_) => 7,
             Component::C6(_) => 6,
             Component::C5(_) => 5,
             Component::C4(_) => 4,
@@ -269,6 +281,7 @@ impl Component {
         //assert!(self.graph().contains_node(v1));
         //assert!(self.graph().contains_node(v2));
         match self {
+            Component::C7(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
             Component::C6(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
             Component::C5(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
             Component::C4(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
@@ -293,7 +306,7 @@ impl Component {
 
     pub fn graph(&self) -> Graph {
         match self {
-            Component::C6(_) | Component::C5(_) | Component::C4(_) | Component::C3(_) => {
+            Component::C7(_) |Component::C6(_) | Component::C5(_) | Component::C4(_) | Component::C3(_) => {
                 Graph::from_edges(
                     self.edges()
                         .into_iter()
@@ -313,6 +326,7 @@ impl Component {
 
     pub fn comp_type(&self) -> CompType {
         match self {
+            Component::C7(nodes) => CompType::Cycle(nodes.len()),
             Component::C6(nodes) => CompType::Cycle(nodes.len()),
             Component::C5(nodes) => CompType::Cycle(nodes.len()),
             Component::C4(nodes) => CompType::Cycle(nodes.len()),
@@ -347,6 +361,7 @@ impl Component {
 
     pub fn num_labels(&self) -> usize {
         match self {
+            Component::C7(_) => 6,
             Component::C6(_) => 6,
             Component::C5(_) => 5,
             Component::C4(_) => 4,
@@ -380,6 +395,7 @@ fn nodes_to_edges(nodes: &[Node]) -> Vec<(Node, Node)> {
 impl Display for Component {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Component::C7(nodes) => write!(f, "C7 [{}]", nodes.into_iter().join("-")),
             Component::C6(nodes) => write!(f, "C6 [{}]", nodes.into_iter().join("-")),
             Component::C5(nodes) => write!(f, "C5 [{}]", nodes.into_iter().join("-")),
             Component::C4(nodes) => write!(f, "C4 [{}]", nodes.into_iter().join("-")),
@@ -409,6 +425,7 @@ pub fn edges_of_type<'a>(graph: &'a Graph, typ: EdgeType) -> Vec<(Node, Node)> {
 impl CreditInv {
     pub fn credits(&self, comp: &Component) -> Credit {
         match comp {
+            Component::C7(_) => self.two_ec_credit(7),
             Component::C6(_) => self.two_ec_credit(6),
             Component::C5(_) => self.two_ec_credit(5),
             Component::C4(_) => self.two_ec_credit(4),

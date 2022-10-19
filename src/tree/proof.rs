@@ -49,7 +49,7 @@ pub fn prove_tree_case(
                 and(
                     or3(
                         CoreTriangle::new(),
-                        FiniteInstance::new(),
+                        ExternalProofs::new(),
                         any(
                             ContractableCompsEnum::new(true),
                             all(
@@ -189,28 +189,28 @@ impl Statistics for CoreTriangle {
 }
 
 #[derive(Clone)]
-struct FiniteInstance {
+struct ExternalProofs {
     num_calls: usize,
 }
 
-impl FiniteInstance {
+impl ExternalProofs {
     fn new() -> Self {
         Self { num_calls: 0 }
     }
 }
 
-impl Tactic<TreeCaseInstance, TreeContext> for FiniteInstance {
+impl Tactic<TreeCaseInstance, TreeContext> for ExternalProofs {
     fn precondition(&self, data: &TreeCaseInstance, _context: &TreeContext) -> bool {
-        data.all_small()
+        data.comps.len() == 2 && data.comps.iter().any(|c| c.is_c4()) && data.comps.iter().any(|c| c.is_complex())
     }
 
     fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> ProofNode {
         self.num_calls += 1;
-        ProofNode::new_leaf("Only small components!".into(), true)
+        ProofNode::new_leaf("Complex - C4 instance!".into(), true)
     }
 }
 
-impl Statistics for FiniteInstance {
+impl Statistics for ExternalProofs {
     fn print_stats(&self) {
         println!("Finite instances {}", self.num_calls)
     }

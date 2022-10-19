@@ -90,7 +90,19 @@ fn product_of_first(
     length: usize,
 ) -> Box<dyn Iterator<Item = Vec<Edge>>> {
     assert_eq!(length, edges.len());
-    if length == 5 {
+    if length == 6 {
+        let edges0 = edges.remove(0);
+        let edges1 = edges.remove(0);
+        let edges2 = edges.remove(0);
+        let edges3 = edges.remove(0);
+        let edges4 = edges.remove(0);
+        let edges5 = edges.remove(0);
+
+        Box::new(
+            iproduct!(edges0, edges1, edges2, edges3, edges4, edges5)
+                .map(|(e1, e2, e3, e4, e5, e6)| vec![e1, e2, e3, e4, e5, e6]),
+        )
+    } else if length == 5 {
         let edges0 = edges.remove(0);
         let edges1 = edges.remove(0);
         let edges2 = edges.remove(0);
