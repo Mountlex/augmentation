@@ -82,7 +82,7 @@ impl EnumeratorTactic<TreeCaseInstance, ContractableCompInstance, TreeContext>
     type Enumer<'a> = ContractableCompsEnumerator<'a>;
 
     fn msg(&self, _data_in: &TreeCaseInstance) -> String {
-        format!("Enumerate more components")
+        format!("Enumerate contractable components")
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a TreeCaseInstance) -> Self::Enumer<'a> {

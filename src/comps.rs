@@ -361,7 +361,7 @@ impl Component {
 
     pub fn num_labels(&self) -> usize {
         match self {
-            Component::C7(_) => 6,
+            Component::C7(_) => 7,
             Component::C6(_) => 6,
             Component::C5(_) => 5,
             Component::C4(_) => 4,
