@@ -78,7 +78,7 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
             sellable
                 .filter(|e| e.nodes_incident(&buy_endpoints))
                 .powerset()
-                .filter(|p| p.len() <= 2 * data.comps.len() - 1),
+                .filter(|p| p.len() <= 2 * (data.comps.len() - 1)),
             total_component_credits,
             data.comps.iter().map(|c| c.num_edges()).sum(),
             &context.credit_inv,
@@ -145,8 +145,8 @@ fn find_feasible_merge<'a, B, S>(
     one_is_complex: bool,
 ) -> MergeResult
 where
-    B: Iterator<Item = Vec<Edge>> + Clone,
-    S: Iterator<Item = Vec<Edge>>,
+    B: Iterator<Item = Vec<Edge>>,
+    S: Iterator<Item = Vec<Edge>> + Clone,
 {
     let req_credits = credit_inv.two_ec_credit(num_comp_edges);
     let white_vertices = graph
@@ -154,12 +154,18 @@ where
         .filter(|n| matches!(n, Node::Comp(_)))
         .collect_vec();
 
-    for sell in sell_iter {
-        let sell_credits = Credit::from_integer(sell.len() as i64);
-        let total_plus_sell = total_component_credits + sell_credits;
-
-        for buy in buy_iter.clone() {
+    for buy in buy_iter {
+        let buy_endpoints = edges_of_type(&graph, EdgeType::Buyable)
+            .into_iter()
+            .flat_map(|e| vec![e.0, e.1])
+            .collect_vec();
+        for sell in sell_iter.clone().filter(|sell| {
+            sell.iter()
+                .all(|e| e.between_sets(&buy_endpoints, &buy_endpoints) || (graph.neighbors(e.to_tuple().0).count() > 2  ) || (graph.neighbors(e.to_tuple().1).count() > 2  ))
+        }) {
+            let sell_credits = Credit::from_integer(sell.len() as i64);
             let buy_credits = Credit::from_integer(buy.len() as i64);
+            let total = total_component_credits + sell_credits - buy_credits;
 
             let check_graph = EdgeFiltered::from_fn(graph, |(v1, v2, t)| {
                 if t == &EdgeType::Sellable && sell.contains(&Edge::from_tuple(v1, v2)) {
@@ -172,20 +178,8 @@ where
             });
 
             if !one_is_complex {
-                if total_plus_sell - buy_credits >= req_credits {
+                if total >= req_credits {
                     if connected_components(&check_graph) == 1 {
-                        // let no_bridges = check_graph
-                        //     .0
-                        //     .all_edges()
-                        //     .filter(|e| (check_graph.1)(*e))
-                        //     .all(|(e1, e2, _)| {
-                        //         let g = EdgeFiltered::from_fn(&check_graph, |(v1, v2, _)| {
-                        //             !((v1 == e1 && v2 == e2) || (v1 == e2 && v2 == e1))
-                        //         });
-                        //         connected_components(&g) == 1
-                        //     });
-
-                        //if !no_bridges {
                         if is_complex(&check_graph, &vec![], true).has_bridges() {
                             continue;
                         } else {
@@ -217,7 +211,7 @@ where
                             + credit_inv.complex_black(black_deg as i64)
                             + credit_inv.complex_comp();
 
-                        if total_plus_sell - buy_credits >= new_credits {
+                        if total >= new_credits {
                             //dbg!(bridges);
                             //dbg!(num_blocks);
                             //dbg!(black_vertices);
@@ -231,7 +225,7 @@ where
                         }
                     }
                     ComplexCheckResult::NoBridges => {
-                        if total_plus_sell - buy_credits >= req_credits {
+                        if total >= req_credits {
                             return MergeResult::Feasible2EC(FeasibleMerge {
                                 bought_edges: buy.clone(),
                                 sold_edges: sell.clone(),
