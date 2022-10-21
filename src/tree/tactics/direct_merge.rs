@@ -1,9 +1,14 @@
 use itertools::Itertools;
-use petgraph::{algo::connected_components, visit::EdgeFiltered};
+use petgraph::{
+    algo::connected_components,
+    dot::{Config, Dot},
+    visit::EdgeFiltered,
+};
 
 use crate::{
     bridges::{is_complex, ComplexCheckResult},
     comps::{edges_of_type, EdgeType},
+    path::Pidx,
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
     tree::{utils::get_merge_graph, TreeCaseInstance, TreeContext},
@@ -50,9 +55,7 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
         let sellable = edges_of_type(&graph, EdgeType::Sellable)
             .into_iter()
             .map(|(u, v)| Edge::from_tuple(u, v));
-        let buyable = edges_of_type(&graph, EdgeType::Buyable)
-            .into_iter()
-            .map(|(u, v)| Edge::from_tuple(u, v));
+        let buyable = data.edges.iter().cloned();
 
         let total_component_credits = data
             .comps
@@ -69,11 +72,22 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
         let result = find_feasible_merge(
             &graph,
             buyable.powerset().filter(|p| {
-                if one_is_complex {
-                    p.len() >= (data.comps.len() - 1)
-                } else {
-                    p.len() >= 2 * (data.comps.len() - 1)
-                }
+                (0..data.comps.len()).tuple_windows().all(|(l, r)| {
+                    let bound = if data.comps[l].is_complex() || data.comps[r].is_complex() {
+                        1
+                    } else {
+                        2
+                    };
+                    p.iter()
+                        .filter(|e| e.between_path_nodes(Pidx::from(l), Pidx::from(r)))
+                        .count()
+                        >= bound
+                })
+                // if one_is_complex {
+                //     p.len() >= (data.comps.len() - 1)
+                // } else {
+                //     p.len() >= 2 * (data.comps.len() - 1)
+                // }
             }),
             sellable
                 .filter(|e| e.nodes_incident(&buy_endpoints))
@@ -155,13 +169,10 @@ where
         .collect_vec();
 
     for buy in buy_iter {
-        let buy_endpoints = edges_of_type(&graph, EdgeType::Buyable)
-            .into_iter()
-            .flat_map(|e| vec![e.0, e.1])
-            .collect_vec();
+        let buy_endpoints = buy.iter().flat_map(|e| e.to_vec()).collect_vec();
         for sell in sell_iter.clone().filter(|sell| {
             sell.iter()
-                .all(|e| e.between_sets(&buy_endpoints, &buy_endpoints) || (graph.neighbors(e.to_tuple().0).count() > 2  ) || (graph.neighbors(e.to_tuple().1).count() > 2  ))
+                .all(|e| e.between_sets(&buy_endpoints, &buy_endpoints) || one_is_complex)
         }) {
             let sell_credits = Credit::from_integer(sell.len() as i64);
             let buy_credits = Credit::from_integer(buy.len() as i64);
@@ -177,6 +188,9 @@ where
                 }
             });
 
+            //println!("sell {}", sell.iter().join(","));
+            //println!("buy {}", buy.iter().join(","));
+
             if !one_is_complex {
                 if total >= req_credits {
                     if connected_components(&check_graph) == 1 {
@@ -190,6 +204,10 @@ where
                             });
                         }
                     } else {
+                        // println!("{:?}", sell);
+                        // println!("{:?}", buy);
+                        // println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
+                        // panic!();
                         continue;
                     }
                 } else {

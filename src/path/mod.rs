@@ -418,7 +418,7 @@ impl PseudoCycle {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug)]
 pub enum Pidx {
     Last,
     Prelast,
@@ -490,6 +490,14 @@ impl Ord for Pidx {
         self.raw().cmp(&other.raw())
     }
 }
+
+impl PartialEq for Pidx {
+    fn eq(&self, other: &Self) -> bool {
+        self.raw().eq(&other.raw())
+    }
+}
+
+impl Eq for Pidx { }
 
 impl Display for Pidx {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
