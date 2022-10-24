@@ -38,19 +38,21 @@ pub fn large() -> Component {
 pub fn complex_path() -> Component {
     Component::ComplexPath(
         Complex {
+            ///
+            /// 0 -- 1 -- 2 -- 3 -- 4 -- 5 -- 6
+            /// 
             graph: Graph::from_edges(vec![
                 (Node::c(0), 1.into(), EdgeType::Fixed),
                 (1.into(), 2.into(), EdgeType::Sellable),
                 (2.into(), 3.into(), EdgeType::Sellable),
                 (3.into(), 4.into(), EdgeType::Sellable),
                 (4.into(), 5.into(), EdgeType::Sellable),
-                (5.into(), 6.into(), EdgeType::Sellable),
-                (6.into(), Node::c(7), EdgeType::Fixed),
+                (5.into(), Node::c(6), EdgeType::Fixed),
             ]),
             num_blocks: 2,
-            total_black_deg: 12,
+            total_black_deg: 10,
         },
-        [1.into(), 2.into(), 3.into(), 4.into(), 5.into(), 6.into()],
+        [1.into(), 2.into(), 3.into(), 4.into(), 5.into()],
     )
 }
 
@@ -61,37 +63,27 @@ pub fn complex_tree() -> Component {
             ///          |
             ///          1
             ///          |
-            ///          2
+            ///          2 -- 5 -- 6
             ///          |
-            ///          3 -- 7 -- 8 -- 9
+            ///          3
             ///          |
             ///          4
-            ///          |
-            ///          5
-            ///          |
-            ///          6
             graph: Graph::from_edges(vec![
                 (Node::c(0), 1.into(), EdgeType::Fixed),
                 (1.into(), 2.into(), EdgeType::Sellable),
                 (2.into(), 3.into(), EdgeType::Sellable),
-                (3.into(), 4.into(), EdgeType::Sellable),
-                (4.into(), 5.into(), EdgeType::Sellable),
+                (3.into(), Node::c(4), EdgeType::Fixed),
+                (2.into(), 5.into(), EdgeType::Sellable),
                 (5.into(), Node::c(6), EdgeType::Fixed),
-                (3.into(), 7.into(), EdgeType::Sellable),
-                (7.into(), 8.into(), EdgeType::Sellable),
-                (8.into(), Node::c(9), EdgeType::Fixed),
             ]),
             num_blocks: 3,
-            total_black_deg: 15,
+            total_black_deg: 9,
         },
         [
             1.into(),
             2.into(),
             3.into(),
-            4.into(),
             5.into(),
-            7.into(),
-            8.into(),
         ],
     )
 }
@@ -110,8 +102,8 @@ pub enum Component {
     C4([Node; 4]),
     C3([Node; 3]),
     Large(Node),
-    ComplexPath(Complex, [Node; 6]),
-    ComplexTree(Complex, [Node; 7]),
+    ComplexPath(Complex, [Node; 5]),
+    ComplexTree(Complex, [Node; 4]),
 }
 
 impl Component {
@@ -148,31 +140,31 @@ impl Component {
                 (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
             }
             Component::ComplexTree(_, b) => {
-                if b[..5].contains(u) && b[..5].contains(v) {
+                if b[..3].contains(u) && b[..3].contains(v) {
                     (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
-                        + if u.to_vertex().min(v.to_vertex()) <= b[2].to_vertex()
-                            && u.to_vertex().max(v.to_vertex()) >= b[2].to_vertex()
+                        + if u.to_vertex().min(v.to_vertex()) <= b[1].to_vertex()
+                            && u.to_vertex().max(v.to_vertex()) >= b[1].to_vertex()
                         {
                             1
                         } else {
                             0
                         }
-                } else if b[5..].contains(u) && b[5..].contains(v) {
+                } else if b[3..].contains(u) && b[3..].contains(v) {
                     (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
                 } else {
-                    if b[5..].contains(v) {
-                        (u.to_vertex().max(b[2].to_vertex()) - u.to_vertex().min(b[2].to_vertex())
-                            + v.to_vertex().max(b[2].to_vertex())
-                            - v.to_vertex().min(b[2].to_vertex())
-                            - 3
+                    if b[3..].contains(v) {
+                        (u.to_vertex().max(b[1].to_vertex()) - u.to_vertex().min(b[1].to_vertex())
+                            + v.to_vertex().max(b[1].to_vertex())
+                            - v.to_vertex().min(b[1].to_vertex())
+                            - 2
                             + 1)
                             * 2
                             + 1
                     } else {
-                        (v.to_vertex().max(b[2].to_vertex()) - v.to_vertex().min(b[2].to_vertex())
-                            + u.to_vertex().max(b[2].to_vertex())
-                            - u.to_vertex().min(b[2].to_vertex())
-                            - 3
+                        (v.to_vertex().max(b[1].to_vertex()) - v.to_vertex().min(b[1].to_vertex())
+                            + u.to_vertex().max(b[1].to_vertex())
+                            - u.to_vertex().min(b[1].to_vertex())
+                            - 2
                             + 1)
                             * 2
                             + 1
@@ -367,8 +359,8 @@ impl Component {
             Component::C4(_) => 4,
             Component::C3(_) => 3,
             Component::Large(_) => 1,
-            Component::ComplexPath(_, _) => 8,
-            Component::ComplexTree(_, _) => 10,
+            Component::ComplexPath(_, _) => 7,
+            Component::ComplexTree(_, _) => 7,
         }
     }
 }
@@ -459,13 +451,21 @@ mod test_complex_degree {
     #[test]
     fn test_complex_tree() {
         let comp = complex_tree();
-
+        //          0
+        //          |
+        //          1
+        //          |
+        //          2 -- 5 -- 6
+        //          |
+        //          3
+        //          |
+        //          4
         assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(3)), 7);
-        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(2)), 4);
-        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(5)), 11);
-        assert_eq!(comp.complex_degree_between(&Node::n(2), &Node::n(7)), 7);
-        assert_eq!(comp.complex_degree_between(&Node::n(3), &Node::n(7)), 5);
-        assert_eq!(comp.complex_degree_between(&Node::n(4), &Node::n(7)), 7);
-        assert_eq!(comp.complex_degree_between(&Node::n(5), &Node::n(8)), 11);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(2)), 5);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(5)), 7);
+        assert_eq!(comp.complex_degree_between(&Node::n(2), &Node::n(2)), 3);
+        assert_eq!(comp.complex_degree_between(&Node::n(3), &Node::n(3)), 2);
+        assert_eq!(comp.complex_degree_between(&Node::n(3), &Node::n(5)), 7);
+        assert_eq!(comp.complex_degree_between(&Node::n(2), &Node::n(2)), 3);
     }
 }
