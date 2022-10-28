@@ -101,7 +101,7 @@ pub fn prove_nice_path_progress(
         .into_iter()
         .map(|c| {
             if c.get_comp().is_complex() {
-                (c.clone(), k + 3)
+                (c.clone(), 4)
             } else {
                 (c.clone(), 4)
             }
