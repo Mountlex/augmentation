@@ -34,7 +34,12 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleMergeTactic {
     fn action(&mut self, data: &PseudoCycleInstance, context: &PathContext) -> ProofNode {
         self.num_calls += 1;
 
-        let cycle_value = data.pseudo_cycle.value(&context.credit_inv);
+        let mut cycle_value = data.pseudo_cycle.value(&context.credit_inv);
+
+        if data.pseudo_cycle.nodes.iter().any(|n| n.get_comp().is_complex()) {
+            cycle_value += Credit::from_integer(3) * context.credit_inv.c
+        }
+
         if cycle_value >= Credit::from_integer(2) {
             self.num_proofs += 1;
             ProofNode::new_leaf_success(
