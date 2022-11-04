@@ -319,7 +319,7 @@ fn get_path_tactic(
                             or6(
                                 CountTactic::new("AugmentedPathInstances".into()),
                                 LongerPathTactic::new(path_finite),
-                                ContractabilityTactic::new(),
+                                ContractabilityTactic::new(path_finite),
                                 any(
                                     PseudoCyclesEnum,
                                     or(
