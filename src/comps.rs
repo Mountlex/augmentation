@@ -29,7 +29,15 @@ pub fn c6() -> Component {
     Component::C6([0.into(), 1.into(), 2.into(), 3.into(), 4.into(), 5.into()])
 }
 pub fn c7() -> Component {
-    Component::C7([0.into(), 1.into(), 2.into(), 3.into(), 4.into(), 5.into(), 6.into()])
+    Component::C7([
+        0.into(),
+        1.into(),
+        2.into(),
+        3.into(),
+        4.into(),
+        5.into(),
+        6.into(),
+    ])
 }
 pub fn large() -> Component {
     Component::Large(Node::Comp(0))
@@ -40,7 +48,7 @@ pub fn complex_path() -> Component {
         Complex {
             ///
             /// 0 -- 1 -- 2 -- 3 -- 4 -- 5 -- 6
-            /// 
+            ///
             graph: Graph::from_edges(vec![
                 (Node::c(0), 1.into(), EdgeType::Fixed),
                 (1.into(), 2.into(), EdgeType::Sellable),
@@ -79,12 +87,7 @@ pub fn complex_tree() -> Component {
             num_blocks: 3,
             total_black_deg: 9,
         },
-        [
-            1.into(),
-            2.into(),
-            3.into(),
-            5.into(),
-        ],
+        [1.into(), 2.into(), 3.into(), 5.into()],
     )
 }
 
@@ -298,14 +301,16 @@ impl Component {
 
     pub fn graph(&self) -> Graph {
         match self {
-            Component::C7(_) |Component::C6(_) | Component::C5(_) | Component::C4(_) | Component::C3(_) => {
-                Graph::from_edges(
-                    self.edges()
-                        .into_iter()
-                        .map(|(u, v)| (u, v, EdgeType::Sellable))
-                        .collect_vec(),
-                )
-            }
+            Component::C7(_)
+            | Component::C6(_)
+            | Component::C5(_)
+            | Component::C4(_)
+            | Component::C3(_) => Graph::from_edges(
+                self.edges()
+                    .into_iter()
+                    .map(|(u, v)| (u, v, EdgeType::Sellable))
+                    .collect_vec(),
+            ),
             Component::Large(n) => {
                 let mut g = Graph::new();
                 g.add_node(*n);

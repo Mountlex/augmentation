@@ -17,7 +17,9 @@ impl<'a> Enumerator<PathRearrangementInstance, PathContext> for PathRearrangemen
     ) -> Box<dyn Iterator<Item = PathRearrangementInstance> + '_> {
         let instance = self.input;
 
-        // find path index of last node in cycle       [...,hit,remaining_path]
+        // find path index of last node in cycle
+        // We know by the precondition that all previous nodes in the path are also in this cycle
+        // [...,hit,cycle_nodes]
         let (cycle_idx, node) = instance
             .pseudo_cycle
             .nodes
@@ -51,8 +53,7 @@ impl<'a> Enumerator<PathRearrangementInstance, PathContext> for PathRearrangemen
         let mut path2 = vec![p1, p2].concat();
         fix_in_out_direction(&mut path2);
 
-        // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]
-
+        // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]  3 is new last of nice path
         let iter = vec![
             PathRearrangementInstance {
                 instance: self.input.instance.clone(),

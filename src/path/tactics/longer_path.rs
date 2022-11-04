@@ -44,6 +44,7 @@ impl Tactic<PathRearrangementInstance, PathContext> for LongerPathTactic {
         let new_last = data.extension.last().unwrap();
         let outside_hits = data.instance.outside_hits_from(new_last.path_idx());
         for outside_hit in outside_hits {
+            // new_last will be prelast
             if new_last.get_zoomed().valid_out(outside_hit.source(), true) {
                 let mut feasible =
                     check_fixed_extension_feasible(&data.extension, &data.instance, false);

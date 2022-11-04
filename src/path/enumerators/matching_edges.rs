@@ -56,7 +56,6 @@ fn finite_path_matching_edges(
 
     let mut bound = 2;
     while bound <= 3 {
-
         for i in 1..instance.path_len() {
             let node_idx = Pidx::from(i);
             let node_matching_endpoints = instance
@@ -125,7 +124,10 @@ fn finite_path_matching_edges(
                                 let c = instance[node_idx].get_comp();
 
                                 !(rem_used_nodes.iter().all(|u| {
-                                    c.is_adjacent(u, &instance[node_idx].get_zoomed().out_node.unwrap())
+                                    c.is_adjacent(
+                                        u,
+                                        &instance[node_idx].get_zoomed().out_node.unwrap(),
+                                    )
                                 }) && c.is_adjacent(
                                     left,
                                     &instance[node_idx].get_zoomed().out_node.unwrap(),
@@ -169,9 +171,8 @@ fn finite_path_matching_edges(
                 });
                 return Box::new(iter);
             }
-
         }
-        
+
         bound += 1;
     }
 

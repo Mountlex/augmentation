@@ -23,24 +23,14 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for ExpandAllEnumerator<
             Box::new(vec![self.instance.clone()].into_iter());
 
         for (i, _node) in self.instance.nodes.iter().enumerate() {
-            //if !node.is_zoomed() {
             let context = context.clone();
             cases = Box::new(cases.into_iter().flat_map(move |instance| {
                 let context = context.clone();
                 matching_nodes_iter(instance, i.into())
                     .flat_map(move |instance| expand_iter(instance, Pidx::from(i), context.clone()))
             }));
-            //}
         }
 
-        //let vec_cases = cases.collect_vec();
-
-        // assert!(vec_cases.iter()
-        //     .all(|case| case.path.nodes.iter().all(|node| node.is_zoomed())));
-        // assert!(vec_cases.iter()
-        //     .all(|case| case.non_path_matching_edges.len() == case.outside_hits().len()));
-
-        //Box::new(vec_cases.into_iter())
         cases
     }
 }

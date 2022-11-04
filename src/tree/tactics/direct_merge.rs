@@ -1,9 +1,5 @@
 use itertools::Itertools;
-use petgraph::{
-    algo::connected_components,
-    dot::{Config, Dot},
-    visit::EdgeFiltered,
-};
+use petgraph::{algo::connected_components, visit::EdgeFiltered};
 
 use crate::{
     bridges::{is_complex, ComplexCheckResult},

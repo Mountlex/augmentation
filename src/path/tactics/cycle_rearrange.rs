@@ -69,7 +69,11 @@ impl Tactic<PathRearrangementInstance, PathContext> for CycleRearrangeTactic {
             }
 
             // Reduce C6 to anything except C3 and C6 and C7
-            if old_last_comp.is_c7() && !new_last_comp.is_c3() && !new_last_comp.is_c6()  && !new_last_comp.is_c7() {
+            if old_last_comp.is_c7()
+                && !new_last_comp.is_c3()
+                && !new_last_comp.is_c6()
+                && !new_last_comp.is_c7()
+            {
                 self.num_proofs += 1;
                 return ProofNode::new_leaf(
                     format!("Rearrange cycle: now ends with {}!", new_last_comp),
@@ -92,9 +96,7 @@ impl Tactic<PathRearrangementInstance, PathContext> for CycleRearrangeTactic {
             }
 
             // Reduce C4 to C5
-            if old_last_comp.is_c4()
-                && new_last_comp.is_c5()
-            {
+            if old_last_comp.is_c4() && new_last_comp.is_c5() {
                 self.num_proofs += 1;
                 return ProofNode::new_leaf(
                     format!("Rearrange cycle: now ends with {}!", new_last_comp),
@@ -121,6 +123,8 @@ pub fn check_fixed_extension_feasible(
     instance: &AugmentedPathInstance,
     prelast_is_prelast: bool,
 ) -> ProofNode {
+    // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]
+
     // check for inner nodes of extension that they fullfil nice path properties
     for i in 1..extension.len() - 1 {
         let inner_node = &extension[i];
@@ -156,7 +160,7 @@ pub fn check_fixed_extension_feasible(
         // if we are in the fixed cycle case, all nodes should be expanded!
         panic!()
     }
-    ProofNode::new_leaf("Feasbile path".into(), true)
+    ProofNode::new_leaf("Feasible path".into(), true)
 }
 
 fn check_matching_edge_extension_feasible(extension: &[SuperNode]) -> ProofNode {

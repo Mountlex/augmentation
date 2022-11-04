@@ -344,10 +344,6 @@ fn comp_npcs(
                 .filter(|(u, v)| !comp.is_adjacent(u, v))
                 .powerset()
                 .map(|config| NicePairConfig { nice_pairs: config })
-                // .filter(|npc| {
-                //     // if config misses a nice pair although it is a pair of adjacent vertices, remove it
-                //     adj_pairs.iter().all(|(u, v)| npc.is_nice_pair(*u, *v))
-                // })
                 .map(|mut npc| {
                     // adjacent vertices are always nice pairs!
                     npc.nice_pairs.append(&mut comp.edges());

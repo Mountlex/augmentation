@@ -411,6 +411,7 @@ pub struct PseudoCycle {
 }
 
 impl PseudoCycle {
+    /// checks whether this cycle includes all components of a suffix
     pub fn consecutive_end(&self) -> bool {
         let mut indices = self.nodes.iter().map(|n| n.path_idx().raw()).collect_vec();
         indices.sort();
@@ -497,7 +498,7 @@ impl PartialEq for Pidx {
     }
 }
 
-impl Eq for Pidx { }
+impl Eq for Pidx {}
 
 impl Display for Pidx {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

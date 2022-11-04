@@ -201,7 +201,9 @@ impl ExternalProofs {
 
 impl Tactic<TreeCaseInstance, TreeContext> for ExternalProofs {
     fn precondition(&self, data: &TreeCaseInstance, _context: &TreeContext) -> bool {
-        data.comps.len() == 2 && data.comps.iter().any(|c| c.is_c4()) && data.comps.iter().any(|c| c.is_complex())
+        data.comps.len() == 2
+            && data.comps.iter().any(|c| c.is_c4())
+            && data.comps.iter().any(|c| c.is_complex())
     }
 
     fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> ProofNode {

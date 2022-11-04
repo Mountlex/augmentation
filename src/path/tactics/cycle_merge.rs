@@ -36,7 +36,13 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleMergeTactic {
 
         let mut cycle_value = data.pseudo_cycle.value(&context.credit_inv);
 
-        if data.pseudo_cycle.nodes.iter().any(|n| n.get_comp().is_complex()) {
+        if data
+            .pseudo_cycle
+            .nodes
+            .iter()
+            .any(|n| n.get_comp().is_complex())
+        {
+            // 3c due to gainful bridge covering. We convert the resulting complex to a large
             cycle_value += Credit::from_integer(3) * context.credit_inv.c
         }
 

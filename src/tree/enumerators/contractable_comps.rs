@@ -107,6 +107,9 @@ impl EnumeratorTactic<TreeCaseInstance, ContractableCompInstance, TreeContext>
             data.comps.len() - 1
         };
 
-        data.comps.iter().take(take).any(|c| c.is_c7() || c.is_c6() || c.is_c5())
+        data.comps
+            .iter()
+            .take(take)
+            .any(|c| c.is_c7() || c.is_c6() || c.is_c5())
     }
 }
