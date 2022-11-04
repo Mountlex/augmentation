@@ -64,13 +64,44 @@ pub fn prove_tree_case(
                         CompEnum,
                         all(
                             MatchingEnum::new(3),
-                            or(
+                            or3(
                                 DirectMerge::new("3-Comp Merge".into()),
                                 any(
                                     ContractableCompsEnum::new(false),
                                     all(
                                         ContractableEdgesEnum,
                                         DirectMerge::new("3-Comp Merge via Contractability".into()),
+                                    ),
+                                ),
+                                and(
+                                    or3(
+                                        CoreTriangle::new(),
+                                        ExternalProofs::new(),
+                                        any(
+                                            ContractableCompsEnum::new(true),
+                                            all(
+                                                ContractableEdgesEnum,
+                                                DirectMerge::new(
+                                                    "3-Comp Merge (double leaf) via Contractability".into(),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                    all(
+                                        CompEnum,
+                                        all(
+                                            MatchingEnum::new(3),
+                                            or(
+                                                DirectMerge::new("4-Comp Merge".into()),
+                                                any(
+                                                    ContractableCompsEnum::new(false),
+                                                    all(
+                                                        ContractableEdgesEnum,
+                                                        DirectMerge::new("4-Comp Merge via Contractability".into()),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
                                     ),
                                 ),
                             ),

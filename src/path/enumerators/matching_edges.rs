@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::{
     comps::Component,
     path::{proof::PathContext, AbstractEdge, AugmentedPathInstance, PathHit, Pidx},
-    proof_logic::{Enumerator, EnumeratorTactic, OptEnumerator, OptEnumeratorTactic},
+    proof_logic::{OptEnumerator, OptEnumeratorTactic},
     types::Edge,
     Node,
 };
