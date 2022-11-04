@@ -377,8 +377,9 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                     ),
                 ),
             ),
-            all(
+            all_opt(
                 FindMatchingEdgesEnum::new(path_finite),
+                ContractabilityTactic::new(path_finite),
                 all(
                     ExpandAllEnum,
                     or4(
@@ -397,8 +398,9 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                 ),
                             ),
                         ),
-                        all(
+                        all_opt(
                             FindMatchingEdgesEnum::new(path_finite),
+                            ContractabilityTactic::new(path_finite),
                             all(
                                 ExpandAllEnum,
                                 or4(
@@ -417,8 +419,9 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                             ),
                                         ),
                                     ),
-                                    all(
+                                    all_opt(
                                         FindMatchingEdgesEnum::new(path_finite),
+                                        ContractabilityTactic::new(path_finite),
                                         all(
                                             ExpandAllEnum,
                                             or4(
@@ -437,8 +440,9 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                                         ),
                                                     ),
                                                 ),
-                                                all(
+                                                all_opt(
                                                     FindMatchingEdgesEnum::new(path_finite),
+                                                    ContractabilityTactic::new(path_finite),
                                                     all(
                                                         ExpandAllEnum,
                                                         or4(
@@ -457,8 +461,9 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                                                     ),
                                                                 ),
                                                             ),
-                                                            all(
+                                                            all_opt(
                                                                 FindMatchingEdgesEnum::new(path_finite),
+                                                                ContractabilityTactic::new(path_finite),
                                                                 all(
                                                                     ExpandAllEnum,
                                                                     or3(

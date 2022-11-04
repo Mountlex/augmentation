@@ -16,8 +16,26 @@ pub trait EnumeratorTactic<I, O, C> {
     }
 }
 
+pub trait OptEnumeratorTactic<I, O, C> {
+    type Enumer<'a>: OptEnumerator<O, C>
+    where
+        Self: 'a,
+        I: 'a;
+
+    fn msg(&self, data_in: &I) -> String;
+    fn get_enumerator<'a>(&'a self, data: &'a I) -> Self::Enumer<'a>;
+    fn item_msg(&self, item: &O) -> String;
+    fn precondition(&self, _data: &I, _context: &C) -> bool {
+        true
+    }
+}
+
 pub trait Enumerator<O, C> {
     fn iter(&self, context: &C) -> Box<dyn Iterator<Item = O> + '_>;
+}
+
+pub trait OptEnumerator<O, C> {
+    fn iter(&self, context: &C) -> Option<Box<dyn Iterator<Item = O> + '_>>;
 }
 
 pub trait Tactic<I, C> {
@@ -230,6 +248,73 @@ where
 }
 
 #[derive(Clone)]
+pub struct AllOpt<O, E, T, A> {
+    enum_tactic: E,
+    else_tactic: T,
+    item_tactic: A,
+    short_circuiting: bool,
+    _phantom_data: PhantomData<O>,
+}
+
+pub fn all_opt<O, E, T, A>(enum_tactic: E, else_tactic: T, item_tactic: A) -> AllOpt<O, E, T, A> {
+    AllOpt {
+        enum_tactic,
+        else_tactic,
+        item_tactic,
+        short_circuiting: true,
+        _phantom_data: PhantomData,
+    }
+}
+
+impl<O, E, A, T> Statistics for AllOpt<O, E, T, A>
+where
+    A: Statistics,
+{
+    fn print_stats(&self) {
+        self.item_tactic.print_stats();
+    }
+}
+
+impl<E, A, I, O, C, T> Tactic<I, C> for AllOpt<O, E, T, A>
+where
+    E: OptEnumeratorTactic<I, O, C>,
+    A: Tactic<O, C>,
+    T: Tactic<I, C>
+{
+    fn action(&mut self, data_in: &I, context: &C) -> ProofNode {
+        
+        if let Some(iter) = self.enum_tactic.get_enumerator(data_in).iter(context) {
+            let mut proof = ProofNode::new_all(self.enum_tactic.msg(&data_in));
+            for d in iter {
+                let res = if !self.item_tactic.precondition(&d, context) {
+                    false
+                } else {
+                    let item_msg = self.enum_tactic.item_msg(&d);
+                    let mut proof_item = self.item_tactic.action(&d, context);
+                    proof_item = ProofNode::new_info(item_msg, proof_item);
+                    let outcome = proof_item.eval();
+                    proof.add_child(proof_item);
+                    outcome.success()
+                };
+    
+                if !res && self.short_circuiting {
+                    break;
+                }
+            }
+            return proof
+        } else {
+            return self.else_tactic.action(data_in, context)
+        }
+
+    }
+
+    fn precondition(&self, data: &I, context: &C) -> bool {
+        self.enum_tactic.precondition(data, context)
+    }
+}
+
+
+#[derive(Clone)]
 pub struct All<O, E, A> {
     enum_tactic: E,
     item_tactic: A,
@@ -274,31 +359,6 @@ where
 
         let enumerator = self.enum_tactic.get_enumerator(data_in);
 
-        // if self.parallel {
-        //     let proof_nodes: Vec<ProofNode> = enumerator
-        //         .iter(context)
-        //         .collect_vec()
-        //         .into_iter()
-        //         .par_bridge()
-        //         .map(|d| {
-        //             if !self.item_tactic.precondition(&d, context) {
-        //                 ProofNode::new_leaf("wrong precondition".into(), false)
-        //             } else {
-        //                 let item_msg = self.enum_tactic.item_msg(&d);
-        //                 let mut proof_item = self.item_tactic.clone().action(&d, context);
-        //                 proof_item = ProofNode::new_info(item_msg, proof_item);
-        //                 let outcome = proof_item.eval();
-        //                 proof_item
-        //             }
-        //         })
-        //         .collect();
-
-        //     for proof_node in proof_nodes {
-        //         proof.add_child(proof_node);
-        //     }
-
-        //     proof.eval();
-        // } else {
         for d in enumerator.iter(context) {
             let res = if !self.item_tactic.precondition(&d, context) {
                 false

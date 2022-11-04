@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::{
     comps::Component,
     path::{proof::PathContext, AbstractEdge, AugmentedPathInstance, PathHit, Pidx},
-    proof_logic::{Enumerator, EnumeratorTactic},
+    proof_logic::{Enumerator, EnumeratorTactic, OptEnumerator, OptEnumeratorTactic},
     types::Edge,
     Node,
 };
@@ -29,29 +29,25 @@ enum Hit {
     Node(Node),
 }
 
-impl<'a> Enumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnumerator<'a> {
-    fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+impl<'a> OptEnumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnumerator<'a> {
+    fn iter(&self, _context: &PathContext) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
         assert!(self.instance.abstract_edges.len() == self.instance.all_outside_hits().len());
 
         if self.path_finite {
             finite_path_matching_edges(self.instance)
         } else {
-            if let Some(iter) = infinite_path_matching_edges(self.instance) {
-                iter
-            } else {
-                Box::new(vec![self.instance.clone()].into_iter())
-            }
+            infinite_path_matching_edges(self.instance) 
         }
     }
 }
 
 fn finite_path_matching_edges(
     instance: &AugmentedPathInstance,
-) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
+) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
     let instance = instance;
 
     if let Some(iter) = infinite_path_matching_edges(instance) {
-        return iter;
+        return Some(iter);
     }
 
     let mut bound = 2;
@@ -169,14 +165,14 @@ fn finite_path_matching_edges(
                         new_instance
                     })
                 });
-                return Box::new(iter);
+                return Some(Box::new(iter));
             }
         }
 
         bound += 1;
     }
 
-    Box::new(vec![instance.clone()].into_iter())
+    None
 }
 
 fn infinite_path_matching_edges(
@@ -303,7 +299,7 @@ fn infinite_path_matching_edges(
     None
 }
 
-impl EnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
+impl OptEnumeratorTactic<AugmentedPathInstance, AugmentedPathInstance, PathContext>
     for FindMatchingEdgesEnum
 {
     type Enumer<'a> = FindMatchingEdgesEnumerator<'a>;
