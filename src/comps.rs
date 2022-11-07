@@ -110,6 +110,10 @@ pub enum Component {
 }
 
 impl Component {
+    pub fn is_cycle(&self) -> bool {
+        self.is_c3() || self.is_c4() || self.is_c5() || self.is_c6() || self.is_c7()
+    }
+
     pub fn is_c7(&self) -> bool {
         matches!(self, Component::C7(_))
     }
@@ -127,6 +131,17 @@ impl Component {
 
     pub fn is_c3(&self) -> bool {
         matches!(self, Component::C3(_))
+    }
+
+    pub fn symmetric_combs(&self) -> Vec<[Node; 2]> {
+        match self { // must be consistent with the fact that fixed node is n[0]!!!
+            Component::C7(n) => vec![[n[1], n[2]], [n[1], n[3]], [n[2], n[4]], [n[1], n[4]]],
+            Component::C6(n) => vec![[n[1], n[2]], [n[1], n[3]], [n[2], n[4]]],
+            Component::C5(n) => vec![[n[1], n[2]], [n[1], n[3]]],
+            Component::C4(n) => vec![[n[1], n[2]]],
+            Component::C3(n) => vec![[n[1], n[2]]],
+            _ => panic!("Complex or large is not symmetric!"),
+        }
     }
 
     pub fn is_complex(&self) -> bool {

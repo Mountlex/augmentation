@@ -79,11 +79,11 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
         };
 
         let iter_data = IterData {
-            left_fixed: left.fixed_node(),
-            left_free: left_free,
+            left: left.clone(),
+            left_free,
             left_fix,
-            right_fixed: right.fixed_node(),
-            right_free: right_free,
+            right: right.clone(),
+            right_free,
             right_fix,
             instance: self.instance.clone(),
         };
@@ -92,15 +92,19 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
             (Component::Large(_), Component::Large(_), _, _) => {
                 self.construct_iter(IterType::Fixed, IterType::Fixed, iter_data)
             }
-            (Component::Large(_), _, _, _) => {
+            (Component::Large(_), _, _, _) if right.is_cycle() => {
+                self.construct_iter(IterType::Fixed, IterType::SymComb, iter_data)
+            },
+            (Component::Large(_), _, _, _) if !right.is_cycle() => {
                 self.construct_iter(IterType::Fixed, IterType::Comb, iter_data)
             }
             (_, Component::Large(_), _, _) => {
                 self.construct_iter(IterType::Comb, IterType::Fixed, iter_data)
             }
             (_, _, true, false) => self.construct_iter(IterType::Comb, IterType::Perm, iter_data),
-            (_, _, false, true) => self.construct_iter(IterType::Perm, IterType::Comb, iter_data),
-            (_, _, _, _) => self.construct_iter(IterType::Perm, IterType::Comb, iter_data),
+            (_, _, _, _) if right.is_cycle() => self.construct_iter(IterType::Perm, IterType::SymComb, iter_data),
+            (_, _, _, _) if !right.is_cycle() => self.construct_iter(IterType::Perm, IterType::Comb, iter_data),
+            _ => panic!() // the above two cases catch all remaining cases!
         };
 
         Box::new(iter)
@@ -111,14 +115,15 @@ enum IterType {
     Fixed,
     Perm,
     Comb,
+    SymComb,
 }
 
 #[derive(Clone)]
 struct IterData {
-    left_fixed: Option<Node>,
+    left: Component,
     left_free: Vec<Node>,
     left_fix: usize,
-    right_fixed: Option<Node>,
+    right: Component,
     right_free: Vec<Node>,
     right_fix: usize,
     instance: TreeCaseInstance,
@@ -151,6 +156,15 @@ impl MatchingEnumerator<'_> {
                         .combinations(size - data.right_fix)
                         .map(move |rights| {
                             construct_instance(data.left_free.to_vec(), rights, data.clone())
+                        }),
+                )
+            },
+            (IterType::Fixed, IterType::SymComb) => {
+                assert!(data.left_free.len() == self.size);
+                Box::new(
+                    data.right.symmetric_combs().into_iter()
+                        .map(move |rights| {
+                            construct_instance(data.left_free.to_vec(), rights.to_vec(), data.clone())
                         }),
                 )
             }
@@ -210,6 +224,24 @@ impl MatchingEnumerator<'_> {
                                 })
                         }),
                 )
+            },
+            (IterType::Perm, IterType::SymComb) => {
+                let left_free = data.left_free.clone();
+                let left_fix = data.left_fix;
+                let size = self.size;
+                Box::new(
+                    left_free
+                        .into_iter()
+                        .permutations(size - left_fix)
+                        .flat_map(move |lefts| {
+                            let data_clone = data.clone();
+                            data.right.symmetric_combs()
+                                .into_iter()
+                                .map(move |rights| {
+                                    construct_instance(lefts.clone(), rights.to_vec(), data_clone.clone())
+                                })
+                        }),
+                )
             }
             _ => {
                 panic!()
@@ -228,13 +260,13 @@ fn construct_instance(
     for (l, r) in lefts
         .into_iter()
         .chain(
-            std::iter::once(iter_data.left_fixed)
+            std::iter::once(iter_data.left.fixed_node())
                 .take(iter_data.left_fix)
                 .map(|n| n.unwrap()),
         )
         .zip(
             rights.iter().cloned().chain(
-                std::iter::once(iter_data.right_fixed)
+                std::iter::once(iter_data.right.fixed_node())
                     .take(iter_data.right_fix)
                     .map(|n| n.unwrap()),
             ),
