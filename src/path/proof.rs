@@ -90,7 +90,7 @@ pub fn prove_nice_path_progress(
         })
         .collect_vec();
 
-    let k = ((Credit::from_integer(4) - Credit::from_integer(11) * credit_inv.c)
+    let k = ((Credit::from_integer(4) - Credit::from_integer(13) * credit_inv.c)
         / (Credit::from_integer(5) * credit_inv.c - Credit::from_integer(1)))
     .ceil()
     .to_integer() as usize;
@@ -100,8 +100,8 @@ pub fn prove_nice_path_progress(
     let last_nodes_with_depth = last_nodes
         .into_iter()
         .map(|c| {
-            if c.get_comp().is_c4() || c.get_comp().is_c5() {
-                (c.clone(), 4)
+            if c.get_comp().is_c4() {
+                (c.clone(), k + 3)
             } else {
                 (c.clone(), 4)
             }
