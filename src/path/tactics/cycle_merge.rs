@@ -42,8 +42,8 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleMergeTactic {
             .iter()
             .any(|n| n.get_comp().is_complex())
         {
-            // 3c due to gainful bridge covering. We convert the resulting complex to a large
-            cycle_value += Credit::from_integer(3) * context.credit_inv.c
+            // 2c due to gainful bridge covering. We convert the resulting complex to a large
+            cycle_value += Credit::from_integer(2) * context.credit_inv.c
         }
 
         if cycle_value >= Credit::from_integer(2) {

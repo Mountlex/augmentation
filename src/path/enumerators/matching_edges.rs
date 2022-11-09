@@ -2,7 +2,10 @@ use itertools::Itertools;
 
 use crate::{
     comps::Component,
-    path::{proof::PathContext, AbstractEdge, AugmentedPathInstance, PathHit, Pidx},
+    path::{
+        proof::PathContext, tactics::contract::check_for_comp, AbstractEdge, AugmentedPathInstance,
+        PathHit, Pidx,
+    },
     proof_logic::{OptEnumerator, OptEnumeratorTactic},
     types::Edge,
     Node,
@@ -30,15 +33,99 @@ enum Hit {
 }
 
 impl<'a> OptEnumerator<AugmentedPathInstance, PathContext> for FindMatchingEdgesEnumerator<'a> {
-    fn iter(&self, _context: &PathContext) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
+    fn iter(
+        &self,
+        _context: &PathContext,
+    ) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
         assert!(self.instance.abstract_edges.len() == self.instance.all_outside_hits().len());
 
         if self.path_finite {
-            finite_path_matching_edges(self.instance)
+            if let Some(iter) = infinite_path_matching_edges(self.instance) {
+                return Some(iter);
+            }
+            if let Some(iter) = finite_path_matching_edges(self.instance) {
+                return Some(iter);
+            }
+            contractable_path_matching_edges(self.instance)
         } else {
-            infinite_path_matching_edges(self.instance) 
+            if let Some(iter) = infinite_path_matching_edges(self.instance) {
+                return Some(iter);
+            }
+            contractable_path_matching_edges(self.instance)
         }
     }
+}
+
+fn contractable_path_matching_edges(
+    instance: &AugmentedPathInstance,
+) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
+    let instance = instance;
+
+    for i in 1..instance.path_len() {
+        let node_idx = Pidx::from(i);
+        let node = &instance[node_idx];
+        let res = check_for_comp(
+            instance,
+            node.get_comp(),
+            node.get_zoomed(),
+            node.path_idx(),
+        );
+        if res.success() {
+            let free_nodes = instance.nodes_without_edges(node_idx);
+
+            let rem_nodes = instance
+                .nodes
+                .iter()
+                .filter(|n| n.path_idx().raw() != i)
+                .flat_map(|n| n.get_comp().matching_nodes())
+                .cloned()
+                .collect_vec();
+
+            let iter = free_nodes.into_iter().flat_map(move |node_matched| {
+                let mut rem_iter: Box<dyn Iterator<Item = Hit>> = Box::new(
+                    rem_nodes
+                        .clone().into_iter()
+                        .map(|left| Hit::Node(left)),
+                );
+
+                for i_rem in 0..instance.path_len() {
+                    if i_rem != i {
+                        if let Component::Large(n) = instance[Pidx::N(i_rem)].get_comp() {
+                            rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Node(*n))));
+                        }
+                    }
+                }
+
+                rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
+
+                rem_iter.map(move |rem_hit| {
+                    let mut new_instance = instance.clone();
+
+                    match rem_hit {
+                        Hit::Outside => new_instance.abstract_edges.push(AbstractEdge::new(
+                            node_idx,
+                            node_matched,
+                            PathHit::Outside,
+                        )),
+                        Hit::Node(left) => {
+                            let left_idx = new_instance.index_of_super_node(left);
+                            new_instance.fixed_edges.push(Edge::new(
+                                left,
+                                left_idx,
+                                node_matched,
+                                node_idx,
+                            ))
+                        }
+                    }
+
+                    new_instance
+                })
+            });
+            return Some(Box::new(iter));
+        }
+    }
+
+    None
 }
 
 fn finite_path_matching_edges(

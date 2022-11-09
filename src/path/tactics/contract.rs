@@ -60,7 +60,7 @@ impl Tactic<AugmentedPathInstance, PathContext> for ContractabilityTactic {
     }
 }
 
-fn check_for_comp(data: &AugmentedPathInstance, comp: &Component, node: &ZoomedNode, idx: Pidx) -> ProofNode {
+pub fn check_for_comp(data: &AugmentedPathInstance, comp: &Component, node: &ZoomedNode, idx: Pidx) -> ProofNode {
     if comp.is_complex() || comp.is_large() || comp.is_c3() || comp.is_c4() {
         return ProofNode::new_leaf(
             "Contractability check not applied: component is C3, Large or Complex".into(),

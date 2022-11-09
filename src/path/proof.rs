@@ -101,7 +101,7 @@ pub fn prove_nice_path_progress(
         .into_iter()
         .map(|c| {
             if c.get_comp().is_c4() || c.get_comp().is_c5() {
-                (c.clone(), 5)
+                (c.clone(), 4)
             } else {
                 (c.clone(), 4)
             }
@@ -379,7 +379,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
             ),
             all_opt(
                 FindMatchingEdgesEnum::new(path_finite),
-                ContractabilityTactic::new(path_finite),
+                False,
                 all(
                     ExpandAllEnum,
                     or4(
@@ -400,7 +400,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                         ),
                         all_opt(
                             FindMatchingEdgesEnum::new(path_finite),
-                            ContractabilityTactic::new(path_finite),
+                            False,
                             all(
                                 ExpandAllEnum,
                                 or4(
@@ -421,7 +421,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                     ),
                                     all_opt(
                                         FindMatchingEdgesEnum::new(path_finite),
-                                        ContractabilityTactic::new(path_finite),
+                                        False,
                                         all(
                                             ExpandAllEnum,
                                             or4(
@@ -442,7 +442,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                                 ),
                                                 all_opt(
                                                     FindMatchingEdgesEnum::new(path_finite),
-                                                    ContractabilityTactic::new(path_finite),
+                                                    False,
                                                     all(
                                                         ExpandAllEnum,
                                                         or4(
@@ -463,7 +463,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                                             ),
                                                             all_opt(
                                                                 FindMatchingEdgesEnum::new(path_finite),
-                                                                ContractabilityTactic::new(path_finite),
+                                                                False,
                                                                 all(
                                                                     ExpandAllEnum,
                                                                     or3(
@@ -526,6 +526,25 @@ impl Tactic<AugmentedPathInstance, PathContext> for TacticsExhausted {
 impl Statistics for TacticsExhausted {
     fn print_stats(&self) {
         println!("Unproved path matching instances {}", self.num_calls)
+    }
+}
+
+#[derive(Clone)]
+struct False;
+
+impl Tactic<AugmentedPathInstance, PathContext> for False {
+    fn precondition(&self, _data: &AugmentedPathInstance, _context: &PathContext) -> bool {
+        true
+    }
+
+    fn action(&mut self, _data: &AugmentedPathInstance, _context: &PathContext) -> ProofNode {
+        ProofNode::new_leaf("False!".into(), false)
+    }
+}
+
+impl Statistics for False {
+    fn print_stats(&self) {
+        println!("")
     }
 }
 
