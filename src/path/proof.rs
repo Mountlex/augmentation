@@ -379,7 +379,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
             ),
             all_opt(
                 FindMatchingEdgesEnum::new(path_finite),
-                False,
+                FiniteInstance::new(),
                 all(
                     ExpandAllEnum,
                     or4(
@@ -400,7 +400,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                         ),
                         all_opt(
                             FindMatchingEdgesEnum::new(path_finite),
-                            False,
+                            FiniteInstance::new(),
                             all(
                                 ExpandAllEnum,
                                 or4(
@@ -421,7 +421,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                     ),
                                     all_opt(
                                         FindMatchingEdgesEnum::new(path_finite),
-                                        False,
+                                        FiniteInstance::new(),
                                         all(
                                             ExpandAllEnum,
                                             or4(
@@ -442,7 +442,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                                 ),
                                                 all_opt(
                                                     FindMatchingEdgesEnum::new(path_finite),
-                                                    False,
+                                                    FiniteInstance::new(),
                                                     all(
                                                         ExpandAllEnum,
                                                         or4(
@@ -463,7 +463,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                                             ),
                                                             all_opt(
                                                                 FindMatchingEdgesEnum::new(path_finite),
-                                                                False,
+                                                                FiniteInstance::new(),
                                                                 all(
                                                                     ExpandAllEnum,
                                                                     or3(
@@ -545,6 +545,39 @@ impl Tactic<AugmentedPathInstance, PathContext> for False {
 impl Statistics for False {
     fn print_stats(&self) {
         println!("")
+    }
+}
+
+
+#[derive(Clone)]
+struct FiniteInstance {
+    num_calls: usize,
+}
+
+impl FiniteInstance {
+    fn new() -> Self {
+        Self { num_calls: 0 }
+    }
+}
+
+impl Tactic<AugmentedPathInstance, PathContext> for FiniteInstance {
+    fn precondition(&self, _data: &AugmentedPathInstance, _context: &PathContext) -> bool {
+        true
+    }
+
+    fn action(&mut self, data: &AugmentedPathInstance, _context: &PathContext) -> ProofNode {
+        self.num_calls += 1;
+        if data.all_outside_hits().is_empty() && data.nodes.iter().all(|n| n.get_comp().is_cycle()) {
+            ProofNode::new_leaf("Finite Instance but not outgoing edges!".into(), true)
+        } else {
+            ProofNode::new_leaf("No Finite Instance!".into(), false)
+        }
+    }
+}
+
+impl Statistics for FiniteInstance {
+    fn print_stats(&self) {
+        println!("{}", self.num_calls)
     }
 }
 
