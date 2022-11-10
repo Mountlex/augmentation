@@ -1,5 +1,5 @@
 use std::fmt::Write;
-use std::path::PathBuf;
+use std::path::{PathBuf, self};
 
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
@@ -379,7 +379,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
             ),
             all_opt(
                 FindMatchingEdgesEnum::new(path_finite),
-                FiniteInstance::new(),
+                FiniteInstance::new(path_finite),
                 all(
                     ExpandAllEnum,
                     or4(
@@ -400,7 +400,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                         ),
                         all_opt(
                             FindMatchingEdgesEnum::new(path_finite),
-                            FiniteInstance::new(),
+                            FiniteInstance::new(path_finite),
                             all(
                                 ExpandAllEnum,
                                 or4(
@@ -421,7 +421,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                     ),
                                     all_opt(
                                         FindMatchingEdgesEnum::new(path_finite),
-                                        FiniteInstance::new(),
+                                        FiniteInstance::new(path_finite),
                                         all(
                                             ExpandAllEnum,
                                             or4(
@@ -442,7 +442,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                                 ),
                                                 all_opt(
                                                     FindMatchingEdgesEnum::new(path_finite),
-                                                    FiniteInstance::new(),
+                                                    FiniteInstance::new(path_finite),
                                                     all(
                                                         ExpandAllEnum,
                                                         or4(
@@ -463,7 +463,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                                             ),
                                                             all_opt(
                                                                 FindMatchingEdgesEnum::new(path_finite),
-                                                                FiniteInstance::new(),
+                                                                FiniteInstance::new(path_finite),
                                                                 all(
                                                                     ExpandAllEnum,
                                                                     or3(
@@ -552,17 +552,18 @@ impl Statistics for False {
 #[derive(Clone)]
 struct FiniteInstance {
     num_calls: usize,
+    finite_instance: bool,
 }
 
 impl FiniteInstance {
-    fn new() -> Self {
-        Self { num_calls: 0 }
+    fn new(finite_instance: bool) -> Self {
+        Self { num_calls: 0, finite_instance }
     }
 }
 
 impl Tactic<AugmentedPathInstance, PathContext> for FiniteInstance {
     fn precondition(&self, _data: &AugmentedPathInstance, _context: &PathContext) -> bool {
-        true
+        self.finite_instance
     }
 
     fn action(&mut self, data: &AugmentedPathInstance, _context: &PathContext) -> ProofNode {
