@@ -568,8 +568,8 @@ impl Tactic<AugmentedPathInstance, PathContext> for FiniteInstance {
 
     fn action(&mut self, data: &AugmentedPathInstance, _context: &PathContext) -> ProofNode {
         self.num_calls += 1;
-        if data.all_outside_hits().is_empty() && data.nodes.iter().all(|n| n.get_comp().is_cycle()) {
-            ProofNode::new_leaf("Finite Instance but not outgoing edges!".into(), true)
+        if data.all_outside_hits().len() < 3 && data.nodes.iter().all(|n| n.get_comp().is_cycle()) {
+            ProofNode::new_leaf("Finite Instance but less than three outgoing edges!".into(), true)
         } else {
             ProofNode::new_leaf("No Finite Instance!".into(), false)
         }
