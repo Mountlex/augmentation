@@ -40,9 +40,9 @@ impl<'a> OptEnumerator<AugmentedPathInstance, PathContext> for FindMatchingEdges
         assert!(self.instance.abstract_edges.len() == self.instance.all_outside_hits().len());
 
         if self.path_finite {
-            if let Some(iter) = infinite_path_matching_edges(self.instance) {
-                return Some(iter);
-            }
+            //if let Some(iter) = infinite_path_matching_edges(self.instance) {
+            //    return Some(iter);
+            //}
             if let Some(iter) = finite_path_matching_edges(self.instance) {
                 return Some(iter);
             }
@@ -134,9 +134,6 @@ fn finite_path_matching_edges(
 ) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
     let instance = instance;
 
-    if let Some(iter) = infinite_path_matching_edges(instance) {
-        return Some(iter);
-    }
 
     let mut bound = 2;
     while bound <= 3 {
