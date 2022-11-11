@@ -508,7 +508,7 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                                                                         FiniteInstance::new(path_finite),
                                                                                         all(
                                                                                             ExpandAllEnum,
-                                                                                            or3(
+                                                                                            or4(
                                                                                                 LongerPathTactic::new(path_finite),
                                                                                                 LocalMergeTactic::new(),
                                                                                                 any(
@@ -520,6 +520,54 @@ fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathConte
                                                                                                             or(
                                                                                                                 CycleRearrangeTactic::new(),
                                                                                                                 LongerPathTactic::new(path_finite),
+                                                                                                            ),
+                                                                                                        ),
+                                                                                                    ),
+                                                                                                ),
+                                                                                                all_opt(
+                                                                                                    FindMatchingEdgesEnum::new(path_finite),
+                                                                                                    FiniteInstance::new(path_finite),
+                                                                                                    all(
+                                                                                                        ExpandAllEnum,
+                                                                                                        or4(
+                                                                                                            LongerPathTactic::new(path_finite),
+                                                                                                            LocalMergeTactic::new(),
+                                                                                                            any(
+                                                                                                                PseudoCyclesEnum,
+                                                                                                                or(
+                                                                                                                    CycleMergeTactic::new(),
+                                                                                                                    any(
+                                                                                                                        PathRearrangementEnum,
+                                                                                                                        or(
+                                                                                                                            CycleRearrangeTactic::new(),
+                                                                                                                            LongerPathTactic::new(path_finite),
+                                                                                                                        ),
+                                                                                                                    ),
+                                                                                                                ),
+                                                                                                            ),
+                                                                                                            all_opt(
+                                                                                                                FindMatchingEdgesEnum::new(path_finite),
+                                                                                                                FiniteInstance::new(path_finite),
+                                                                                                                all(
+                                                                                                                    ExpandAllEnum,
+                                                                                                                    or3(
+                                                                                                                        LongerPathTactic::new(path_finite),
+                                                                                                                        LocalMergeTactic::new(),
+                                                                                                                        any(
+                                                                                                                            PseudoCyclesEnum,
+                                                                                                                            or(
+                                                                                                                                CycleMergeTactic::new(),
+                                                                                                                                any(
+                                                                                                                                    PathRearrangementEnum,
+                                                                                                                                    or(
+                                                                                                                                        CycleRearrangeTactic::new(),
+                                                                                                                                        LongerPathTactic::new(path_finite),
+                                                                                                                                    ),
+                                                                                                                                ),
+                                                                                                                            ),
+                                                                                                                        ),
+                                                                                                                    ),
+                                                                                                                ),
                                                                                                             ),
                                                                                                         ),
                                                                                                     ),
