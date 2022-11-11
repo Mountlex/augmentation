@@ -46,13 +46,15 @@ impl<'a> OptEnumerator<AugmentedPathInstance, PathContext> for FindMatchingEdges
             if let Some(iter) = finite_path_matching_edges(self.instance) {
                 return Some(iter);
             }
-            contractable_path_matching_edges(self.instance)
+            //contractable_path_matching_edges(self.instance)
         } else {
             if let Some(iter) = infinite_path_matching_edges(self.instance) {
                 return Some(iter);
             }
-            contractable_path_matching_edges(self.instance)
+            //contractable_path_matching_edges(self.instance)
+
         }
+        None
     }
 }
 
