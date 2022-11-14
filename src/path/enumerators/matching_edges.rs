@@ -147,7 +147,7 @@ fn finite_path_matching_edges(
 
             let unique_node_matching_endpoints = all_node_matching_endpoints.iter().unique().collect_vec();
 
-            if (instance[node_idx].get_comp().is_large() && unique_node_matching_endpoints.len() < bound) || (!instance[node_idx].get_comp().is_large() && all_node_matching_endpoints.len() < bound)  {
+            if (!instance[node_idx].get_comp().is_large() && unique_node_matching_endpoints.len() < bound) || (instance[node_idx].get_comp().is_large() && all_node_matching_endpoints.len() < bound)  {
                 let mut node_free = instance[node_idx]
                     .get_comp()
                     .matching_nodes()
