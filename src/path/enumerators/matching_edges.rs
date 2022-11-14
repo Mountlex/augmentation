@@ -139,19 +139,20 @@ fn finite_path_matching_edges(
     while bound <= 3 {
         for i in 1..instance.path_len() {
             let node_idx = Pidx::from(i);
-            let node_matching_endpoints = instance
+            let all_node_matching_endpoints = instance
                 .nodes_with_fixed_edges(node_idx)
                 .into_iter()
                 .chain(instance.outside_edges_on(node_idx).into_iter())
-                .unique()
                 .collect_vec();
 
-            if node_matching_endpoints.len() < bound {
+            let unique_node_matching_endpoints = all_node_matching_endpoints.iter().unique().collect_vec();
+
+            if (instance[node_idx].get_comp().is_large() && unique_node_matching_endpoints.len() < bound) || (!instance[node_idx].get_comp().is_large() && all_node_matching_endpoints.len() < bound)  {
                 let mut node_free = instance[node_idx]
                     .get_comp()
                     .matching_nodes()
                     .into_iter()
-                    .filter(|n| !node_matching_endpoints.contains(n))
+                    .filter(|n| !unique_node_matching_endpoints.contains(n))
                     .collect_vec();
                 if let Component::Large(n) = instance[node_idx].get_comp() {
                     node_free.push(n);
