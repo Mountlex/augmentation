@@ -1,5 +1,5 @@
 use std::fmt::Write;
-use std::path::{PathBuf, self};
+use std::path::{self, PathBuf};
 
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
@@ -25,8 +25,8 @@ use super::tactics::contract::ContractabilityTactic;
 use super::tactics::cycle_merge::CycleMergeTactic;
 use super::tactics::local_merge::LocalMergeTactic;
 use super::tactics::longer_path::LongerPathTactic;
-use super::{AugmentedPathInstance, SuperNode, AbstractNode, Pidx};
-use crate::comps::{Component, c4, c3, c5, c6, CompType};
+use super::{AbstractNode, AugmentedPathInstance, Pidx, SuperNode};
+use crate::comps::{c3, c4, c5, c6, CompType, Component};
 
 #[derive(Clone)]
 pub struct PathContext {
@@ -289,64 +289,65 @@ fn prove_last_node(
     std::fs::write(filename, buf).expect("Unable to write file");
 }
 
-
-
 pub fn test_instance() {
-
     let mut context = PathContext {
         credit_inv: CreditInv::new(Credit::new(1, 4)),
     };
 
-
-    let path = vec![PathNode::Unused(c4()), PathNode::Unused(c6()), PathNode::Unused(c5()),  PathNode::Unused(c5()),  PathNode::Unused(c3())];
+    let path = vec![
+        PathNode::Unused(c4()),
+        PathNode::Unused(c6()),
+        //PathNode::Unused(c5()),
+        PathNode::Unused(c5()),
+        PathNode::Unused(c3()),
+    ];
     let mut path_updated = path.iter().map(|n| n.get_comp().clone()).collect_vec();
     relabels_nodes_sequentially(&mut path_updated, 0);
 
     let path = path
-                .into_iter()
-                .zip(path_updated.into_iter())
-                .map(|(o, n)| match o {
-                    PathNode::Used(_) => PathNode::Used(n),
-                    PathNode::Unused(_) => PathNode::Unused(n),
-                })
-                .collect_vec();
+        .into_iter()
+        .zip(path_updated.into_iter())
+        .map(|(o, n)| match o {
+            PathNode::Used(_) => PathNode::Used(n),
+            PathNode::Unused(_) => PathNode::Unused(n),
+        })
+        .collect_vec();
 
-            let nodes = path
-                .into_iter()
-                .enumerate()
-                .map(|(i, c)| -> SuperNode {
-                    let nice_pair = match c.get_comp().comp_type() {
-                        CompType::Cycle(num) if num <= 4 => true,
-                        CompType::Cycle(num) if num == 5 && i == 1 && !c.is_used() => true,
-                        CompType::Complex => true,
-                        _ => false,
-                    };
+    let nodes = path
+        .into_iter()
+        .enumerate()
+        .map(|(i, c)| -> SuperNode {
+            let nice_pair = match c.get_comp().comp_type() {
+                CompType::Cycle(num) if num <= 4 => true,
+                CompType::Cycle(num) if num == 5 && i == 1 && !c.is_used() => true,
+                CompType::Complex => true,
+                _ => false,
+            };
 
-                    let in_not_out = if c.get_comp().is_c5() && i == 1 {
-                        true
-                    } else {
-                        nice_pair
-                    };
+            let in_not_out = if c.get_comp().is_c5() && i == 1 {
+                true
+            } else {
+                nice_pair
+            };
 
-                    SuperNode::Abstract(AbstractNode {
-                        comp: c.get_comp().clone(),
-                        nice_pair,
-                        used: c.is_used(),
-                        in_not_out,
-                        path_idx: Pidx::from(i),
-                    })
-                })
-                .collect();
+            SuperNode::Abstract(AbstractNode {
+                comp: c.get_comp().clone(),
+                nice_pair,
+                used: c.is_used(),
+                in_not_out,
+                path_idx: Pidx::from(i),
+            })
+        })
+        .collect();
 
     let instance = AugmentedPathInstance {
-                nodes,
-                abstract_edges: vec![],
-                fixed_edges: vec![],
+        nodes,
+        abstract_edges: vec![],
+        fixed_edges: vec![],
     };
 
     let result = get_path_tactic(true, true).action(&instance, &context);
 }
-
 
 fn get_path_tactic(
     sc: bool,
@@ -704,7 +705,6 @@ impl Statistics for False {
     }
 }
 
-
 #[derive(Clone)]
 struct FiniteInstance {
     num_calls: usize,
@@ -713,7 +713,10 @@ struct FiniteInstance {
 
 impl FiniteInstance {
     fn new(finite_instance: bool) -> Self {
-        Self { num_calls: 0, finite_instance }
+        Self {
+            num_calls: 0,
+            finite_instance,
+        }
     }
 }
 
@@ -725,7 +728,10 @@ impl Tactic<AugmentedPathInstance, PathContext> for FiniteInstance {
     fn action(&mut self, data: &AugmentedPathInstance, _context: &PathContext) -> ProofNode {
         self.num_calls += 1;
         if data.all_outside_hits().len() < 3 && data.nodes.iter().all(|n| n.get_comp().is_cycle()) {
-            ProofNode::new_leaf("Finite Instance but less than three outgoing edges!".into(), true)
+            ProofNode::new_leaf(
+                "Finite Instance but less than three outgoing edges!".into(),
+                true,
+            )
         } else {
             ProofNode::new_leaf("No Finite Instance!".into(), false)
         }
