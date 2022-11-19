@@ -297,7 +297,7 @@ pub fn test_instance() {
     let path = vec![
         PathNode::Unused(c4()),
         PathNode::Unused(c6()),
-        //PathNode::Unused(c5()),
+        PathNode::Unused(c5()),
         //PathNode::Unused(c5()),
         PathNode::Unused(c3()),
     ];
