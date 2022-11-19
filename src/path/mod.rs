@@ -10,7 +10,7 @@ use std::{
 };
 
 use itertools::Itertools;
-pub use proof::prove_nice_path_progress;
+pub use proof::{prove_nice_path_progress,test_instance};
 
 use crate::{path::utils::complex_cycle_value_base, Credit, CreditInv, Node};
 

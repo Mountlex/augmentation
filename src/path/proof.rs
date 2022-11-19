@@ -13,6 +13,7 @@ use crate::path::tactics::cycle_rearrange::CycleRearrangeTactic;
 use crate::path::tactics::pendant_rewire::PendantRewireTactic;
 use crate::path::SelectedHitInstance;
 use crate::proof_tree::ProofNode;
+use crate::util::relabels_nodes_sequentially;
 use crate::{proof_logic::*, Credit, CreditInv};
 
 use super::enumerators::comp_hits::ComponentHitEnum;
@@ -24,8 +25,8 @@ use super::tactics::contract::ContractabilityTactic;
 use super::tactics::cycle_merge::CycleMergeTactic;
 use super::tactics::local_merge::LocalMergeTactic;
 use super::tactics::longer_path::LongerPathTactic;
-use super::AugmentedPathInstance;
-use crate::comps::Component;
+use super::{AugmentedPathInstance, SuperNode, AbstractNode, Pidx};
+use crate::comps::{Component, c4, c3, c5, c6, CompType};
 
 #[derive(Clone)]
 pub struct PathContext {
@@ -287,6 +288,65 @@ fn prove_last_node(
         .expect("Unable to format tree");
     std::fs::write(filename, buf).expect("Unable to write file");
 }
+
+
+
+pub fn test_instance() {
+
+    let mut context = PathContext {
+        credit_inv: CreditInv::new(Credit::new(1, 4)),
+    };
+
+
+    let path = vec![PathNode::Unused(c4()), PathNode::Unused(c6()), PathNode::Unused(c5()),  PathNode::Unused(c5()),  PathNode::Unused(c3())];
+    let mut path_updated = path.iter().map(|n| n.get_comp().clone()).collect_vec();
+    relabels_nodes_sequentially(&mut path_updated, 0);
+
+    let path = path
+                .into_iter()
+                .zip(path_updated.into_iter())
+                .map(|(o, n)| match o {
+                    PathNode::Used(_) => PathNode::Used(n),
+                    PathNode::Unused(_) => PathNode::Unused(n),
+                })
+                .collect_vec();
+
+            let nodes = path
+                .into_iter()
+                .enumerate()
+                .map(|(i, c)| -> SuperNode {
+                    let nice_pair = match c.get_comp().comp_type() {
+                        CompType::Cycle(num) if num <= 4 => true,
+                        CompType::Cycle(num) if num == 5 && i == 1 && !c.is_used() => true,
+                        CompType::Complex => true,
+                        _ => false,
+                    };
+
+                    let in_not_out = if c.get_comp().is_c5() && i == 1 {
+                        true
+                    } else {
+                        nice_pair
+                    };
+
+                    SuperNode::Abstract(AbstractNode {
+                        comp: c.get_comp().clone(),
+                        nice_pair,
+                        used: c.is_used(),
+                        in_not_out,
+                        path_idx: Pidx::from(i),
+                    })
+                })
+                .collect();
+
+    let instance = AugmentedPathInstance {
+                nodes,
+                abstract_edges: vec![],
+                fixed_edges: vec![],
+    };
+
+    let result = get_path_tactic(true, true).action(&instance, &context);
+}
+
 
 fn get_path_tactic(
     sc: bool,
