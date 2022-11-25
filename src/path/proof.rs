@@ -290,7 +290,7 @@ fn prove_last_node(
 }
 
 pub fn test_instance() {
-    let mut context = PathContext {
+    let context = PathContext {
         credit_inv: CreditInv::new(Credit::new(1, 4)),
     };
 
@@ -346,7 +346,13 @@ pub fn test_instance() {
         fixed_edges: vec![],
     };
 
-    let result = get_path_tactic(true, true).action(&instance, &context);
+    let mut result = get_path_tactic(true, true).action(&instance, &context);
+    result.eval();
+    let mut buf = String::new();
+    result
+        .print_tree(&mut buf, 20)
+        .expect("Unable to format tree");
+    std::fs::write("test.txt", buf).expect("Unable to write file");
 }
 
 fn get_path_tactic(
