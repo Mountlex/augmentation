@@ -33,7 +33,8 @@ impl CreditInv {
     }
 
     pub fn large(&self) -> Credit {
-        Credit::from_integer(2)
+        //Credit::from_integer(2)
+        self.two_ec_credit(6)
     }
 }
 
