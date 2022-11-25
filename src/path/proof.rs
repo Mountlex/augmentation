@@ -298,7 +298,7 @@ pub fn test_instance() {
         PathNode::Unused(c4()),
         PathNode::Unused(c6()),
         PathNode::Unused(c5()),
-        //PathNode::Unused(c5()),
+        PathNode::Unused(c5()),
         PathNode::Unused(c3()),
     ];
     let mut path_updated = path.iter().map(|n| n.get_comp().clone()).collect_vec();

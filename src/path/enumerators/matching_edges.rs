@@ -130,7 +130,7 @@ fn finite_path_matching_edges(
 ) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
     let instance = instance;
 
-    for i in (1..instance.path_len()){
+    for i in (1..instance.path_len()).rev(){
         let node_idx = Pidx::from(i);
         let all_node_matching_endpoints = instance
             .nodes_with_fixed_edges(node_idx)
