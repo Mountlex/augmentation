@@ -442,7 +442,7 @@ impl CreditInv {
             Component::C5(_) => self.two_ec_credit(5),
             Component::C4(_) => self.two_ec_credit(4),
             Component::C3(_) => self.two_ec_credit(3),
-            Component::Large(_) => self.large(),
+            Component::Large(_) => self.two_ec_credit(6), // self.large(),
             Component::ComplexPath(c, _) => self.complex(c),
             Component::ComplexTree(c, _) => self.complex(c),
         }
