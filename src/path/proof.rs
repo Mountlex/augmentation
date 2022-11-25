@@ -350,7 +350,7 @@ pub fn test_instance() {
     result.eval();
     let mut buf = String::new();
     result
-        .print_tree(&mut buf, 20)
+        .print_tree(&mut buf, 3)
         .expect("Unable to format tree");
     std::fs::write("test.txt", buf).expect("Unable to write file");
 }
