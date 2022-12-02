@@ -26,7 +26,7 @@ use super::tactics::cycle_merge::CycleMergeTactic;
 use super::tactics::local_merge::LocalMergeTactic;
 use super::tactics::longer_path::LongerPathTactic;
 use super::{AbstractNode, AugmentedPathInstance, Pidx, SuperNode};
-use crate::comps::{c3, c4, c5, c6, CompType, Component};
+use crate::comps::{c3, c4, c5, c6, CompType, Component, large};
 
 #[derive(Clone)]
 pub struct PathContext {
@@ -296,10 +296,10 @@ pub fn test_instance() {
 
     let path = vec![
         PathNode::Unused(c4()),
-        PathNode::Unused(c6()),
+        PathNode::Unused(large()),
+        PathNode::Unused(c4()),
+        //PathNode::Unused(c5()),
         PathNode::Unused(c5()),
-        PathNode::Unused(c5()),
-        PathNode::Unused(c3()),
     ];
     let mut path_updated = path.iter().map(|n| n.get_comp().clone()).collect_vec();
     relabels_nodes_sequentially(&mut path_updated, 0);

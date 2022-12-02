@@ -1,0 +1,14 @@
+Expanded [ C4: in=0, used=false ] =✔️=
+  Enumerate all matching hits from last component =✔️=
+    [AbstractEdge { source_path: Last, source: Node(1), hit: Outside }] ✔️
+    [AbstractEdge { source_path: Last, source: Node(1), hit: Path(Prelast) }] ✔️
+    [AbstractEdge { source_path: Last, source: Node(1), hit: Path(N(2)) }] =✔️=
+    [AbstractEdge { source_path: Last, source: Node(1), hit: Path(N(3)) }] ✔️
+    [AbstractEdge { source_path: Last, source: Node(2), hit: Outside }] =✔️=
+    [AbstractEdge { source_path: Last, source: Node(2), hit: Path(Prelast) }] ✔️
+    [AbstractEdge { source_path: Last, source: Node(2), hit: Path(N(2)) }] =✔️=
+    [AbstractEdge { source_path: Last, source: Node(2), hit: Path(N(3)) }] ✔️
+    [AbstractEdge { source_path: Last, source: Node(3), hit: Outside }] ✔️
+    [AbstractEdge { source_path: Last, source: Node(3), hit: Path(Prelast) }] ✔️
+    [AbstractEdge { source_path: Last, source: Node(3), hit: Path(N(2)) }] =✔️=
+    [AbstractEdge { source_path: Last, source: Node(3), hit: Path(N(3)) }] ✔️
