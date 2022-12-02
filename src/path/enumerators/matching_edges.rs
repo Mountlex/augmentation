@@ -40,24 +40,28 @@ impl<'a> OptEnumerator<AugmentedPathInstance, PathContext> for FindMatchingEdges
         assert!(self.instance.abstract_edges.len() == self.instance.all_outside_hits().len());
 
         if self.path_finite {
+            if let Some(iter) = outside_matching_edges(self.instance) {
+                return Some(iter);
+            }
             if let Some(iter) = finite_path_matching_edges(self.instance) {
                 return Some(iter);
             }
-            if let Some(iter) = infinite_path_matching_edges(self.instance) {    
+            if let Some(iter) = infinite_path_matching_edges(self.instance, self.path_finite) {
                 return Some(iter);
             }
-            contractable_path_matching_edges(self.instance)
+            contractable_path_matching_edges(self.instance, self.path_finite)
         } else {
-            if let Some(iter) = infinite_path_matching_edges(self.instance) {
+            if let Some(iter) = infinite_path_matching_edges(self.instance, self.path_finite) {
                 return Some(iter);
             }
-            contractable_path_matching_edges(self.instance)
+            contractable_path_matching_edges(self.instance, self.path_finite)
         }
     }
 }
 
 fn contractable_path_matching_edges(
     instance: &AugmentedPathInstance,
+    finite: bool,
 ) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
     let instance = instance;
 
@@ -93,7 +97,9 @@ fn contractable_path_matching_edges(
                     }
                 }
 
-                rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
+                if !finite {
+                    rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
+                }
 
                 rem_iter.map(move |rem_hit| {
                     let mut new_instance = instance.clone();
@@ -120,6 +126,57 @@ fn contractable_path_matching_edges(
             });
             return Some(Box::new(iter));
         }
+    }
+
+    None
+}
+
+fn outside_matching_edges(
+    instance: &AugmentedPathInstance,
+) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
+    let instance = instance;
+
+    let num_current_outside = instance.all_outside_hits().len();
+    if num_current_outside < 3 {
+        let nodes_with_fixed_edges = instance
+            .fixed_edges
+            .iter()
+            .flat_map(|e| e.to_vec())
+            .collect_vec();
+        let nodes_with_matching_edges = instance
+            .all_outside_hits()
+            .into_iter()
+            .map(|e| e.source())
+            .collect_vec();
+
+        let free_nodes = instance
+            .nodes
+            .iter()
+            .flat_map(|node| node.get_comp().matching_nodes())
+            .filter(|n| {
+                !nodes_with_fixed_edges.contains(&n) && !nodes_with_matching_edges.contains(n)
+            })
+            .collect_vec();
+
+        let iter = free_nodes
+            .into_iter()
+            .combinations(3 - num_current_outside)
+            .map(|nodes| {
+                let mut new_instance = instance.clone();
+
+                for n in nodes {
+                    let path_idx = new_instance.index_of_super_node(*n);
+                    new_instance.abstract_edges.push(AbstractEdge::new(
+                        path_idx,
+                        *n,
+                        PathHit::Outside,
+                    ))
+                }
+
+                new_instance
+            });
+
+        return Some(Box::new(iter));
     }
 
     None
@@ -219,7 +276,8 @@ fn finite_path_matching_edges(
                     }
                 }
 
-                rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
+                // Outside edges now sampled separately
+                //rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
 
                 rem_iter.map(move |rem_hit| {
                     let mut new_instance = instance.clone();
@@ -253,6 +311,7 @@ fn finite_path_matching_edges(
 
 fn infinite_path_matching_edges(
     instance: &AugmentedPathInstance,
+    finite: bool,
 ) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
     let instance = instance;
 
@@ -264,8 +323,11 @@ fn infinite_path_matching_edges(
             .chain(instance.outside_edges_on(node_idx).into_iter())
             .collect_vec();
 
-        let unique_node_matching_endpoints =
-            all_node_matching_endpoints.iter().cloned().unique().collect_vec();
+        let unique_node_matching_endpoints = all_node_matching_endpoints
+            .iter()
+            .cloned()
+            .unique()
+            .collect_vec();
 
         let mut node_free = instance[node_idx]
             .get_comp()
@@ -303,14 +365,17 @@ fn infinite_path_matching_edges(
             .collect_vec();
 
         let node_to_rem_edges = instance
-        .fixed_edges
-        .iter()
-        .filter(|edge| edge.nodes_incident(&rem_nodes) && edge.path_incident(node_idx))
-        .collect_vec();
+            .fixed_edges
+            .iter()
+            .filter(|edge| edge.nodes_incident(&rem_nodes) && edge.path_incident(node_idx))
+            .collect_vec();
 
         let rem_used_nodes = rem_nodes
             .iter()
-            .filter(|n| prefix_rem_crossing.iter().any(|e| e.node_incident(n)) || node_to_rem_edges.iter().any(|e| e.node_incident(n)))
+            .filter(|n| {
+                prefix_rem_crossing.iter().any(|e| e.node_incident(n))
+                    || node_to_rem_edges.iter().any(|e| e.node_incident(n))
+            })
             .cloned()
             .collect_vec();
 
@@ -327,8 +392,7 @@ fn infinite_path_matching_edges(
         if (prefix_rem_crossing.len() + prefix_outside <= 1)
             || (!instance[node_idx].get_comp().is_large()
                 && unique_node_matching_endpoints.len() < 3)
-                || (instance[node_idx].get_comp().is_large()
-                    && all_node_matching_endpoints.len() < 3)
+            || (instance[node_idx].get_comp().is_large() && all_node_matching_endpoints.len() < 3)
         {
             let iter = node_free.into_iter().flat_map(move |node_matched| {
                 let rem_used_nodes = rem_used_nodes.clone();
@@ -355,10 +419,12 @@ fn infinite_path_matching_edges(
                     }
                 }
 
-                if (!instance[node_idx].get_comp().is_large()
-                && unique_node_matching_endpoints.len() < 3)
-                || (instance[node_idx].get_comp().is_large()
-                    && all_node_matching_endpoints.len() < 3) {
+                if !finite
+                    && ((!instance[node_idx].get_comp().is_large()
+                        && unique_node_matching_endpoints.len() < 3)
+                        || (instance[node_idx].get_comp().is_large()
+                            && all_node_matching_endpoints.len() < 3))
+                {
                     rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
                 };
 
