@@ -302,9 +302,15 @@ fn infinite_path_matching_edges(
             .filter(|edge| edge.nodes_incident(&rem_nodes) && edge.nodes_incident(&prefix_nodes))
             .collect_vec();
 
+        let node_to_rem_edges = instance
+        .fixed_edges
+        .iter()
+        .filter(|edge| edge.nodes_incident(&rem_nodes) && edge.path_incident(node_idx))
+        .collect_vec();
+
         let rem_used_nodes = rem_nodes
             .iter()
-            .filter(|n| prefix_rem_crossing.iter().any(|e| e.node_incident(n)))
+            .filter(|n| prefix_rem_crossing.iter().any(|e| e.node_incident(n)) || node_to_rem_edges.iter().any(|e| e.node_incident(n)))
             .cloned()
             .collect_vec();
 
@@ -319,10 +325,10 @@ fn infinite_path_matching_edges(
             .sum();
 
         if (prefix_rem_crossing.len() + prefix_outside <= 1)
-            || ((!instance[node_idx].get_comp().is_large()
+            || (!instance[node_idx].get_comp().is_large()
                 && unique_node_matching_endpoints.len() < 3)
                 || (instance[node_idx].get_comp().is_large()
-                    && all_node_matching_endpoints.len() < 3))
+                    && all_node_matching_endpoints.len() < 3)
         {
             let iter = node_free.into_iter().flat_map(move |node_matched| {
                 let rem_used_nodes = rem_used_nodes.clone();
