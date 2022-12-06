@@ -26,7 +26,7 @@ use super::tactics::cycle_merge::CycleMergeTactic;
 use super::tactics::local_merge::LocalMergeTactic;
 use super::tactics::longer_path::LongerPathTactic;
 use super::{AbstractNode, AugmentedPathInstance, Pidx, SuperNode};
-use crate::comps::{c3, c4, c5, c6, CompType, Component, large};
+use crate::comps::{c3, c4, c5, c6, large, CompType, Component};
 
 #[derive(Clone)]
 pub struct PathContext {
@@ -101,7 +101,7 @@ pub fn prove_nice_path_progress(
     let last_nodes_with_depth = last_nodes
         .into_iter()
         .map(|c| {
-            if c.get_comp().is_c4() || c.get_comp().is_c5()  {
+            if c.get_comp().is_c4() || c.get_comp().is_c5() {
                 (c.clone(), k + 3)
             } else {
                 (c.clone(), 4)
@@ -353,6 +353,158 @@ pub fn test_instance() {
         .print_tree(&mut buf, 3)
         .expect("Unable to format tree");
     std::fs::write("test.txt", buf).expect("Unable to write file");
+}
+
+
+
+fn inductive_proof(comps: Vec<PathNode>) -> impl Tactic<PathEnumeratorInput, PathContext> + Statistics {
+    induction_start(induction_steps(comps))
+}
+
+
+fn induction_start<T>(
+    induction_steps: T,
+) -> impl Tactic<PathEnumeratorInput, PathContext> + Statistics
+where
+    T: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
+{
+    all(
+        PathEnum,
+        all(
+            ExpandLastEnum::new(false),
+            all(
+                MatchingHitEnum,
+                all(
+                    ExpandLastEnum::new(false),
+                    or3(
+                        LongerPathTactic::new(false),
+                        any(
+                            PseudoCyclesEnum,
+                            or(
+                                CycleMergeTactic::new(),
+                                any(PathRearrangementEnum, CycleRearrangeTactic::new()),
+                            ),
+                        ),
+                        all(
+                            MatchingHitEnum,
+                            all(
+                                ExpandAllEnum,
+                                or(progress(), find_all_matching_edges(induction_steps)),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+}
+
+fn induction_steps(
+    comps: Vec<PathNode>,
+) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone {
+    single_induction_step(
+        single_induction_step(
+            single_induction_step(
+                single_induction_step(
+                    single_induction_step(
+                        single_induction_step(
+                            single_induction_step(
+                                single_induction_step(TacticsExhausted::new(), comps.clone()),
+                                comps.clone(),
+                            ),
+                            comps.clone(),
+                        ),
+                        comps.clone(),
+                    ),
+                    comps.clone(),
+                ),
+                comps.clone(),
+            ),
+            comps.clone(),
+        ),
+        comps.clone(),
+    )
+}
+
+fn single_induction_step<T>(
+    step: T,
+    comps: Vec<PathNode>,
+) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone
+where
+    T: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
+{
+    all(
+        IterCompEnum::new(comps), // TODO fix RemPath
+        all(
+            MatchingHitEnum, // TODO rewrite
+            or(
+                progress(), // progress without expansion
+                all(
+                    ExpandAllEnum,
+                    or(
+                        progress(), // progress with expansion
+                        find_all_matching_edges(step),
+                    ),
+                ),
+            ),
+        ),
+    )
+}
+
+fn find_all_matching_edges<T>(
+    otherwise: T,
+) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone
+where
+    T: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
+{
+    find_matching_edge(
+        find_matching_edge(
+            find_matching_edge(
+                find_matching_edge(
+                    find_matching_edge(
+                        find_matching_edge(otherwise.clone(), otherwise.clone()),
+                        otherwise.clone(),
+                    ),
+                    otherwise.clone(),
+                ),
+                otherwise.clone(),
+            ),
+            otherwise.clone(),
+        ),
+        otherwise.clone(),
+    )
+}
+
+fn find_matching_edge<T1, T2>(
+    enumerator: T1,
+    otherwise: T2,
+) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone
+where
+    T1: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
+    T2: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
+{
+    all_opt(
+        FindMatchingEdgesEnum::new(false),
+        otherwise,
+        all(ExpandAllEnum, or(progress(), enumerator)),
+    )
+}
+
+fn progress() -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone {
+    or3(
+        LocalMergeTactic::new(),
+        LongerPathTactic::new(false),
+        any(
+            PseudoCyclesEnum,
+            or(
+                CycleMergeTactic::new(),
+                any(
+                    PathRearrangementEnum,
+                    or(CycleRearrangeTactic::new(), LongerPathTactic::new(false)),
+                ),
+            ),
+        ),
+    )
 }
 
 fn get_path_tactic(

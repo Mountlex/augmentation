@@ -131,6 +131,7 @@ impl NicePairConfig {
 pub enum SuperNode {
     Zoomed(ZoomedNode),
     Abstract(AbstractNode),
+    RemPath(Pidx)
 }
 
 impl SuperNode {
@@ -138,6 +139,7 @@ impl SuperNode {
         match self {
             SuperNode::Zoomed(n) => n,
             SuperNode::Abstract(_) => panic!("Super node is not zoomed!"),
+            SuperNode::RemPath(_) => panic!("Super node is not zoomed!"),
         }
     }
 
@@ -145,6 +147,7 @@ impl SuperNode {
         match self {
             SuperNode::Zoomed(n) => n.path_idx,
             SuperNode::Abstract(n) => n.path_idx,
+            SuperNode::RemPath(pidx) => *pidx,
         }
     }
 
@@ -155,12 +158,14 @@ impl SuperNode {
         match self {
             SuperNode::Zoomed(c) => c.used,
             SuperNode::Abstract(c) => c.used,
+            SuperNode::RemPath(_) => panic!("RemPath has no used property!"),
         }
     }
 
     pub fn get_abstract(&self) -> &AbstractNode {
         match self {
             SuperNode::Zoomed(_) => panic!("Super node is not abstract!"),
+            SuperNode::RemPath(_) => panic!("Super node is not abstract!"),
             SuperNode::Abstract(n) => n,
         }
     }
@@ -169,11 +174,13 @@ impl SuperNode {
         match self {
             SuperNode::Zoomed(n) => n,
             SuperNode::Abstract(_) => panic!("Super node is not zoomed!"),
+            SuperNode::RemPath(_) => panic!("Super node is not zoomed!"),
         }
     }
 
     pub fn get_abstract_mut(&mut self) -> &mut AbstractNode {
         match self {
+            SuperNode::RemPath(_) => panic!("Super node is not abstract!"),
             SuperNode::Zoomed(_) => panic!("Super node is not abstract!"),
             SuperNode::Abstract(n) => n,
         }
@@ -183,6 +190,7 @@ impl SuperNode {
         match self {
             SuperNode::Zoomed(node) => node.get_comp(),
             SuperNode::Abstract(node) => node.get_comp(),
+            SuperNode::RemPath(_) => panic!("RemPath has no comp!"),
         }
     }
 }
@@ -192,6 +200,7 @@ impl Display for SuperNode {
         match self {
             SuperNode::Zoomed(n) => write!(f, "{}", n),
             SuperNode::Abstract(n) => write!(f, "{}", n),
+            SuperNode::RemPath(_) => write!(f, "RemPath"),
         }
     }
 }

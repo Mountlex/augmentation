@@ -84,6 +84,7 @@ impl PseudoCycle {
                 match node {
                     SuperNode::Abstract(abs) => abs.value(credit_inv, lower_complex),
                     SuperNode::Zoomed(zoomed) => zoomed.value(credit_inv, lower_complex),
+                    SuperNode::RemPath(_) => credit_inv.two_ec_credit(3) - Credit::from_integer(1),
                 }
             })
             .sum()
