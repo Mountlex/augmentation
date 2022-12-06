@@ -1,10 +1,10 @@
 use std::fmt::Write;
-use std::path::{self, PathBuf};
+use std::path::PathBuf;
 
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
-use crate::path::enumerators::expand::{ExpandEnum, ExpandLastEnum};
+use crate::path::enumerators::expand::ExpandLastEnum;
 use crate::path::enumerators::expand_all::ExpandAllEnum;
 use crate::path::enumerators::iter_comp::IterCompEnum;
 use crate::path::enumerators::matching_edges::FindMatchingEdgesEnum;
@@ -91,70 +91,36 @@ pub fn prove_nice_path_progress(
         })
         .collect_vec();
 
-    let k = ((Credit::from_integer(4) - Credit::from_integer(13) * credit_inv.c)
-        / (Credit::from_integer(5) * credit_inv.c - Credit::from_integer(1)))
-    .ceil()
-    .to_integer() as usize;
-
-    println!("k = {}", k);
-
-    let last_nodes_with_depth = last_nodes
-        .into_iter()
-        .map(|c| {
-            if c.get_comp().is_c4() || c.get_comp().is_c5() {
-                (c.clone(), k + 3)
-            } else {
-                (c.clone(), 4)
-            }
-        })
-        .collect_vec();
-
-    let proof_cases = last_nodes_with_depth
-        .into_iter()
-        .flat_map(|(node, depth)| {
-            std::iter::once((node.clone(), depth, false))
-                .chain((3..depth).into_iter().map(move |d| (node.clone(), d, true)))
-        })
-        .collect_vec();
+    let proof_cases = last_nodes;
 
     if parallel {
-        proof_cases
-            .into_par_iter()
-            .for_each(|(last_node, length, finite)| {
-                prove_last_node(
-                    nodes.clone(),
-                    last_node,
-                    length,
-                    finite,
-                    credit_inv.clone(),
-                    &output_dir,
-                    output_depth,
-                    sc,
-                )
-            })
+        proof_cases.into_par_iter().for_each(|last_node| {
+            prove_last_node(
+                nodes.clone(),
+                last_node,
+                credit_inv.clone(),
+                &output_dir,
+                output_depth,
+                sc,
+            )
+        })
     } else {
-        proof_cases
-            .into_iter()
-            .for_each(|(last_node, length, finite)| {
-                prove_last_node(
-                    nodes.clone(),
-                    last_node,
-                    length,
-                    finite,
-                    credit_inv.clone(),
-                    &output_dir,
-                    output_depth,
-                    sc,
-                )
-            })
+        proof_cases.into_iter().for_each(|last_node| {
+            prove_last_node(
+                nodes.clone(),
+                last_node,
+                credit_inv.clone(),
+                &output_dir,
+                output_depth,
+                sc,
+            )
+        })
     };
 }
 
 fn prove_last_node(
     nodes: Vec<PathNode>,
     last_node: PathNode,
-    length: usize,
-    finite: bool,
     credit_inv: CreditInv,
     output_dir: &PathBuf,
     output_depth: usize,
@@ -164,113 +130,28 @@ fn prove_last_node(
         credit_inv: credit_inv.clone(),
     };
 
-    let mut proof = if length == 3 {
-        let mut proof_tactic = all_sc(sc, PathEnum, get_path_tactic(sc, finite));
+    let mut proof_tactic = inductive_proof(nodes.clone(), sc);
 
-        let proof = proof_tactic.action(
-            &PathEnumeratorInput::new(last_node.clone(), nodes),
-            &mut context,
-        );
-        proof_tactic.print_stats();
-
-        proof
-    } else if length == 4 {
-        let mut proof_tactic = all_sc(
-            sc,
-            PathEnum,
-            all_sc(
-                sc,
-                IterCompEnum::new(nodes.clone()),
-                get_path_tactic(sc, finite),
-            ),
-        );
-
-        let proof = proof_tactic.action(
-            &PathEnumeratorInput::new(last_node.clone(), nodes),
-            &mut context,
-        );
-        proof_tactic.print_stats();
-
-        proof
-    } else if length == 5 {
-        let mut proof_tactic = all_sc(
-            sc,
-            PathEnum,
-            all_sc(
-                sc,
-                IterCompEnum::new(nodes.clone()),
-                all_sc(
-                    sc,
-                    IterCompEnum::new(nodes.clone()),
-                    get_path_tactic(sc, finite),
-                ),
-            ),
-        );
-
-        let proof = proof_tactic.action(
-            &PathEnumeratorInput::new(last_node.clone(), nodes),
-            &mut context,
-        );
-        proof_tactic.print_stats();
-
-        proof
-    } else {
-        assert!(length == 6);
-        let mut proof_tactic = all_sc(
-            sc,
-            PathEnum,
-            all_sc(
-                sc,
-                IterCompEnum::new(nodes.clone()),
-                all_sc(
-                    sc,
-                    IterCompEnum::new(nodes.clone()),
-                    all_sc(
-                        sc,
-                        IterCompEnum::new(nodes.clone()),
-                        get_path_tactic(sc, false),
-                    ),
-                ),
-            ),
-        );
-
-        let proof = proof_tactic.action(
-            &PathEnumeratorInput::new(last_node.clone(), nodes),
-            &mut context,
-        );
-        proof_tactic.print_stats();
-
-        proof
-    };
+    let mut proof = proof_tactic.action(
+        &PathEnumeratorInput::new(last_node.clone(), nodes),
+        &mut context,
+    );
+    proof_tactic.print_stats();
 
     let outcome = proof.eval();
 
     let filename = if outcome.success() {
         println!(
-            "✔️ Proved nice path progress ending in {} of length {}, finite={}",
+            "✔️ Proved nice path progress ending in {}",
             last_node.short_name(),
-            length,
-            finite
         );
-        output_dir.join(format!(
-            "proof_{}_{}_{}.txt",
-            last_node.short_name(),
-            length,
-            finite
-        ))
+        output_dir.join(format!("proof_{}.txt", last_node.short_name(),))
     } else {
         println!(
-            "❌ Disproved nice path progress ending in {} of length {}, finite={}",
+            "❌ Disproved nice path progress ending in {}",
             last_node.short_name(),
-            length,
-            finite
         );
-        output_dir.join(format!(
-            "wrong_proof_{}_{}_{}.txt",
-            last_node.short_name(),
-            length,
-            finite
-        ))
+        output_dir.join(format!("wrong_proof_{}.txt", last_node.short_name(),))
     };
 
     println!();
@@ -289,86 +170,22 @@ fn prove_last_node(
     std::fs::write(filename, buf).expect("Unable to write file");
 }
 
-pub fn test_instance() {
-    let context = PathContext {
-        credit_inv: CreditInv::new(Credit::new(1, 4)),
-    };
-
-    let path = vec![
-        PathNode::Unused(c4()),
-        PathNode::Unused(large()),
-        PathNode::Unused(c4()),
-        //PathNode::Unused(c5()),
-        PathNode::Unused(c5()),
-    ];
-    let mut path_updated = path.iter().map(|n| n.get_comp().clone()).collect_vec();
-    relabels_nodes_sequentially(&mut path_updated, 0);
-
-    let path = path
-        .into_iter()
-        .zip(path_updated.into_iter())
-        .map(|(o, n)| match o {
-            PathNode::Used(_) => PathNode::Used(n),
-            PathNode::Unused(_) => PathNode::Unused(n),
-        })
-        .collect_vec();
-
-    let nodes = path
-        .into_iter()
-        .enumerate()
-        .map(|(i, c)| -> SuperNode {
-            let nice_pair = match c.get_comp().comp_type() {
-                CompType::Cycle(num) if num <= 4 => true,
-                CompType::Cycle(num) if num == 5 && i == 1 && !c.is_used() => true,
-                CompType::Complex => true,
-                _ => false,
-            };
-
-            let in_not_out = if c.get_comp().is_c5() && i == 1 {
-                true
-            } else {
-                nice_pair
-            };
-
-            SuperNode::Abstract(AbstractNode {
-                comp: c.get_comp().clone(),
-                nice_pair,
-                used: c.is_used(),
-                in_not_out,
-                path_idx: Pidx::from(i),
-            })
-        })
-        .collect();
-
-    let instance = AugmentedPathInstance {
-        nodes,
-        abstract_edges: vec![],
-        fixed_edges: vec![],
-    };
-
-    let mut result = get_path_tactic(true, true).action(&instance, &context);
-    result.eval();
-    let mut buf = String::new();
-    result
-        .print_tree(&mut buf, 3)
-        .expect("Unable to format tree");
-    std::fs::write("test.txt", buf).expect("Unable to write file");
+fn inductive_proof(
+    comps: Vec<PathNode>,
+    sc: bool,
+) -> impl Tactic<PathEnumeratorInput, PathContext> + Statistics {
+    induction_start(induction_steps(comps), sc)
 }
-
-
-
-fn inductive_proof(comps: Vec<PathNode>) -> impl Tactic<PathEnumeratorInput, PathContext> + Statistics {
-    induction_start(induction_steps(comps))
-}
-
 
 fn induction_start<T>(
     induction_steps: T,
+    sc: bool,
 ) -> impl Tactic<PathEnumeratorInput, PathContext> + Statistics
 where
     T: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
 {
-    all(
+    all_sc(
+        sc,
         PathEnum,
         all(
             ExpandLastEnum::new(false),
@@ -501,315 +318,6 @@ fn progress() -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + 
                 any(
                     PathRearrangementEnum,
                     or(CycleRearrangeTactic::new(), LongerPathTactic::new(false)),
-                ),
-            ),
-        ),
-    )
-}
-
-fn get_path_tactic(
-    sc: bool,
-    path_finite: bool,
-) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics {
-    all_sc(
-        sc,
-        ExpandLastEnum::new(path_finite),
-        all_sc(
-            sc,
-            MatchingHitEnum,
-            all_sc(
-                sc,
-                ExpandLastEnum::new(path_finite),
-                or3(
-                    LongerPathTactic::new(path_finite),
-                    any(
-                        PseudoCyclesEnum,
-                        or(
-                            CycleMergeTactic::new(),
-                            any(PathRearrangementEnum, CycleRearrangeTactic::new()),
-                        ),
-                    ),
-                    all_sc(
-                        sc,
-                        MatchingHitEnum,
-                        all_sc(
-                            sc,
-                            ExpandLastEnum::new(path_finite),
-                            or6(
-                                CountTactic::new("AugmentedPathInstances".into()),
-                                LongerPathTactic::new(path_finite),
-                                ContractabilityTactic::new(false),
-                                any(
-                                    PseudoCyclesEnum,
-                                    or(
-                                        CycleMergeTactic::new(),
-                                        any(PathRearrangementEnum, CycleRearrangeTactic::new()),
-                                    ),
-                                ),
-                                any(
-                                    ComponentHitEnum,
-                                    all(
-                                        MatchingNodesEnum,
-                                        all(
-                                            ExpandEnum::new(path_finite),
-                                            or5(
-                                                PendantRewireTactic::new(),
-                                                LocalMergeTactic::new(),
-                                                LongerPathTactic::new(path_finite),
-                                                any(PseudoCyclesEnum, CycleMergeTactic::new()),
-                                                ifcond(
-                                                    |instance: &SelectedHitInstance| {
-                                                        instance.last_hit
-                                                    },
-                                                    tryhard_mode(path_finite),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                                TacticsExhausted::new(),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
-    )
-}
-
-fn tryhard_mode(path_finite: bool) -> impl Tactic<SelectedHitInstance, PathContext> + Statistics {
-    all(
-        ExpandAllEnum,
-        or4(
-            CountTactic::new("Fully expanded AugmentedPathInstances".into()),
-            LongerPathTactic::new(path_finite),
-            any(
-                PseudoCyclesEnum,
-                or(
-                    CycleMergeTactic::new(),
-                    any(
-                        PathRearrangementEnum,
-                        or(
-                            CycleRearrangeTactic::new(),
-                            LongerPathTactic::new(path_finite),
-                        ),
-                    ),
-                ),
-            ),
-            all_opt(
-                FindMatchingEdgesEnum::new(path_finite),
-                FiniteInstance::new(path_finite),
-                all(
-                    ExpandAllEnum,
-                    or4(
-                        LocalMergeTactic::new(),
-                        LongerPathTactic::new(path_finite),
-                        any(
-                            PseudoCyclesEnum,
-                            or(
-                                CycleMergeTactic::new(),
-                                any(
-                                    PathRearrangementEnum,
-                                    or(
-                                        CycleRearrangeTactic::new(),
-                                        LongerPathTactic::new(path_finite),
-                                    ),
-                                ),
-                            ),
-                        ),
-                        all_opt(
-                            FindMatchingEdgesEnum::new(path_finite),
-                            FiniteInstance::new(path_finite),
-                            all(
-                                ExpandAllEnum,
-                                or4(
-                                    LongerPathTactic::new(path_finite),
-                                    LocalMergeTactic::new(),
-                                    any(
-                                        PseudoCyclesEnum,
-                                        or(
-                                            CycleMergeTactic::new(),
-                                            any(
-                                                PathRearrangementEnum,
-                                                or(
-                                                    CycleRearrangeTactic::new(),
-                                                    LongerPathTactic::new(path_finite),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                    all_opt(
-                                        FindMatchingEdgesEnum::new(path_finite),
-                                        FiniteInstance::new(path_finite),
-                                        all(
-                                            ExpandAllEnum,
-                                            or4(
-                                                LongerPathTactic::new(path_finite),
-                                                LocalMergeTactic::new(),
-                                                any(
-                                                    PseudoCyclesEnum,
-                                                    or(
-                                                        CycleMergeTactic::new(),
-                                                        any(
-                                                            PathRearrangementEnum,
-                                                            or(
-                                                                CycleRearrangeTactic::new(),
-                                                                LongerPathTactic::new(path_finite),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
-                                                all_opt(
-                                                    FindMatchingEdgesEnum::new(path_finite),
-                                                    FiniteInstance::new(path_finite),
-                                                    all(
-                                                        ExpandAllEnum,
-                                                        or4(
-                                                            LongerPathTactic::new(path_finite),
-                                                            LocalMergeTactic::new(),
-                                                            any(
-                                                                PseudoCyclesEnum,
-                                                                or(
-                                                                    CycleMergeTactic::new(),
-                                                                    any(
-                                                                        PathRearrangementEnum,
-                                                                        or(
-                                                                            CycleRearrangeTactic::new(),
-                                                                            LongerPathTactic::new(path_finite),
-                                                                        ),
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                            all_opt(
-                                                                FindMatchingEdgesEnum::new(path_finite),
-                                                                FiniteInstance::new(path_finite),
-                                                                all(
-                                                                    ExpandAllEnum,
-                                                                    or4(
-                                                                        LongerPathTactic::new(path_finite),
-                                                                        LocalMergeTactic::new(),
-                                                                        any(
-                                                                            PseudoCyclesEnum,
-                                                                            or(
-                                                                                CycleMergeTactic::new(),
-                                                                                any(
-                                                                                    PathRearrangementEnum,
-                                                                                    or(
-                                                                                        CycleRearrangeTactic::new(),
-                                                                                        LongerPathTactic::new(path_finite),
-                                                                                    ),
-                                                                                ),
-                                                                            ),
-                                                                        ),
-                                                                        all_opt(
-                                                                            FindMatchingEdgesEnum::new(path_finite),
-                                                                            FiniteInstance::new(path_finite),
-                                                                            all(
-                                                                                ExpandAllEnum,
-                                                                                or4(
-                                                                                    LongerPathTactic::new(path_finite),
-                                                                                    LocalMergeTactic::new(),
-                                                                                    any(
-                                                                                        PseudoCyclesEnum,
-                                                                                        or(
-                                                                                            CycleMergeTactic::new(),
-                                                                                            any(
-                                                                                                PathRearrangementEnum,
-                                                                                                or(
-                                                                                                    CycleRearrangeTactic::new(),
-                                                                                                    LongerPathTactic::new(path_finite),
-                                                                                                ),
-                                                                                            ),
-                                                                                        ),
-                                                                                    ),
-                                                                                    all_opt(
-                                                                                        FindMatchingEdgesEnum::new(path_finite),
-                                                                                        FiniteInstance::new(path_finite),
-                                                                                        all(
-                                                                                            ExpandAllEnum,
-                                                                                            or4(
-                                                                                                LongerPathTactic::new(path_finite),
-                                                                                                LocalMergeTactic::new(),
-                                                                                                any(
-                                                                                                    PseudoCyclesEnum,
-                                                                                                    or(
-                                                                                                        CycleMergeTactic::new(),
-                                                                                                        any(
-                                                                                                            PathRearrangementEnum,
-                                                                                                            or(
-                                                                                                                CycleRearrangeTactic::new(),
-                                                                                                                LongerPathTactic::new(path_finite),
-                                                                                                            ),
-                                                                                                        ),
-                                                                                                    ),
-                                                                                                ),
-                                                                                                all_opt(
-                                                                                                    FindMatchingEdgesEnum::new(path_finite),
-                                                                                                    FiniteInstance::new(path_finite),
-                                                                                                    all(
-                                                                                                        ExpandAllEnum,
-                                                                                                        or4(
-                                                                                                            LongerPathTactic::new(path_finite),
-                                                                                                            LocalMergeTactic::new(),
-                                                                                                            any(
-                                                                                                                PseudoCyclesEnum,
-                                                                                                                or(
-                                                                                                                    CycleMergeTactic::new(),
-                                                                                                                    any(
-                                                                                                                        PathRearrangementEnum,
-                                                                                                                        or(
-                                                                                                                            CycleRearrangeTactic::new(),
-                                                                                                                            LongerPathTactic::new(path_finite),
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                ),
-                                                                                                            ),
-                                                                                                            all_opt(
-                                                                                                                FindMatchingEdgesEnum::new(path_finite),
-                                                                                                                FiniteInstance::new(path_finite),
-                                                                                                                all(
-                                                                                                                    ExpandAllEnum,
-                                                                                                                    or3(
-                                                                                                                        LongerPathTactic::new(path_finite),
-                                                                                                                        LocalMergeTactic::new(),
-                                                                                                                        any(
-                                                                                                                            PseudoCyclesEnum,
-                                                                                                                            or(
-                                                                                                                                CycleMergeTactic::new(),
-                                                                                                                                any(
-                                                                                                                                    PathRearrangementEnum,
-                                                                                                                                    or(
-                                                                                                                                        CycleRearrangeTactic::new(),
-                                                                                                                                        LongerPathTactic::new(path_finite),
-                                                                                                                                    ),
-                                                                                                                                ),
-                                                                                                                            ),
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                ),
-                                                                                                            ),
-                                                                                                        ),
-                                                                                                    ),
-                                                                                                ),
-                                                                                            ),
-                                                                                        ),
-                                                                                    ),
-                                                                                ),
-                                                                            ),
-                                                                        ),
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
                 ),
             ),
         ),

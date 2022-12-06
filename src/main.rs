@@ -6,7 +6,7 @@ use clap::Parser;
 
 pub use credit::*;
 use num_rational::Rational64;
-use path::{prove_nice_path_progress, test_instance};
+use path::{prove_nice_path_progress};
 
 use comps::*;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
@@ -86,7 +86,6 @@ pub type Graph = petgraph::graphmap::UnGraphMap<Node, EdgeType>;
 enum Cli {
     Tree(Tree),
     Path(Path),
-    Test,
 }
 
 #[derive(Parser)]
@@ -132,7 +131,6 @@ fn main() -> anyhow::Result<()> {
     match cli {
         Cli::Tree(local) => prove_local(local),
         Cli::Path(path) => prove_path(path),
-        Cli::Test => test_instance()
     }
 
     Ok(())
