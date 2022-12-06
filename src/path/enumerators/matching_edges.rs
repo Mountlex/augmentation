@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use itertools::Itertools;
 
 use crate::{
@@ -181,6 +183,30 @@ fn outside_matching_edges(
 
     None
 }
+
+
+fn matching_iterator_between(mut nodes: Vec<Node>, instance: &AugmentedPathInstance) -> Option<Box<dyn Iterator<Item = Edge>>> {
+
+    let all_outside_sources = instance.all_outside_hits().into_iter().map(|e| e.source).collect_vec();
+    let nodes_with_outside = nodes.drain_filter(|n| all_outside_sources.contains(n)).unique().collect_vec();
+
+    if nodes_with_outside.len() < 3 {
+
+        let complement = instance.nodes.iter().flat_map(|c| c.get_comp().matching_nodes()).filter(|n| !nodes.contains(n)).collect_vec();
+
+        let mut node_incidents = HashMap::<Node, Edge>::new();
+        let mut complement_incidents = HashMap::<Node, Edge>::new();
+
+        todo!()
+    }
+
+    
+
+
+
+    None
+}
+
 
 fn finite_path_matching_edges(
     instance: &AugmentedPathInstance,

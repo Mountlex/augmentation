@@ -700,6 +700,18 @@ impl AugmentedPathInstance {
         }
     }
 
+    pub fn all_fixed_edges(&self) -> Vec<Edge> {
+        let mut edges = self
+            .fixed_edges.clone();
+            
+        for node in self.nodes.iter().take(self.nodes.len() - 1) {
+            if let Some(path_edge) = self.path_edge(node.path_idx()) {
+                edges.push(path_edge);
+            }
+        }
+        edges
+    }
+
     pub fn fixed_edges_between(&self, idx1: Pidx, idx2: Pidx) -> Vec<Edge> {
         let mut edges = self
             .fixed_edges
