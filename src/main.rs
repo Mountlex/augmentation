@@ -202,8 +202,8 @@ fn prove_path(path: Path) {
             c3(),
             c4(),
             c5(),
-            c6(),
-            c7(),
+            //c6(),
+            //c7(),
         ]
     } else {
         vec![
