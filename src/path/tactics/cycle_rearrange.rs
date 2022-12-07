@@ -113,7 +113,7 @@ impl Tactic<PathRearrangementInstance, PathContext> for CycleRearrangeTactic {
                 );
             }
 
-            return ProofNode::new_leaf(format!("No feasible reduction"), false);
+            return ProofNode::new_leaf(format!("No feasible reduction (old_last = {}, new_last = {}", old_last_comp, new_last), false);
         }
     }
 

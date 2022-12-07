@@ -69,7 +69,7 @@ fn contractable_path_matching_edges(
             let rem_nodes = instance
                 .nodes
                 .iter()
-                .filter(|n| n.path_idx().raw() != i)
+                .filter(|n| n.path_idx().raw() != i && n.path_idx().raw() <= instance.path_len() - 2)
                 .flat_map(|n| n.get_comp().matching_nodes())
                 .cloned()
                 .collect_vec();
@@ -78,7 +78,7 @@ fn contractable_path_matching_edges(
                 let mut rem_iter: Box<dyn Iterator<Item = Hit>> =
                     Box::new(rem_nodes.clone().into_iter().map(|left| Hit::Node(left)));
 
-                for i_rem in 0..instance.path_len() {
+                for i_rem in 0..instance.path_len()-1 {
                     if i_rem != i {
                         if let Component::Large(n) = instance[Pidx::N(i_rem)].get_comp() {
                             rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Node(*n))));

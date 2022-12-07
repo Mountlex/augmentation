@@ -135,7 +135,7 @@ fn prove_last_node(
         &PathEnumeratorInput::new(last_node.clone(), nodes),
         &mut context,
     );
-    proof_tactic.print_stats();
+    //proof_tactic.print_stats();
 
     let outcome = proof.eval();
 
@@ -237,15 +237,15 @@ where
 {
     all(
         IterCompEnum::new(comps), // Done
-        or(
-            progress(), // progress without expansion
+        //or(
+            //progress(), // progress without expansion
             all(
                 ExpandAllEnum,
                 or(
                     progress(), // progress with expansion
                     find_all_matching_edges(step),
                 ),
-            ),
+            //),
         ),
     )
 }
@@ -258,9 +258,15 @@ where
 {
     find_matching_edge(
         find_matching_edge(
+        find_matching_edge(
+        find_matching_edge(
             find_matching_edge(
                 find_matching_edge(otherwise.clone(), otherwise.clone()),
                 otherwise.clone(),
+            ),
+            otherwise.clone(),
+            ),
+            otherwise.clone(),
             ),
             otherwise.clone(),
         ),
@@ -284,9 +290,10 @@ where
 }
 
 fn progress() -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone {
-    or4(
+    or5(
         LocalMergeTactic::new(),
         PendantRewireTactic::new(),
+        ContractabilityTactic::new(false),
         LongerPathTactic::new(false),
         any(
             PseudoCyclesEnum,
