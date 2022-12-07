@@ -44,6 +44,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for IterCompEnumerator<'
             };
 
             let mut instance = self.input.clone();
+            instance.nodes.pop();
 
             let nice_pair = match new_node.get_comp().comp_type() {
                 CompType::Cycle(num) if num <= 4 => true,
@@ -61,7 +62,9 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for IterCompEnumerator<'
                 path_idx: Pidx::from(instance.path_len()),
             });
 
+
             instance.nodes.push(super_node);
+            instance.nodes.push(SuperNode::RemPath(Pidx::from(instance.path_len())));
             instance
         });
         Box::new(iter)

@@ -186,20 +186,20 @@ where
 {
     all_sc(
         sc,
-        PathEnum,
+        PathEnum,     // Done
         all(
-            ExpandLastEnum::new(false),
+            ExpandLastEnum::new(false),  // Done
             all(
-                MatchingHitEnum,
+                MatchingHitEnum, // Done
                 all(
-                    ExpandLastEnum::new(false),
+                    ExpandLastEnum::new(false), // Done
                     or3(
                         LongerPathTactic::new(false),
                         any(
-                            PseudoCyclesEnum,
+                            PseudoCyclesEnum,  // Done
                             or(
-                                CycleMergeTactic::new(),
-                                any(PathRearrangementEnum, CycleRearrangeTactic::new()),
+                                CycleMergeTactic::new(), // Done
+                                any(PathRearrangementEnum, CycleRearrangeTactic::new()), // Done
                             ),
                         ),
                         all(

@@ -58,13 +58,11 @@ impl<'a> Enumerator<PathRearrangementInstance, PathContext> for PathRearrangemen
             PathRearrangementInstance {
                 instance: self.input.instance.clone(),
                 start_idx: node.path_idx(),
-                cycle_edge: self.input.cycle_edge.clone(),
                 extension: path1,
             },
             PathRearrangementInstance {
                 instance: self.input.instance.clone(),
                 start_idx: node.path_idx(),
-                cycle_edge: self.input.cycle_edge.clone(),
                 extension: path2,
             },
         ]
@@ -102,6 +100,6 @@ impl EnumeratorTactic<PseudoCycleInstance, PathRearrangementInstance, PathContex
     }
 
     fn precondition(&self, data: &PseudoCycleInstance, _context: &PathContext) -> bool {
-        data.pseudo_cycle.consecutive_end()
+        data.pseudo_cycle.consecutive_end() && !data.pseudo_cycle.nodes.iter().any(|n| matches!(n, SuperNode::RemPath(_)))
     }
 }

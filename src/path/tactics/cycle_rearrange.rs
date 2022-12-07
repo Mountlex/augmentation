@@ -32,7 +32,7 @@ impl Tactic<PathRearrangementInstance, PathContext> for CycleRearrangeTactic {
         self.num_calls += 1;
 
         let mut feasible =
-            check_feasible_path(&data.extension, &data.cycle_edge, &data.instance, true);
+            check_fixed_extension_feasible(&data.extension, &data.instance, true);
         feasible.eval();
         if !feasible.success() {
             return feasible;
@@ -116,6 +116,10 @@ impl Tactic<PathRearrangementInstance, PathContext> for CycleRearrangeTactic {
             return ProofNode::new_leaf(format!("No feasible reduction"), false);
         }
     }
+
+    fn precondition(&self, data: &PathRearrangementInstance, _context: &PathContext) -> bool {
+        !data.extension.iter().any(|n| matches!(n, SuperNode::RemPath(_)))
+    }
 }
 
 pub fn check_fixed_extension_feasible(
@@ -125,7 +129,7 @@ pub fn check_fixed_extension_feasible(
 ) -> ProofNode {
     // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]
 
-    // check for inner nodes of extension that they fullfil nice path properties
+    // check for inner zoomed nodes of extension that they fullfil nice path properties
     for i in 1..extension.len() - 1 {
         let inner_node = &extension[i];
         if let SuperNode::Zoomed(node) = inner_node {
@@ -141,11 +145,36 @@ pub fn check_fixed_extension_feasible(
                 )
                 .into();
             }
-        } else {
-            // if we are in the fixed cycle case, all nodes should be expanded!
-            panic!()
         }
     }
+
+    if let Some(SuperNode::Abstract(node)) = extension.get(extension.len() - 2) {
+        if node.get_comp().is_c5() {
+            return ProofNode::new_leaf(
+                format!("New prelast is C5 but we cannot check nice path properties",),
+                false,
+            )
+            .into();
+        }
+    } 
+
+    // check for inner abstract nodes if we do not care about nice pairs
+    for i in 1..extension.len() - 1 {
+        let inner_node = &extension[i];
+        if let SuperNode::Abstract(node) = inner_node {
+            if (node.get_comp().is_c3() || node.get_comp().is_c4()) && !node.nice_pair {
+                return ProofNode::new_leaf(
+                    format!(
+                        "Cannot rearrange cycle: comp {} is abstract but has no nice pair!",
+                        node.get_comp()
+                    ),
+                    false,
+                )
+                .into();
+            }
+        }
+    }
+
 
     // check that connection between hit and remaining path is feasible
     if let Some(SuperNode::Zoomed(hit_node)) = extension.first() {
@@ -156,10 +185,16 @@ pub fn check_fixed_extension_feasible(
                 }
             }
         }
-    } else {
-        // if we are in the fixed cycle case, all nodes should be expanded!
-        panic!()
-    }
+    } 
+
+    // check that connection between hit and remaining path is feasible
+    if let Some(SuperNode::Abstract(node)) = extension.first() {
+        if node.get_comp().is_c3() || node.get_comp().is_c4() {
+            return ProofNode::new_leaf(format!("Cannot rearrange cycle: hit comp is {} but has no nice pair in new instance!", node.get_comp()), false).into();
+        }
+    } 
+
+
     ProofNode::new_leaf("Feasible path".into(), true)
 }
 
@@ -219,15 +254,4 @@ fn check_matching_edge_extension_feasible(extension: &[SuperNode]) -> ProofNode 
     ProofNode::new_leaf("Feasbile path".into(), true)
 }
 
-fn check_feasible_path(
-    extension: &[SuperNode],
-    cycle_edge: &CycleEdge,
-    instance: &AugmentedPathInstance,
-    prelast_is_prelast: bool,
-) -> ProofNode {
-    if matches!(cycle_edge, CycleEdge::Fixed) {
-        check_fixed_extension_feasible(extension, instance, prelast_is_prelast)
-    } else {
-        check_matching_edge_extension_feasible(extension)
-    }
-}
+

@@ -48,7 +48,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for PathEnumerator<'a> {
                 })
                 .collect_vec();
 
-            let nodes = path
+            let mut nodes = path
                 .into_iter()
                 .enumerate()
                 .map(|(i, c)| -> SuperNode {
@@ -73,7 +73,11 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for PathEnumerator<'a> {
                         path_idx: Pidx::from(i),
                     })
                 })
-                .collect();
+                .collect_vec();
+
+
+            // add remaining path
+            nodes.push(SuperNode::RemPath(Pidx::from(nodes.len())));
 
             AugmentedPathInstance {
                 nodes,

@@ -58,6 +58,10 @@ impl AbstractEdge {
         }
     }
 
+    pub fn between_path_nodes(&self, idx1: Pidx, idx2: Pidx) -> bool {
+        (self.source_path() == idx1 && Some(idx2) == self.hits_path()) || (self.source_path() == idx2 && Some(idx1) == self.hits_path()) 
+    }
+
     pub fn is_cycle_edge(&self) -> Option<(Pidx, Pidx)> {
         let j = self.source_path;
         match self.hit {
@@ -154,6 +158,11 @@ impl SuperNode {
     pub fn is_zoomed(&self) -> bool {
         matches!(self, Self::Zoomed(_))
     }
+
+    pub fn is_abstract(&self) -> bool {
+        matches!(self, Self::Abstract(_))
+    }
+
     pub fn used(&self) -> bool {
         match self {
             SuperNode::Zoomed(c) => c.used,
@@ -387,14 +396,12 @@ pub struct SelectedHitInstance {
 #[derive(Clone, Debug)]
 pub struct PseudoCycleInstance {
     pub instance: AugmentedPathInstance,
-    pub cycle_edge: CycleEdge,
     pub pseudo_cycle: PseudoCycle,
 }
 
 #[derive(Clone, Debug)]
 pub struct PathRearrangementInstance {
     pub instance: AugmentedPathInstance,
-    pub cycle_edge: CycleEdge,
     pub start_idx: Pidx,
     pub extension: Vec<SuperNode>,
 }
@@ -719,6 +726,15 @@ impl AugmentedPathInstance {
             }
         }
         edges
+    }
+
+    pub fn abstract_edges_between(&self, idx1: Pidx, idx2: Pidx) -> Vec<AbstractEdge> {
+         self
+            .abstract_edges
+            .iter()
+            .filter(|&edge| edge.between_path_nodes(idx1, idx2))
+            .cloned()
+            .collect_vec()
     }
 
     pub fn fixed_edges_between(&self, idx1: Pidx, idx2: Pidx) -> Vec<Edge> {

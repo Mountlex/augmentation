@@ -108,7 +108,7 @@ pub fn expand_iter(
         } else {
             Box::new(vec![instance].into_iter())
         }
-    } else {
+    } else if node.is_abstract() {
         // Expand node and enumerate in and out
 
         let out_nodes = if let Some(fixed) = comp.fixed_node() {
@@ -248,6 +248,9 @@ pub fn expand_iter(
             }
             instance
         }))
+    } else {
+        // node is rem path; nothing to do
+        Box::new(vec![instance].into_iter())
     }
 }
 
