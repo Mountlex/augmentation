@@ -1,8 +1,10 @@
+use itertools::Itertools;
+
 use crate::{
     comps::CompType,
     path::{
         proof::{PathContext, PathNode},
-        AbstractNode, AugmentedPathInstance, Pidx, SuperNode,
+        AbstractNode, AugmentedPathInstance, Pidx, SuperNode, PathHit,
     },
     proof_logic::{Enumerator, EnumeratorTactic},
     util::relabels_nodes_sequentially,
@@ -26,12 +28,13 @@ pub struct IterCompEnumerator<'a> {
 
 impl<'a> Enumerator<AugmentedPathInstance, PathContext> for IterCompEnumerator<'a> {
     fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = AugmentedPathInstance> + '_> {
-        let iter = self.comps.iter().map(|node| {
+        let iter = self.comps.iter().flat_map(|node| {
             let comp = node.get_comp().clone();
             let num_used_labels = self
                 .input
                 .nodes
                 .iter()
+                .filter(|c| c.is_zoomed())
                 .map(|c| c.get_comp().num_labels())
                 .sum::<usize>() as u32;
             let mut new_comps = vec![comp];
@@ -44,6 +47,11 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for IterCompEnumerator<'
             };
 
             let mut instance = self.input.clone();
+            let old_length = instance.path_len();
+
+            let edges_hit_rem_path = instance.abstract_edges.drain_filter(|e| e.hits_path() == Some(Pidx::from(old_length - 1))).collect_vec();
+
+            // remove PathRem
             instance.nodes.pop();
 
             let nice_pair = match new_node.get_comp().comp_type() {
@@ -62,10 +70,32 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for IterCompEnumerator<'
                 path_idx: Pidx::from(instance.path_len()),
             });
 
-
+            // push new comp
             instance.nodes.push(super_node);
+
+            // push PathRem
             instance.nodes.push(SuperNode::RemPath(Pidx::from(instance.path_len())));
-            instance
+            let new_length = instance.path_len();
+
+            // Enumerate all possible cases where edges that previously hit PathRem now can hit
+            edges_hit_rem_path.clone().into_iter().powerset().map(move |edges_hit_rem| {
+                let mut instance = instance.clone();
+                let edges_hit_other = edges_hit_rem_path.iter().filter(|e| !edges_hit_rem.contains(&e)).collect_vec();
+
+                for e in edges_hit_rem {
+                    let mut e = e.clone();
+                    e.hit = PathHit::Path(Pidx::from(new_length - 1));
+                    instance.abstract_edges.push(e);
+                }
+
+                for e in edges_hit_other {
+                    let mut e = e.clone();
+                    e.hit = PathHit::Path(Pidx::from(new_length - 2));
+                    instance.abstract_edges.push(e);
+                }
+
+                instance
+            })
         });
         Box::new(iter)
     }

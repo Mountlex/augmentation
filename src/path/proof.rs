@@ -19,7 +19,6 @@ use crate::{proof_logic::*, Credit, CreditInv};
 use super::enumerators::comp_hits::ComponentHitEnum;
 use super::enumerators::cycle_rearrangements::PathRearrangementEnum;
 use super::enumerators::matching_hits::MatchingHitEnum;
-use super::enumerators::matching_nodes::MatchingNodesEnum;
 use super::enumerators::nice_paths::{PathEnum, PathEnumeratorInput};
 use super::tactics::contract::ContractabilityTactic;
 use super::tactics::cycle_merge::CycleMergeTactic;
@@ -175,6 +174,7 @@ fn inductive_proof(
     sc: bool,
 ) -> impl Tactic<PathEnumeratorInput, PathContext> + Statistics {
     induction_start(induction_steps(comps), sc)
+    //induction_start(TacticsExhausted::new(), sc)
 }
 
 fn induction_start<T>(
@@ -186,9 +186,9 @@ where
 {
     all_sc(
         sc,
-        PathEnum,     // Done
+        PathEnum, // Done
         all(
-            ExpandLastEnum::new(false),  // Done
+            ExpandLastEnum::new(false), // Done
             all(
                 MatchingHitEnum, // Done
                 all(
@@ -196,16 +196,16 @@ where
                     or3(
                         LongerPathTactic::new(false),
                         any(
-                            PseudoCyclesEnum,  // Done
+                            PseudoCyclesEnum, // Done
                             or(
-                                CycleMergeTactic::new(), // Done
+                                CycleMergeTactic::new(),                                 // Done
                                 any(PathRearrangementEnum, CycleRearrangeTactic::new()), // Done
                             ),
                         ),
                         all(
                             MatchingHitEnum,
                             all(
-                                ExpandAllEnum,
+                                ExpandAllEnum, // this also fixes matching edges
                                 or(progress(), find_all_matching_edges(induction_steps)),
                             ),
                         ),
@@ -221,22 +221,7 @@ fn induction_steps(
 ) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone {
     single_induction_step(
         single_induction_step(
-            single_induction_step(
-                single_induction_step(
-                    single_induction_step(
-                        single_induction_step(
-                            single_induction_step(
-                                single_induction_step(TacticsExhausted::new(), comps.clone()),
-                                comps.clone(),
-                            ),
-                            comps.clone(),
-                        ),
-                        comps.clone(),
-                    ),
-                    comps.clone(),
-                ),
-                comps.clone(),
-            ),
+            single_induction_step(TacticsExhausted::new(), comps.clone()),
             comps.clone(),
         ),
         comps.clone(),
@@ -251,17 +236,14 @@ where
     T: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
 {
     all(
-        IterCompEnum::new(comps), // TODO fix RemPath
-        all(
-            MatchingHitEnum, // TODO rewrite
-            or(
-                progress(), // progress without expansion
-                all(
-                    ExpandAllEnum,
-                    or(
-                        progress(), // progress with expansion
-                        find_all_matching_edges(step),
-                    ),
+        IterCompEnum::new(comps), // Done
+        or(
+            progress(), // progress without expansion
+            all(
+                ExpandAllEnum,
+                or(
+                    progress(), // progress with expansion
+                    find_all_matching_edges(step),
                 ),
             ),
         ),
@@ -277,13 +259,7 @@ where
     find_matching_edge(
         find_matching_edge(
             find_matching_edge(
-                find_matching_edge(
-                    find_matching_edge(
-                        find_matching_edge(otherwise.clone(), otherwise.clone()),
-                        otherwise.clone(),
-                    ),
-                    otherwise.clone(),
-                ),
+                find_matching_edge(otherwise.clone(), otherwise.clone()),
                 otherwise.clone(),
             ),
             otherwise.clone(),
@@ -308,8 +284,9 @@ where
 }
 
 fn progress() -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone {
-    or3(
+    or4(
         LocalMergeTactic::new(),
+        PendantRewireTactic::new(),
         LongerPathTactic::new(false),
         any(
             PseudoCyclesEnum,

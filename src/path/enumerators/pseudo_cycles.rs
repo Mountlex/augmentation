@@ -3,7 +3,7 @@ use itertools::{iproduct, Itertools};
 use crate::{
     path::{
         proof::PathContext, AugmentedPathInstance, Pidx, PseudoCycle,
-        PseudoCycleInstance, SelectedHitInstance, SuperNode, AbstractEdge,
+        PseudoCycleInstance, SelectedHitInstance, SuperNode, AbstractEdge, PathHit,
     },
     proof_logic::{Enumerator, EnumeratorTactic},
     types::Edge, Node,
@@ -178,7 +178,31 @@ fn pseudo_cycles_of_length(
             let cons_edges = vec![perm.clone(), vec![first]]
                 .concat()
                 .windows(2)
-                .map(|e| instance.fixed_edges_between(e[0], e[1]).into_iter().map(|e| CyEdge::Edge(e)).chain(instance.abstract_edges_between(e[0], e[1]).into_iter().map(|e| CyEdge::Abstract(e))).collect_vec())
+                .map(|e| {
+                    let mut edges =                     instance.fixed_edges_between(e[0], e[1]).into_iter().map(|e| CyEdge::Edge(e)).chain(instance.abstract_edges_between(e[0], e[1]).into_iter().map(|e| CyEdge::Abstract(e))).collect_vec();
+
+                    if e[0].raw() == instance.path_len() - 1 && e[1].raw() == instance.path_len() - 2 {
+                        if instance[e[1]].is_zoomed() {
+                            edges.push(CyEdge::Abstract(AbstractEdge {
+                                source_path: e[1],
+                                source: instance[e[1]].get_zoomed().in_node.unwrap(),
+                                matching: true,
+                                hit: PathHit::Path(e[0]),
+                            }))
+                        }
+                    }
+                    if e[1].raw() == instance.path_len() - 1 && e[0].raw() == instance.path_len() - 2 {
+                        if instance[e[0]].is_zoomed() {
+                            edges.push(CyEdge::Abstract(AbstractEdge {
+                                source_path: e[0],
+                                source: instance[e[0]].get_zoomed().in_node.unwrap(),
+                                matching: true,
+                                hit: PathHit::Path(e[1]),
+                            }))
+                        }
+                    }
+                    edges
+                } )
                 .collect_vec();
             let instance = instance.clone();
 

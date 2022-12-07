@@ -35,7 +35,7 @@ impl<'a> Enumerator<AugmentedPathInstance, PathContext> for MatchingHitEnumerato
                     let mut instance_clone = instance_clone.clone();
                     instance_clone
                         .abstract_edges
-                        .push(AbstractEdge::new(Pidx::Last, source, hit));
+                        .push(AbstractEdge::new(Pidx::Last, source, hit, true));
                     instance_clone
                 })
             });

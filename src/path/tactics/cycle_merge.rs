@@ -40,7 +40,7 @@ impl Tactic<PseudoCycleInstance, PathContext> for CycleMergeTactic {
             .pseudo_cycle
             .nodes
             .iter()
-            .any(|n| n.get_comp().is_complex())
+            .any(|n| !n.is_path_rem() && n.get_comp().is_complex())
         {
             // 2c due to gainful bridge covering. We convert the resulting complex to a large
             cycle_value += Credit::from_integer(2) * context.credit_inv.c
@@ -72,7 +72,7 @@ impl PseudoCycle {
             .iter()
             .enumerate()
             .rev()
-            .find(|(_, n)| n.get_comp().is_complex())
+            .find(|(_, n)| !n.is_path_rem() && n.get_comp().is_complex())
             .map(|(i, _)| i);
 
         self.nodes

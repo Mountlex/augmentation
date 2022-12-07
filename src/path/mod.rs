@@ -20,6 +20,7 @@ use crate::{comps::*, types::Edge};
 pub struct AbstractEdge {
     source_path: Pidx,
     source: Node,
+    matching: bool,
     hit: PathHit,
 }
 
@@ -31,9 +32,10 @@ pub enum PathHit {
 
 impl AbstractEdge {
     // source_path < hit !!!!
-    pub fn new(source_path: Pidx, source: Node, hit: PathHit) -> Self {
+    pub fn new(source_path: Pidx, source: Node, hit: PathHit, matching: bool) -> Self {
         Self {
             source_path,
+            matching,
             source,
             hit,
         }
@@ -45,6 +47,10 @@ impl AbstractEdge {
 
     pub fn source(&self) -> Node {
         self.source.clone()
+    }
+
+    pub fn matching_edge(&self) -> bool {
+        self.matching
     }
 
     pub fn hit(&self) -> PathHit {
@@ -77,10 +83,18 @@ impl AbstractEdge {
 
 impl Display for AbstractEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.hit {
-            PathHit::Path(j) => write!(f, "({}--path[{}])", self.source, j),
-            PathHit::Outside => write!(f, "({}--outside)", self.source),
+        if self.matching {
+            match self.hit {
+                PathHit::Path(j) => write!(f, "({}--m--path[{}])", self.source, j),
+                PathHit::Outside => write!(f, "({}--outside)", self.source),
+            }
+        } else {
+            match self.hit {
+                PathHit::Path(j) => write!(f, "({}--path[{}])", self.source, j),
+                PathHit::Outside => write!(f, "({}--outside)", self.source),
+            }
         }
+        
     }
 }
 
@@ -153,6 +167,10 @@ impl SuperNode {
             SuperNode::Abstract(n) => n.path_idx,
             SuperNode::RemPath(pidx) => *pidx,
         }
+    }
+
+    pub fn is_path_rem(&self) -> bool {
+        matches!(self, Self::RemPath(_))
     }
 
     pub fn is_zoomed(&self) -> bool {

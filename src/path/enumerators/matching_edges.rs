@@ -31,6 +31,7 @@ pub struct FindMatchingEdgesEnumerator<'a> {
 
 enum Hit {
     Outside,
+    RemPath,
     Node(Node),
 }
 
@@ -39,35 +40,21 @@ impl<'a> OptEnumerator<AugmentedPathInstance, PathContext> for FindMatchingEdges
         &self,
         _context: &PathContext,
     ) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
-        assert!(self.instance.abstract_edges.len() == self.instance.all_outside_hits().len());
+        //assert!(self.instance.abstract_edges.len() == self.instance.all_outside_hits().len());
 
-        if self.path_finite {
-            if let Some(iter) = outside_matching_edges(self.instance) {
-                return Some(iter);
-            }
             if let Some(iter) = finite_path_matching_edges(self.instance) {
                 return Some(iter);
             }
-            if let Some(iter) = infinite_path_matching_edges(self.instance, self.path_finite) {
-                return Some(iter);
-            }
-            contractable_path_matching_edges(self.instance, self.path_finite)
-        } else {
-            if let Some(iter) = infinite_path_matching_edges(self.instance, self.path_finite) {
-                return Some(iter);
-            }
-            contractable_path_matching_edges(self.instance, self.path_finite)
-        }
+            contractable_path_matching_edges(self.instance)
     }
 }
 
 fn contractable_path_matching_edges(
     instance: &AugmentedPathInstance,
-    finite: bool,
 ) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
     let instance = instance;
 
-    for i in 1..instance.path_len() {
+    for i in 1..instance.path_len()-1 {
         let node_idx = Pidx::from(i);
         let node = &instance[node_idx];
         let res = check_for_comp(
@@ -99,9 +86,9 @@ fn contractable_path_matching_edges(
                     }
                 }
 
-                if !finite {
-                    rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
-                }
+                
+                rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
+                rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::RemPath)));
 
                 rem_iter.map(move |rem_hit| {
                     let mut new_instance = instance.clone();
@@ -111,6 +98,13 @@ fn contractable_path_matching_edges(
                             node_idx,
                             node_matched,
                             PathHit::Outside,
+                            false
+                        )),
+                        Hit::RemPath => new_instance.abstract_edges.push(AbstractEdge::new(
+                            node_idx,
+                            node_matched,
+                            PathHit::Path((new_instance.path_len() - 1).into()),
+                            false
                         )),
                         Hit::Node(left) => {
                             let left_idx = new_instance.index_of_super_node(left);
@@ -172,6 +166,7 @@ fn outside_matching_edges(
                         path_idx,
                         *n,
                         PathHit::Outside,
+                        true
                     ))
                 }
 
@@ -213,7 +208,7 @@ fn finite_path_matching_edges(
 ) -> Option<Box<dyn Iterator<Item = AugmentedPathInstance> + '_>> {
     let instance = instance;
 
-    for i in (1..instance.path_len()).rev() {
+    for i in (1..instance.path_len() - 2).rev() {
         let node_idx = Pidx::from(i);
         let all_node_matching_endpoints = instance
             .nodes_with_fixed_edges(node_idx)
@@ -240,7 +235,7 @@ fn finite_path_matching_edges(
             let rem_nodes = instance
                 .nodes
                 .iter()
-                .filter(|n| n.path_idx().raw() != i)
+                .filter(|n| n.path_idx().raw() != i && n.path_idx().raw() <= instance.path_len() - 2)
                 .flat_map(|n| n.get_comp().matching_nodes())
                 .cloned()
                 .filter(|n| {
@@ -294,7 +289,7 @@ fn finite_path_matching_edges(
                         .map(|left| Hit::Node(left)),
                 );
 
-                for i_rem in 0..instance.path_len() {
+                for i_rem in 0..instance.path_len()-1 {
                     if i_rem != i {
                         if let Component::Large(n) = instance[Pidx::N(i_rem)].get_comp() {
                             rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Node(*n))));
@@ -302,8 +297,8 @@ fn finite_path_matching_edges(
                     }
                 }
 
-                // Outside edges now sampled separately
-                //rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
+                rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::RemPath)));
+                rem_iter = Box::new(rem_iter.chain(std::iter::once(Hit::Outside)));
 
                 rem_iter.map(move |rem_hit| {
                     let mut new_instance = instance.clone();
@@ -313,6 +308,13 @@ fn finite_path_matching_edges(
                             node_idx,
                             *node_matched,
                             PathHit::Outside,
+                            false
+                        )),
+                        Hit::RemPath => new_instance.abstract_edges.push(AbstractEdge::new(
+                            node_idx,
+                            *node_matched,
+                            PathHit::Path((new_instance.path_len() - 1).into()),
+                            false
                         )),
                         Hit::Node(left) => {
                             let left_idx = new_instance.index_of_super_node(left);
@@ -462,6 +464,13 @@ fn infinite_path_matching_edges(
                             node_idx,
                             *node_matched,
                             PathHit::Outside,
+                            false
+                        )),
+                        Hit::RemPath => new_instance.abstract_edges.push(AbstractEdge::new(
+                            node_idx,
+                            *node_matched,
+                            PathHit::Path((new_instance.path_len() - 1).into()),
+                            false
                         )),
                         Hit::Node(left) => {
                             let left_idx = new_instance.index_of_super_node(left);
