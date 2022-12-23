@@ -2,6 +2,7 @@ mod enumerators;
 mod proof;
 mod tactics;
 mod utils;
+mod test;
 
 use std::{
     cmp::Ordering,
