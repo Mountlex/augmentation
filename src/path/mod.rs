@@ -120,7 +120,7 @@ impl Display for NicePairConfig {
 }
 
 impl NicePairConfig {
-    fn empty() -> Self {
+    pub fn empty() -> Self {
         NicePairConfig { nice_pairs: vec![] }
     }
 
