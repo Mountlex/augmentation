@@ -6,7 +6,7 @@ use clap::Parser;
 
 pub use credit::*;
 use num_rational::Rational64;
-use path::{prove_nice_path_progress};
+use path::prove_nice_path_progress;
 
 use comps::*;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};

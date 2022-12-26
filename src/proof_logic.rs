@@ -279,10 +279,9 @@ impl<E, A, I, O, C, T> Tactic<I, C> for AllOpt<O, E, T, A>
 where
     E: OptEnumeratorTactic<I, O, C>,
     A: Tactic<O, C>,
-    T: Tactic<I, C>
+    T: Tactic<I, C>,
 {
     fn action(&mut self, data_in: &I, context: &C) -> ProofNode {
-        
         if let Some(iter) = self.enum_tactic.get_enumerator(data_in).iter(context) {
             let mut proof = ProofNode::new_all(self.enum_tactic.msg(&data_in));
             for d in iter {
@@ -296,23 +295,21 @@ where
                     proof.add_child(proof_item);
                     outcome.success()
                 };
-    
+
                 if !res && self.short_circuiting {
                     break;
                 }
             }
-            return proof
+            return proof;
         } else {
-            return self.else_tactic.action(data_in, context)
+            return self.else_tactic.action(data_in, context);
         }
-
     }
 
     fn precondition(&self, data: &I, context: &C) -> bool {
         self.enum_tactic.precondition(data, context)
     }
 }
-
 
 #[derive(Clone)]
 pub struct All<O, E, A> {

@@ -94,7 +94,7 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
             }
             (Component::Large(_), _, _, _) if right.is_cycle() => {
                 self.construct_iter(IterType::Fixed, IterType::SymComb, iter_data)
-            },
+            }
             (Component::Large(_), _, _, _) if !right.is_cycle() => {
                 self.construct_iter(IterType::Fixed, IterType::Comb, iter_data)
             }
@@ -102,9 +102,13 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
                 self.construct_iter(IterType::Comb, IterType::Fixed, iter_data)
             }
             (_, _, true, false) => self.construct_iter(IterType::Comb, IterType::Perm, iter_data),
-            (_, _, _, _) if right.is_cycle() => self.construct_iter(IterType::Perm, IterType::SymComb, iter_data),
-            (_, _, _, _) if !right.is_cycle() => self.construct_iter(IterType::Perm, IterType::Comb, iter_data),
-            _ => panic!() // the above two cases catch all remaining cases!
+            (_, _, _, _) if right.is_cycle() => {
+                self.construct_iter(IterType::Perm, IterType::SymComb, iter_data)
+            }
+            (_, _, _, _) if !right.is_cycle() => {
+                self.construct_iter(IterType::Perm, IterType::Comb, iter_data)
+            }
+            _ => panic!(), // the above two cases catch all remaining cases!
         };
 
         Box::new(iter)
@@ -158,15 +162,12 @@ impl MatchingEnumerator<'_> {
                             construct_instance(data.left_free.to_vec(), rights, data.clone())
                         }),
                 )
-            },
+            }
             (IterType::Fixed, IterType::SymComb) => {
                 assert!(data.left_free.len() == self.size);
-                Box::new(
-                    data.right.symmetric_combs().into_iter()
-                        .map(move |rights| {
-                            construct_instance(data.left_free.to_vec(), rights.to_vec(), data.clone())
-                        }),
-                )
+                Box::new(data.right.symmetric_combs().into_iter().map(move |rights| {
+                    construct_instance(data.left_free.to_vec(), rights.to_vec(), data.clone())
+                }))
             }
             (IterType::Comb, IterType::Fixed) => {
                 assert!(data.right_free.len() == self.size);
@@ -224,7 +225,7 @@ impl MatchingEnumerator<'_> {
                                 })
                         }),
                 )
-            },
+            }
             (IterType::Perm, IterType::SymComb) => {
                 let left_free = data.left_free.clone();
                 let left_fix = data.left_fix;
@@ -235,11 +236,13 @@ impl MatchingEnumerator<'_> {
                         .permutations(size - left_fix)
                         .flat_map(move |lefts| {
                             let data_clone = data.clone();
-                            data.right.symmetric_combs()
-                                .into_iter()
-                                .map(move |rights| {
-                                    construct_instance(lefts.clone(), rights.to_vec(), data_clone.clone())
-                                })
+                            data.right.symmetric_combs().into_iter().map(move |rights| {
+                                construct_instance(
+                                    lefts.clone(),
+                                    rights.to_vec(),
+                                    data_clone.clone(),
+                                )
+                            })
                         }),
                 )
             }

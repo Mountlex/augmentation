@@ -134,7 +134,8 @@ impl Component {
     }
 
     pub fn symmetric_combs(&self) -> Vec<[Node; 2]> {
-        match self { // must be consistent with the fact that fixed node is n[0]!!!
+        match self {
+            // must be consistent with the fact that fixed node is n[0]!!!
             Component::C7(n) => vec![[n[1], n[2]], [n[1], n[3]], [n[2], n[4]], [n[1], n[4]]],
             Component::C6(n) => vec![[n[1], n[2]], [n[1], n[3]], [n[2], n[4]]],
             Component::C5(n) => vec![[n[1], n[2]], [n[1], n[3]]],
