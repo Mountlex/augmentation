@@ -28,6 +28,7 @@ mod types;
 pub enum Node {
     Node(u32),
     Comp(u32),
+    Rem,
 }
 
 impl Node {
@@ -41,6 +42,7 @@ impl Node {
         match self {
             Node::Node(id) => *id = offset,
             Node::Comp(id) => *id = offset,
+            _ => panic!(),
         }
     }
 
@@ -48,6 +50,7 @@ impl Node {
         match self {
             Node::Node(id) => *id += offset,
             Node::Comp(id) => *id += offset,
+            _ => panic!(),
         }
     }
 
@@ -59,6 +62,15 @@ impl Node {
         match self {
             Node::Node(n) => *n,
             Node::Comp(_) => panic!("Node not a vertex!"),
+            _ => panic!(),
+        }
+    }
+
+    fn get_id(&self) -> u32 {
+        match self {
+            Node::Node(id) => *id,
+            Node::Comp(id) => *id,
+            Node::Rem => panic!("Rem has no id"),
         }
     }
 }
@@ -68,6 +80,7 @@ impl Display for Node {
         match self {
             Node::Node(n) => write!(f, "{}", n),
             Node::Comp(n) => write!(f, "2ec({})", n),
+            Node::Rem => write!(f, "REM"),
         }
     }
 }

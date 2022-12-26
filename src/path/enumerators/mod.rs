@@ -8,5 +8,6 @@
 // pub mod matching_nodes;
 // pub mod nice_paths;
 // pub mod pseudo_cycles;
+pub mod edges;
 pub mod nice_pairs;
 pub mod path_nodes;

@@ -6,6 +6,9 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::{comps::Component, proof_tree::ProofNode, CreditInv};
 
+use super::enumerators::edges::edge_enumerator;
+use super::enumerators::nice_pairs::nice_pairs_enumerator;
+use super::enumerators::path_nodes::path_node_enumerator;
 use super::{InstPart, InstanceContext, PathNode};
 
 #[derive(Clone, Debug)]
@@ -52,60 +55,66 @@ impl Instance {
     }
 }
 
+#[derive(Debug, Clone)]
 enum Quantor {
     All(Enumerator, Box<Expression>),
+    AllOpt(OptEnumerator, Box<Expression>, Box<Expression>),
     Any(Enumerator, Box<Expression>),
 }
 
 impl Quantor {
-    fn enumerator(&self) -> &Enumerator {
-        match self {
-            Quantor::All(e, _) => e,
-            Quantor::Any(e, _) => e,
-        }
-    }
-
     fn formula(&self) -> &Box<Expression> {
         match self {
             Quantor::All(_, t) => t,
+            Quantor::AllOpt(_, t, _) => t,
             Quantor::Any(_, t) => t,
         }
     }
 
     fn prove(&self, stack: &mut Instance) -> ProofNode {
-        let mut proof = match self {
-            Quantor::All(_, _) => ProofNode::new_all(format!("TODO")),
-            Quantor::Any(_, _) => ProofNode::new_any(format!("TODO")),
+        let (cases, otherwise) = match self {
+            Quantor::All(e, _) => (Some(e.get_iter(stack)), None),
+            Quantor::Any(e, _) => (Some(e.get_iter(stack)), None),
+            Quantor::AllOpt(e, _, otherwise) => (e.try_iter(stack), Some(otherwise)),
         };
 
-        let iter = self.enumerator().get_iter(&stack);
-
-        for instance in iter {
-            let item_msg = format!("{}", instance);
-            stack.push(instance);
-            let mut proof_item = self.formula().prove(stack);
-            proof_item = ProofNode::new_info(item_msg, proof_item);
-            let outcome = proof_item.eval();
-            proof.add_child(proof_item);
-            let res = outcome.success();
-            stack.pop();
-
-            let should_break = match self {
-                Quantor::All(_, _) => !res,
-                Quantor::Any(_, _) => res,
+        if let Some(cases) = cases {
+            let mut proof = match self {
+                Quantor::All(_, _) => ProofNode::new_all(format!("TODO")),
+                Quantor::AllOpt(_, _, _) => ProofNode::new_all(format!("TODO")),
+                Quantor::Any(_, _) => ProofNode::new_any(format!("TODO")),
             };
 
-            if should_break {
-                break;
-            }
-        }
+            for instance in cases {
+                let item_msg = format!("{}", instance);
+                stack.push(instance);
+                let mut proof_item = self.formula().prove(stack);
+                proof_item = ProofNode::new_info(item_msg, proof_item);
+                let outcome = proof_item.eval();
+                proof.add_child(proof_item);
+                let res = outcome.success();
+                stack.pop();
 
-        proof
+                let should_break = match self {
+                    Quantor::AllOpt(_, _, _) => !res,
+                    Quantor::All(_, _) => !res,
+                    Quantor::Any(_, _) => res,
+                };
+
+                if should_break {
+                    break;
+                }
+            }
+
+            proof
+        } else {
+            otherwise.unwrap().prove(stack)
+        }
     }
 }
 
+#[derive(Debug, Clone)]
 enum Enumerator {
-    Edges,
     PathNodes, // includes enumeration of in and out
     NicePairs,
     PseudoCycle,
@@ -113,16 +122,44 @@ enum Enumerator {
 }
 
 impl Enumerator {
-    fn get_iter(&self, stack: &Instance) -> Box<dyn Iterator<Item = StackElement>> {
-        todo!()
+    fn get_iter(&self, stack: &Instance) -> Vec<StackElement> {
+        let iter = match self {
+            Enumerator::PathNodes => path_node_enumerator(stack),
+            Enumerator::NicePairs => nice_pairs_enumerator(stack),
+            Enumerator::PseudoCycle => todo!(),
+            Enumerator::Rearrangments => todo!(),
+        };
+        iter.map(|part| StackElement::Inst(part)).collect_vec()
     }
 }
 
+#[derive(Debug, Clone)]
+enum OptEnumerator {
+    Edges,
+}
+
+impl OptEnumerator {
+    fn try_iter(&self, stack: &Instance) -> Option<Vec<StackElement>> {
+        let iter = match self {
+            OptEnumerator::Edges => edge_enumerator(stack),
+        };
+
+        if let Some(iter) = iter {
+            Some(iter.map(|part| StackElement::Inst(part)).collect_vec())
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 enum Tactic {
     LongerPath,
     CycleMerge,
     LocalMerge,
     Rearrangable,
+    Contractable,
+    Pendant,
     FiniteInstance,
     TacticsExhausted,
 }
@@ -133,6 +170,7 @@ impl Tactic {
     }
 }
 
+#[derive(Debug, Clone)]
 enum Expression {
     Quantor(Quantor),
     Tactic(Tactic),
@@ -170,7 +208,17 @@ fn or4(expr1: Expression, expr2: Expression, expr3: Expression, expr4: Expressio
     or(expr1, or3(expr2, expr3, expr4))
 }
 
-fn tc(tactic: Tactic) -> Expression {
+fn or5(
+    expr1: Expression,
+    expr2: Expression,
+    expr3: Expression,
+    expr4: Expression,
+    expr5: Expression,
+) -> Expression {
+    or(expr1, or4(expr2, expr3, expr4, expr5))
+}
+
+fn expr(tactic: Tactic) -> Expression {
     Expression::Tactic(tactic)
 }
 
@@ -178,15 +226,78 @@ fn all(enumerator: Enumerator, expr: Expression) -> Expression {
     Expression::Quantor(Quantor::All(enumerator, Box::new(expr)))
 }
 
+fn all_opt(enumerator: OptEnumerator, expr: Expression, otherwise: Expression) -> Expression {
+    Expression::Quantor(Quantor::AllOpt(
+        enumerator,
+        Box::new(expr),
+        Box::new(otherwise),
+    ))
+}
+
 fn any(enumerator: Enumerator, expr: Expression) -> Expression {
     Expression::Quantor(Quantor::All(enumerator, Box::new(expr)))
 }
 
-fn test() {
-    let proof = all(
-        Enumerator::Edges,
-        all(Enumerator::Edges, tc(Tactic::LongerPath)),
-    );
+fn inductive_proof() -> Expression {
+    induction_step(induction_step(induction_step(induction_step(
+        induction_step(induction_step(expr(Tactic::TacticsExhausted))),
+    ))))
+}
+
+fn induction_step(step: Expression) -> Expression {
+    all(
+        Enumerator::PathNodes,
+        all(Enumerator::NicePairs, or(progress(), find_all_edges(step))),
+    )
+}
+
+fn find_all_edges(otherwise: Expression) -> Expression {
+    find_edge(
+        find_edge(
+            find_edge(
+                find_edge(
+                    find_edge(
+                        find_edge(
+                            find_edge(otherwise.clone(), otherwise.clone()),
+                            otherwise.clone(),
+                        ),
+                        otherwise.clone(),
+                    ),
+                    otherwise.clone(),
+                ),
+                otherwise.clone(),
+            ),
+            otherwise.clone(),
+        ),
+        otherwise,
+    )
+}
+
+fn find_edge(enumerator: Expression, otherwise: Expression) -> Expression {
+    all_opt(
+        OptEnumerator::Edges,
+        all(Enumerator::NicePairs, or(progress(), enumerator)),
+        otherwise,
+    )
+}
+
+fn progress() -> Expression {
+    or5(
+        expr(Tactic::LocalMerge),
+        expr(Tactic::Pendant),
+        expr(Tactic::Contractable),
+        expr(Tactic::LongerPath),
+        any(
+            Enumerator::PseudoCycle,
+            or(
+                expr(Tactic::CycleMerge),
+                any(
+                    Enumerator::Rearrangments,
+                    or(expr(Tactic::Rearrangable), expr(Tactic::LongerPath)),
+                ),
+            ),
+        ),
+    )
 }
 
 pub fn prove_nice_path_progress(
@@ -268,9 +379,9 @@ fn prove_last_node(
     //     &mut context,
     // );
     //proof_tactic.print_stats();
-    let proof = ProofNode::new_leaf("TODO".into(), false);
+    let expr = inductive_proof();
 
-    todo!();
+    let mut proof = ProofNode::new_leaf("TODO".into(), false);
 
     let outcome = proof.eval();
 
@@ -421,24 +532,5 @@ fn prove_last_node(
 //         FindMatchingEdgesEnum::new(false),
 //         otherwise,
 //         all(ExpandAllEnum, or(progress(), enumerator)),
-//     )
-// }
-
-// fn progress() -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone {
-//     or5(
-//         LocalMergeTactic::new(),
-//         PendantRewireTactic::new(),
-//         ContractabilityTactic::new(false),
-//         LongerPathTactic::new(false),
-//         any(
-//             PseudoCyclesEnum,
-//             or(
-//                 CycleMergeTactic::new(),
-//                 any(
-//                     PathRearrangementEnum,
-//                     or(CycleRearrangeTactic::new(), LongerPathTactic::new(false)),
-//                 ),
-//             ),
-//         ),
 //     )
 // }
