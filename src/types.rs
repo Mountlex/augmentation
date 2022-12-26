@@ -4,10 +4,10 @@ use crate::{path::Pidx, Node};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Edge {
-    n1: Node,
-    n2: Node,
-    path_index_n1: Pidx,
-    path_index_n2: Pidx,
+    pub n1: Node,
+    pub n2: Node,
+    pub path_index_n1: Pidx,
+    pub path_index_n2: Pidx,
 }
 
 impl PartialEq for Edge {

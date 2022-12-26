@@ -9,19 +9,22 @@ use crate::{comps::Component, proof_tree::ProofNode, CreditInv};
 use super::enumerators::edges::edge_enumerator;
 use super::enumerators::nice_pairs::nice_pairs_enumerator;
 use super::enumerators::path_nodes::path_node_enumerator;
-use super::{InstPart, InstanceContext, PathNode};
+use super::enumerators::pseudo_cycles::enumerate_pseudo_cycles;
+use super::enumerators::rearrangements::enumerate_rearrangements;
+use super::{InstPart, InstanceContext, PathNode, PseudoCycle, Rearrangement};
 
 #[derive(Clone, Debug)]
 enum StackElement {
     Inst(InstPart),
-    PseudoCycle,
+    PseudoCycle(PseudoCycle),
+    Rearrangement(Rearrangement),
 }
 
 impl StackElement {
     fn as_inst_part(&self) -> Option<&InstPart> {
         match self {
             StackElement::Inst(inst) => Some(inst),
-            StackElement::PseudoCycle => None,
+            _ => None,
         }
     }
 }
@@ -30,7 +33,8 @@ impl Display for StackElement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             StackElement::Inst(part) => write!(f, "{}", part),
-            StackElement::PseudoCycle => todo!(),
+            StackElement::PseudoCycle(_) => todo!(),
+            StackElement::Rearrangement(_) => todo!(),
         }
     }
 }
@@ -52,6 +56,22 @@ impl Instance {
 
     pub fn inst_parts<'a>(&'a self) -> impl Iterator<Item = &'a InstPart> {
         self.stack.iter().flat_map(|ele| ele.as_inst_part())
+    }
+
+    pub fn pseudo_cycle<'a>(&'a self) -> Option<&'a PseudoCycle> {
+        if let Some(StackElement::PseudoCycle(pc)) = self.stack.last() {
+            Some(pc)
+        } else {
+            None
+        }
+    }
+
+    pub fn rearrangement<'a>(&'a self) -> Option<&'a Rearrangement> {
+        if let Some(StackElement::Rearrangement(pc)) = self.stack.last() {
+            Some(pc)
+        } else {
+            None
+        }
     }
 }
 
@@ -123,13 +143,20 @@ enum Enumerator {
 
 impl Enumerator {
     fn get_iter(&self, stack: &Instance) -> Vec<StackElement> {
-        let iter = match self {
-            Enumerator::PathNodes => path_node_enumerator(stack),
-            Enumerator::NicePairs => nice_pairs_enumerator(stack),
-            Enumerator::PseudoCycle => todo!(),
-            Enumerator::Rearrangments => todo!(),
-        };
-        iter.map(|part| StackElement::Inst(part)).collect_vec()
+        match self {
+            Enumerator::PathNodes => path_node_enumerator(stack)
+                .map(|part| StackElement::Inst(part))
+                .collect_vec(),
+            Enumerator::NicePairs => nice_pairs_enumerator(stack)
+                .map(|part| StackElement::Inst(part))
+                .collect_vec(),
+            Enumerator::PseudoCycle => enumerate_pseudo_cycles(stack)
+                .map(|part| StackElement::PseudoCycle(part))
+                .collect_vec(),
+            Enumerator::Rearrangments => enumerate_rearrangements(stack)
+                .map(|part| StackElement::Rearrangement(part))
+                .collect_vec(),
+        }
     }
 }
 

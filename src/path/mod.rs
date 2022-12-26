@@ -3,6 +3,7 @@ mod proof;
 mod tactics;
 mod utils;
 
+use core::panic;
 use std::{cmp::Ordering, fmt::Display};
 
 use itertools::Itertools;
@@ -149,6 +150,53 @@ impl PathNode {
             PathNode::Used(c) => format!("aided-{}", c.short_name()),
             PathNode::Unused(c) => c.short_name(),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Rearrangement {
+    pub extension: Vec<(Option<Node>, Pidx, Option<Node>)>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PseudoCycle {
+    pub cycle: Vec<(Node, CycleComp, Node)>,
+}
+
+impl PseudoCycle {
+    fn consecutive_end(&self) -> bool {
+        let mut indices = self
+            .cycle
+            .iter()
+            .flat_map(|(_, cycle_comp, _)| {
+                if let CycleComp::PathComp(idx) = cycle_comp {
+                    Some(idx.raw())
+                } else {
+                    None
+                }
+            })
+            .collect_vec();
+        indices.sort();
+        indices.contains(&0) && *indices.last().unwrap() == indices.len() - 1
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CycleComp {
+    PathComp(Pidx),
+    Rem,
+}
+
+impl CycleComp {
+    pub fn to_idx(&self) -> &Pidx {
+        match self {
+            CycleComp::PathComp(idx) => idx,
+            CycleComp::Rem => panic!("Rem has no idx"),
+        }
+    }
+
+    pub fn is_rem(&self) -> bool {
+        matches!(self, CycleComp::Rem)
     }
 }
 

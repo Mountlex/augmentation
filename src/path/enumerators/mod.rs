@@ -1,5 +1,5 @@
 // pub mod comp_hits;
-// pub mod cycle_rearrangements;
+pub mod rearrangements;
 // pub mod expand;
 // pub mod expand_all;
 // pub mod iter_comp;
@@ -7,7 +7,7 @@
 // pub mod matching_hits;
 // pub mod matching_nodes;
 // pub mod nice_paths;
-// pub mod pseudo_cycles;
 pub mod edges;
 pub mod nice_pairs;
 pub mod path_nodes;
+pub mod pseudo_cycles;

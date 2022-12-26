@@ -1,94 +1,37 @@
 use itertools::{iproduct, Itertools};
 
 use crate::{
-    path::{
-        proof::PathContext, AugmentedPathInstance, Pidx, PseudoCycle,
-        PseudoCycleInstance, SelectedHitInstance, SuperNode, AbstractEdge, PathHit,
-    },
-    proof_logic::{Enumerator, EnumeratorTactic},
-    types::Edge, Node,
+    path::{proof::Instance, CycleComp, MatchingEdge, PathComp, Pidx, PseudoCycle},
+    types::Edge,
+    Node,
 };
 
-#[derive(Clone)]
-pub struct PseudoCyclesEnum;
+pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle> + '_> {
+    let mut iter: Box<dyn Iterator<Item = PseudoCycle>> = Box::new(std::iter::empty());
+    let path_comps = instance.path_nodes().cloned().collect_vec();
+    let all_edges = instance.all_edges();
+    let all_rem_edges = instance.rem_edges().into_iter().cloned().collect_vec();
 
-pub struct PseudoCyclesEnumerator<'a> {
-    input: &'a AugmentedPathInstance,
-}
-
-impl<'a> Enumerator<PseudoCycleInstance, PathContext> for PseudoCyclesEnumerator<'a> {
-    fn iter(&self, _context: &PathContext) -> Box<dyn Iterator<Item = PseudoCycleInstance> + '_> {
-        let instance = self.input;
-
-        // let matching_edges_iter = self
-        //     .input
-        //     .abstract_edges
-        //     .iter()
-        //     .filter(|m_edge| m_edge.is_cycle_edge().is_some())
-        //     .flat_map(move |cycle_edge| {
-        //         let (i, j) = cycle_edge.is_cycle_edge().unwrap();
-        //         assert!(i < j);
-        //         let mut pseudo_nodes = instance.nodes.as_slice()[i.raw()..=j.raw()].to_vec();
-
-        //         pseudo_nodes
-        //             .first_mut()
-        //             .unwrap()
-        //             .get_zoomed_mut()
-        //             .set_out(cycle_edge.source());
-        //         pseudo_nodes
-        //             .last_mut()
-        //             .unwrap()
-        //             .get_abstract_mut()
-        //             .nice_pair = false;
-
-        //         let mut path_iter: Box<dyn Iterator<Item = Vec<SuperNode>>> =
-        //             Box::new(vec![pseudo_nodes].into_iter());
-        //         for (k, l) in (i.raw()..=j.raw()).tuple_windows() {
-        //             path_iter = Box::new(path_iter.into_iter().flat_map(move |nodes| {
-        //                 let pk = k - i.raw();
-        //                 let pl = l - i.raw();
-        //                 let nodes_clone = nodes.clone();
-        //                 instance
-        //                     .fixed_edges_between(k.into(), l.into())
-        //                     .into_iter()
-        //                     .map(move |path_edge| {
-        //                         let mut nodes = nodes.clone();
-        //                         nodes[pk]
-        //                             .get_zoomed_mut()
-        //                             .set_in(path_edge.endpoint_at(k.into()).unwrap());
-        //                         nodes[pl]
-        //                             .get_zoomed_mut()
-        //                             .set_out(path_edge.endpoint_at(l.into()).unwrap());
-        //                         nodes
-        //                     })
-        //                     .chain(vec![nodes_clone].into_iter())
-        //             }));
-        //         }
-
-        //         path_iter.map(move |nodes| {
-        //             let cycle = PseudoCycle { nodes };
-
-        //             PseudoCycleInstance {
-        //                 instance: self.input.clone(),
-        //                 cycle_edge: CycleEdge::Matching(cycle_edge.clone()),
-        //                 pseudo_cycle: cycle,
-        //             }
-        //         })
-        //     });
-
-        let mut iter: Box<dyn Iterator<Item = PseudoCycleInstance>> = Box::new(std::iter::empty());
-        for i in 3..=instance.path_len() {
-            let fixed_edge_iter = pseudo_cycles_of_length(instance.clone(), i);
-            iter = Box::new(iter.chain(fixed_edge_iter))
-        }
-        iter
+    if path_comps.len() < 3 {
+        return Box::new(std::iter::empty());
     }
+
+    for i in 3..path_comps.len() {
+        let fixed_edge_iter = pseudo_cycles_of_length(
+            path_comps.clone(),
+            all_edges.clone(),
+            all_rem_edges.clone(),
+            i,
+        );
+        iter = Box::new(iter.chain(fixed_edge_iter))
+    }
+    iter
 }
 
 fn product_of_first(
-    mut edges: Vec<Vec<CyEdge>>,
+    mut edges: Vec<Vec<(Node, Node)>>,
     length: usize,
-) -> Box<dyn Iterator<Item = Vec<CyEdge>>> {
+) -> Box<dyn Iterator<Item = Vec<(Node, Node)>>> {
     assert_eq!(length, edges.len());
     if length == 7 {
         let edges0 = edges.remove(0);
@@ -146,146 +89,77 @@ fn product_of_first(
     }
 }
 
-
-#[derive(Clone, Debug)]
-enum CyEdge {
-    Abstract(AbstractEdge),
-    Edge(Edge)
-}
-
-impl CyEdge {
-    fn endpoint_at(&self, idx: Pidx) -> Node {
-        match self {
-            CyEdge::Abstract(e) => {
-                assert_eq!(e.source_path, idx);
-                e.source()
-            },
-            CyEdge::Edge(e) => e.endpoint_at(idx).unwrap(),
-        }
+fn edges_between(
+    edges: &[Edge],
+    rem_edges: &[MatchingEdge],
+    i1: &CycleComp,
+    i2: &CycleComp,
+) -> Vec<(Node, Node)> {
+    match (i1, i2) {
+        (CycleComp::PathComp(idx1), CycleComp::PathComp(idx2)) => edges
+            .iter()
+            .filter(|e| e.between_path_nodes(*idx1, *idx2))
+            .map(|e| {
+                if e.path_index_n1 == *idx1 {
+                    (e.n1, e.n2)
+                } else {
+                    (e.n2, e.n1)
+                }
+            })
+            .collect_vec(),
+        (CycleComp::PathComp(idx), CycleComp::Rem) => rem_edges
+            .iter()
+            .filter(|e| e.source_idx == *idx)
+            .map(|e| (e.source, Node::Rem))
+            .collect_vec(),
+        (CycleComp::Rem, CycleComp::PathComp(idx)) => rem_edges
+            .iter()
+            .filter(|e| e.source_idx == *idx)
+            .map(|e| (Node::Rem, e.source))
+            .collect_vec(),
+        (CycleComp::Rem, CycleComp::Rem) => panic!(),
     }
 }
 
 fn pseudo_cycles_of_length(
-    instance: AugmentedPathInstance,
+    path_comps: Vec<PathComp>,
+    all_edges: Vec<Edge>,
+    all_rem_edges: Vec<MatchingEdge>,
     length: usize,
-) -> impl Iterator<Item = PseudoCycleInstance> {
-    Pidx::range(instance.path_len())
+) -> impl Iterator<Item = PseudoCycle> {
+    let path_len = path_comps.len();
+    Pidx::range(path_len)
         .into_iter()
+        .map(|idx| CycleComp::PathComp(idx))
+        .chain(std::iter::once(CycleComp::Rem))
         .permutations(length)
         .filter(|perm| perm.iter().min() == perm.first())
         .flat_map(move |perm| {
-            let first = perm[0];
+            let length = length;
+
+            let first = perm[0].clone();
             let cons_edges = vec![perm.clone(), vec![first]]
                 .concat()
                 .windows(2)
-                .map(|e| {
-                    let mut edges =                     instance.fixed_edges_between(e[0], e[1]).into_iter().map(|e| CyEdge::Edge(e)).chain(instance.abstract_edges_between(e[0], e[1]).into_iter().map(|e| CyEdge::Abstract(e))).collect_vec();
-
-                    if e[0].raw() == instance.path_len() - 1 && e[1].raw() == instance.path_len() - 2 {
-                        if instance[e[1]].is_zoomed() {
-                            edges.push(CyEdge::Abstract(AbstractEdge {
-                                source_path: e[1],
-                                source: instance[e[1]].get_zoomed().in_node.unwrap(),
-                                matching: true,
-                                hit: PathHit::Path(e[0]),
-                            }))
-                        }
-                    }
-                    if e[1].raw() == instance.path_len() - 1 && e[0].raw() == instance.path_len() - 2 {
-                        if instance[e[0]].is_zoomed() {
-                            edges.push(CyEdge::Abstract(AbstractEdge {
-                                source_path: e[0],
-                                source: instance[e[0]].get_zoomed().in_node.unwrap(),
-                                matching: true,
-                                hit: PathHit::Path(e[1]),
-                            }))
-                        }
-                    }
-                    edges
-                } )
+                .map(|e| edges_between(&all_edges, &all_rem_edges, &e[0], &e[1]))
                 .collect_vec();
-            let instance = instance.clone();
 
             product_of_first(cons_edges, length).map(move |e| {
-                let mut cycle_nodes = perm.iter().map(|i| instance[*i].clone()).collect_vec();
+                let cycle_indices = &perm;
 
-                for i in 0..length {
-                    let last_edge = if i == 0 { length - 1 } else { i - 1 };
+                assert_eq!(cycle_indices.len(), length);
 
-                    match &mut cycle_nodes[i] {
-                        SuperNode::Zoomed(zoomed) => {
-                            zoomed
-                            .set_in(e[last_edge].endpoint_at(perm[i]));
-                            zoomed
-                                .set_out(e[i].endpoint_at(perm[i]));
-                        },
-                        SuperNode::Abstract(abs) => {
-                            abs.in_not_out = false;
-                            abs.nice_pair = false
-                        },
-                        SuperNode::RemPath(_) => {},
-                    } 
-                    
-                }
+                let cycle = cycle_indices
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, cycle_comp)| {
+                        let last_edge = if i == 0 { length - 1 } else { i - 1 };
+                        (e[last_edge].1, cycle_comp.clone(), e[i].0)
+                    })
+                    .collect_vec();
 
                 // cycle nodes:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in:3.out -- 0.in]
-
-                let cycle = PseudoCycle { nodes: cycle_nodes };
-
-                PseudoCycleInstance {
-                    instance: instance.clone(),
-                    pseudo_cycle: cycle,
-                }
+                PseudoCycle { cycle }
             })
         })
-}
-
-impl EnumeratorTactic<AugmentedPathInstance, PseudoCycleInstance, PathContext>
-    for PseudoCyclesEnum
-{
-    type Enumer<'a> = PseudoCyclesEnumerator<'a> where Self: 'a;
-
-    fn msg(&self, _data_in: &AugmentedPathInstance) -> String {
-        format!("Enumerate all pseudo cycles")
-    }
-
-    fn item_msg(&self, item: &PseudoCycleInstance) -> String {
-        format!(
-            "Pseudo cycle via cycle edge [{}]",
-            item.pseudo_cycle
-                .nodes
-                .iter()
-                .map(|n| n.path_idx())
-                .join(", ")
-        )
-    }
-
-    fn get_enumerator<'a>(&'a self, data: &'a AugmentedPathInstance) -> Self::Enumer<'a> {
-        PseudoCyclesEnumerator { input: data }
-    }
-}
-
-impl EnumeratorTactic<SelectedHitInstance, PseudoCycleInstance, PathContext> for PseudoCyclesEnum {
-    type Enumer<'a> = PseudoCyclesEnumerator<'a> where Self: 'a;
-
-    fn msg(&self, _data_in: &SelectedHitInstance) -> String {
-        format!("Enumerate all pseudo cycles")
-    }
-
-    fn item_msg(&self, item: &PseudoCycleInstance) -> String {
-        format!(
-            "Pseudo cycle via cycle edge [{}]",
-            item.pseudo_cycle
-                .nodes
-                .iter()
-                .map(|n| n.path_idx())
-                .join(", ")
-        )
-    }
-
-    fn get_enumerator<'a>(&'a self, data: &'a SelectedHitInstance) -> Self::Enumer<'a> {
-        PseudoCyclesEnumerator {
-            input: &data.instance,
-        }
-    }
 }
