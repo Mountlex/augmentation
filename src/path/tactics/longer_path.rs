@@ -1,7 +1,5 @@
 use crate::{
     path::{
-        proof::PathContext, AugmentedPathInstance, PathRearrangementInstance, Pidx,
-        SelectedHitInstance, SuperNode,
     },
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
