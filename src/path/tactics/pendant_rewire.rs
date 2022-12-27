@@ -1,50 +1,35 @@
 use crate::{
-    path::{proof::PathContext, AugmentedPathInstance, Pidx, SelectedHitInstance},
-    proof_logic::{Statistics, Tactic},
+    path::{proof::Instance, Pidx},
     proof_tree::ProofNode,
 };
 
-#[derive(Clone)]
-pub struct PendantRewireTactic {
-    num_calls: usize,
-    num_proofs: usize,
-}
+pub fn check_pendant_node(instance: &Instance) -> ProofNode {
+    let all_edges = instance.all_edges();
+    let mut outside = instance.out_edges();
+    let mut path_comps = instance.path_nodes();
+    let rem_edges = instance.rem_edges();
 
-impl PendantRewireTactic {
-    pub fn new() -> Self {
-        Self {
-            num_calls: 0,
-            num_proofs: 0,
-        }
-    }
-}
+    let last_comp_nodes = &path_comps.next().unwrap().comp.matching_nodes();
 
-impl Tactic<AugmentedPathInstance, PathContext> for PendantRewireTactic {
-    fn precondition(
-        &self,
-        data: &AugmentedPathInstance,
-        _context: &crate::path::proof::PathContext,
-    ) -> bool {
-        data.fixed_edges_between(Pidx::Last, Pidx::Prelast).len() == 3 &&
-        data.fixed_incident_edges(Pidx::Last).len() == 3 && data.nodes_with_abstract_edges(Pidx::Last).is_empty()
-    }
+    let a = all_edges
+        .iter()
+        .filter(|e| e.between_path_nodes(Pidx::Last, Pidx::Prelast))
+        .count()
+        == 3;
 
-    fn action(
-        &mut self,
-        _data: &AugmentedPathInstance,
-        _context: &crate::path::proof::PathContext,
-    ) -> crate::proof_tree::ProofNode {
-        self.num_calls += 1;
+    let b = all_edges
+        .iter()
+        .filter(|e| e.path_incident(Pidx::Last))
+        .count()
+        == 3;
 
+    let c = outside.all(|n| !last_comp_nodes.contains(n));
+
+    let d = rem_edges.iter().all(|e| e.source_idx != Pidx::Last);
+
+    if a && b && c && d {
         return ProofNode::new_leaf(format!("Rewire pendant node!",), true);
-    }
-}
-
-impl Statistics for PendantRewireTactic {
-    fn print_stats(&self) {
-        println!(
-            "Rewired pendant nodes {} / {}",
-            self.num_proofs, self.num_calls
-        );
+    } else {
+        return ProofNode::new_leaf(format!("No pendant node!",), false);
     }
 }

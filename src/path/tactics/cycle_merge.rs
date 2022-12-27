@@ -3,91 +3,135 @@ use std::fmt::Display;
 use itertools::Itertools;
 
 use crate::{
-    path::{proof::PathContext, PseudoCycle, PseudoCycleInstance, SuperNode},
-    proof_logic::{Statistics, Tactic},
+    comps::CompType,
+    path::{
+        self, proof::Instance, utils::complex_cycle_value_base, NicePairConfig, PathComp,
+        PseudoCycle,
+    },
     proof_tree::ProofNode,
     Credit, CreditInv,
 };
 
-#[derive(Clone)]
-pub struct CycleMergeTactic {
-    num_calls: usize,
-    num_proofs: usize,
-}
+pub fn check_cycle_merge(instance: &Instance) -> ProofNode {
+    let pc = instance.pseudo_cycle().unwrap();
+    let path_comps = instance.path_nodes().collect_vec();
+    let npc = instance.npc();
 
-impl CycleMergeTactic {
-    pub fn new() -> Self {
-        Self {
-            num_calls: 0,
-            num_proofs: 0,
-        }
+    let mut cycle_value = pc.value(&path_comps, &npc, &instance.context.inv);
+
+    if pc.cycle.iter().any(|(_, comp, _)| match comp {
+        crate::path::CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
+        crate::path::CycleComp::Rem => false,
+    }) {
+        // 2c due to gainful bridge covering. We convert the resulting complex to a large
+        cycle_value += Credit::from_integer(2) * instance.context.inv.c
     }
-}
 
-impl Statistics for CycleMergeTactic {
-    fn print_stats(&self) {
-        println!("Cycle merge {} / {}", self.num_proofs, self.num_calls);
-    }
-}
-
-impl Tactic<PseudoCycleInstance, PathContext> for CycleMergeTactic {
-    fn action(&mut self, data: &PseudoCycleInstance, context: &PathContext) -> ProofNode {
-        self.num_calls += 1;
-
-        let mut cycle_value = data.pseudo_cycle.value(&context.credit_inv);
-
-        if data
-            .pseudo_cycle
-            .nodes
-            .iter()
-            .any(|n| !n.is_path_rem() && n.get_comp().is_complex())
-        {
-            // 2c due to gainful bridge covering. We convert the resulting complex to a large
-            cycle_value += Credit::from_integer(2) * context.credit_inv.c
-        }
-
-        if cycle_value >= Credit::from_integer(2) {
-            self.num_proofs += 1;
-            ProofNode::new_leaf_success(
-                format!("Merged pseudo cycle with value {}!", cycle_value),
-                cycle_value == Credit::from_integer(2),
-            )
-        } else {
-            ProofNode::new_leaf(
-                format!(
-                    "Failed cycle merge with value {}",
-                    //data.pseudo_cycle,
-                    cycle_value
-                ),
-                false,
-            )
-        }
+    if cycle_value >= Credit::from_integer(2) {
+        ProofNode::new_leaf_success(
+            format!("Merged pseudo cycle with value {}!", cycle_value),
+            cycle_value == Credit::from_integer(2),
+        )
+    } else {
+        ProofNode::new_leaf(
+            format!(
+                "Failed cycle merge with value {}",
+                //data.pseudo_cycle,
+                cycle_value
+            ),
+            false,
+        )
     }
 }
 
 impl PseudoCycle {
-    pub fn value(&self, credit_inv: &CreditInv) -> Credit {
+    pub fn value(
+        &self,
+        path_comps: &Vec<&PathComp>,
+        npc: &NicePairConfig,
+        credit_inv: &CreditInv,
+    ) -> Credit {
         let first_complex = self
-            .nodes
+            .cycle
             .iter()
             .enumerate()
             .rev()
-            .find(|(_, n)| !n.is_path_rem() && n.get_comp().is_complex())
+            .find(|(_, n)| match n.1 {
+                crate::path::CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
+                crate::path::CycleComp::Rem => false,
+            })
             .map(|(i, _)| i);
 
-        self.nodes
+        self.cycle
             .iter()
             .enumerate()
-            .map(|(j, node)| {
+            .map(|(j, (in_node, comp, out_node))| {
                 let lower_complex = first_complex.is_some() && first_complex.unwrap() > j;
 
-                match node {
-                    SuperNode::Abstract(abs) => abs.value(credit_inv, lower_complex),
-                    SuperNode::Zoomed(zoomed) => zoomed.value(credit_inv, lower_complex),
-                    SuperNode::RemPath(_) => credit_inv.two_ec_credit(3) - Credit::from_integer(1),
+                match comp {
+                    crate::path::CycleComp::PathComp(idx) => {
+                        let comp = path_comps[idx.raw()];
+                        value(comp, npc, credit_inv, lower_complex)
+                    }
+                    crate::path::CycleComp::Rem => {
+                        credit_inv.two_ec_credit(3) - Credit::from_integer(1)
+                    }
                 }
             })
             .sum()
+    }
+}
+
+fn value(
+    comp: &PathComp,
+    npc: &NicePairConfig,
+    credit_inv: &CreditInv,
+    lower_complex: bool,
+) -> Credit {
+    let nice_pair = npc.is_nice_pair(comp.in_node.unwrap(), comp.out_node.unwrap());
+
+    match comp.comp.comp_type() {
+        CompType::Cycle(_) if !comp.used => {
+            if nice_pair {
+                credit_inv.credits(&comp.comp)
+            } else {
+                credit_inv.credits(&comp.comp) - Credit::from_integer(1)
+            }
+        }
+        CompType::Cycle(_) if comp.used => {
+            assert!(comp.comp.is_c5());
+            if comp.in_node != comp.out_node {
+                credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5) - Credit::from_integer(1)
+            } else {
+                credit_inv.credits(&comp.comp) - Credit::from_integer(1)
+            }
+        }
+        CompType::Large => credit_inv.credits(&comp.comp) - Credit::from_integer(1),
+        CompType::Complex => {
+            let complex = if lower_complex {
+                credit_inv.complex_comp()
+            } else {
+                Credit::from_integer(0)
+            };
+            if nice_pair {
+                complex
+                    + complex_cycle_value_base(
+                        credit_inv,
+                        &comp.comp.graph(),
+                        comp.in_node.unwrap(),
+                        comp.out_node.unwrap(),
+                    )
+            } else {
+                complex
+                    + complex_cycle_value_base(
+                        credit_inv,
+                        &comp.comp.graph(),
+                        comp.in_node.unwrap(),
+                        comp.out_node.unwrap(),
+                    )
+            }
+        }
+        _ => panic!(),
     }
 }
 
@@ -97,9 +141,9 @@ impl Display for PseudoCycle {
         write!(
             f,
             "{}",
-            self.nodes
+            self.cycle
                 .iter()
-                .map(|node| format!("{}", node))
+                .map(|(l, idx, r)| format!("({}-[{}]-{})", l, idx, r))
                 .join(" -- ")
         )?;
         write!(f, "]")

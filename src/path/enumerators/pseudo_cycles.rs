@@ -28,7 +28,7 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     iter
 }
 
-fn product_of_first(
+pub fn product_of_first(
     mut edges: Vec<Vec<(Node, Node)>>,
     length: usize,
 ) -> Box<dyn Iterator<Item = Vec<(Node, Node)>>> {

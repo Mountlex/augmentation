@@ -1,27 +1,27 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{proof::Instance, Pidx, NicePairConfig, PathComp},
-    proof_tree::ProofNode, Node, comps::Component,
+    comps::Component,
+    path::{proof::Instance, NicePairConfig, PathComp, Pidx},
+    proof_tree::ProofNode,
+    Node,
 };
 
-fn check_path_rearrangement(instance: &Instance) -> ProofNode {
+pub fn check_path_rearrangement(instance: &Instance) -> ProofNode {
     let rearrangement = instance.rearrangement().unwrap();
 
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let npc = instance.npc();
 
-    let mut feasible = check_fixed_extension_feasible(&rearrangement.extension, &path_comps, &npc, true);
+    let mut feasible =
+        check_fixed_extension_feasible(&rearrangement.extension, &path_comps, &npc, true);
     feasible.eval();
     if !feasible.success() {
         return feasible;
     } else {
         let extension = &rearrangement.extension;
 
-        let (_, old_last_idx, _) = extension
-            .iter()
-            .find(|(_, idx, _)| idx.is_last())
-            .unwrap();
+        let (_, old_last_idx, _) = extension.iter().find(|(_, idx, _)| idx.is_last()).unwrap();
         let old_last_comp = &path_comps[old_last_idx.raw()].comp;
 
         let new_last_idx = extension.last().unwrap().1;
@@ -108,39 +108,38 @@ pub fn check_fixed_extension_feasible(
     for i in 1..extension.len() - 1 {
         let (in_node, idx, out_node) = &extension[i];
         let comp = &path_comps[idx.raw()];
-            let valid_in_out = valid_in_out_npc(
-                &comp.comp,
-                npc,
-                in_node.unwrap(),
-                out_node.unwrap(),
-                i == extension.len() - 2 && prelast_is_prelast,
-                comp.used
-            );
-            if !valid_in_out {
-                return ProofNode::new_leaf(
-                    format!("New path does not fulfill nice path properties!"),
-                    false,
-                )
-                .into();
-            }
-        
+        let valid_in_out = valid_in_out_npc(
+            &comp.comp,
+            npc,
+            in_node.unwrap(),
+            out_node.unwrap(),
+            i == extension.len() - 2 && prelast_is_prelast,
+            comp.used,
+        );
+        if !valid_in_out {
+            return ProofNode::new_leaf(
+                format!("New path does not fulfill nice path properties!"),
+                false,
+            )
+            .into();
+        }
     }
 
     let (_, hit, hit_out) = extension.first().unwrap();
-    let hit_comp = &path_comps[hit.raw()]; 
+    let hit_comp = &path_comps[hit.raw()];
     valid_in_out_npc(
         &hit_comp.comp,
         npc,
         hit_comp.in_node.unwrap(),
         hit_out.unwrap(),
         extension.len() == 2 && prelast_is_prelast,
-        hit_comp.used
+        hit_comp.used,
     );
 
     ProofNode::new_leaf("Feasible path".into(), true)
 }
 
-fn valid_in_out_npc(
+pub fn valid_in_out_npc(
     c: &Component,
     npc: &NicePairConfig,
     new_in: Node,
@@ -158,7 +157,6 @@ fn valid_in_out_npc(
         true
     }
 }
-
 
 // fn check_matching_edge_extension_feasible(extension: &[SuperNode]) -> ProofNode {
 //     let old_last_node = extension

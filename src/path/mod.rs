@@ -4,6 +4,7 @@ mod tactics;
 mod utils;
 
 use core::panic;
+use std::fmt::write;
 use std::{cmp::Ordering, fmt::Display};
 
 use itertools::Itertools;
@@ -200,6 +201,15 @@ impl CycleComp {
     }
 }
 
+impl Display for CycleComp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CycleComp::PathComp(idx) => write!(f, "{}", idx),
+            CycleComp::Rem => write!(f, "REM"),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct PathComp {
     comp: Component,
@@ -207,57 +217,6 @@ pub struct PathComp {
     out_node: Option<Node>,
     used: bool,
     path_idx: Pidx,
-}
-
-impl PathComp {
-    fn value(&self, npc: &NicePairConfig, credit_inv: &CreditInv, lower_complex: bool) -> Credit {
-        let nice_pair = npc.is_nice_pair(self.in_node.unwrap(), self.out_node.unwrap());
-
-        match self.comp.comp_type() {
-            CompType::Cycle(_) if !self.used => {
-                if nice_pair {
-                    credit_inv.credits(&self.comp)
-                } else {
-                    credit_inv.credits(&self.comp) - Credit::from_integer(1)
-                }
-            }
-            CompType::Cycle(_) if self.used => {
-                assert!(self.comp.is_c5());
-                if self.in_node != self.out_node {
-                    credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5)
-                        - Credit::from_integer(1)
-                } else {
-                    credit_inv.credits(&self.comp) - Credit::from_integer(1)
-                }
-            }
-            CompType::Large => credit_inv.credits(&self.comp) - Credit::from_integer(1),
-            CompType::Complex => {
-                let complex = if lower_complex {
-                    credit_inv.complex_comp()
-                } else {
-                    Credit::from_integer(0)
-                };
-                if nice_pair {
-                    complex
-                        + complex_cycle_value_base(
-                            credit_inv,
-                            &self.comp.graph(),
-                            self.in_node.unwrap(),
-                            self.out_node.unwrap(),
-                        )
-                } else {
-                    complex
-                        + complex_cycle_value_base(
-                            credit_inv,
-                            &self.comp.graph(),
-                            self.in_node.unwrap(),
-                            self.out_node.unwrap(),
-                        )
-                }
-            }
-            _ => panic!(),
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -313,7 +272,6 @@ impl NicePairConfig {
             .all(|(u, v)| self.is_nice_pair(*u, *v) == consistent_npc.is_nice_pair(*u, *v))
     }
 }
-
 
 #[derive(Copy, Clone, Debug)]
 pub enum Pidx {

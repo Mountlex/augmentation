@@ -56,7 +56,7 @@ pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = 
     Box::new(iter)
 }
 
-fn fix_in_out_direction(extension: &mut Vec<(Node, CycleComp, Node)>) {
+pub fn fix_in_out_direction(extension: &mut Vec<(Node, CycleComp, Node)>) {
     extension.iter_mut().for_each(|(n1, c, n2)| {
         let tmp = *n1;
         *n1 = *n2;

@@ -1,180 +1,115 @@
+use itertools::Itertools;
+
 use crate::{
     path::{
+        enumerators::{
+            path_nodes, pseudo_cycles::product_of_first, rearrangements::fix_in_out_direction,
+        },
+        proof::Instance,
+        Pidx,
     },
-    proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
+    Node,
 };
 
-use super::cycle_rearrange::check_fixed_extension_feasible;
+use super::cycle_rearrange::{check_fixed_extension_feasible, valid_in_out_npc};
 
-#[derive(Clone)]
-pub struct LongerPathTactic {
-    num_calls: usize,
-    num_proofs: usize,
-    finite_path: bool,
-}
+pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
+    let all_outside = instance.out_edges().collect_vec();
+    let all_edges = instance.all_edges();
+    let all_comps = instance.path_nodes().cloned().collect_vec();
+    let npc = instance.npc();
 
-impl LongerPathTactic {
-    pub fn new(finite_path: bool) -> Self {
-        Self {
-            num_calls: 0,
-            num_proofs: 0,
-            finite_path,
-        }
-    }
-}
+    if let Some(rearrangement) = instance.rearrangement() {
+        let extension = &rearrangement.extension;
 
-impl Statistics for LongerPathTactic {
-    fn print_stats(&self) {
-        println!("Longer path {} / {}", self.num_proofs, self.num_calls);
-    }
-}
-
-impl Tactic<PathRearrangementInstance, PathContext> for LongerPathTactic {
-    fn precondition(&self, data: &PathRearrangementInstance, _context: &PathContext) -> bool {
-        !data
-            .instance
-            .outside_hits_from(data.extension.last().unwrap().path_idx())
-            .is_empty()
-    }
-
-    fn action(&mut self, data: &PathRearrangementInstance, _context: &PathContext) -> ProofNode {
-        let new_last = data.extension.last().unwrap();
-        let outside_hits = data.instance.outside_hits_from(new_last.path_idx());
+        let new_last_idx = extension.last().unwrap().1;
+        let new_last_comp = &all_comps[new_last_idx.raw()];
+        let new_last_nodes = new_last_comp.comp.matching_nodes();
+        let outside_hits = all_outside.iter().filter(|n| new_last_nodes.contains(n));
         for outside_hit in outside_hits {
             // new_last will be prelast
-            if new_last.get_zoomed().valid_out(outside_hit.source(), true) {
+            if valid_in_out_npc(
+                &new_last_comp.comp,
+                &npc,
+                new_last_comp.in_node.unwrap(),
+                **outside_hit,
+                true,
+                new_last_comp.used,
+            ) {
                 let mut feasible =
-                    check_fixed_extension_feasible(&data.extension, &data.instance, false);
+                    check_fixed_extension_feasible(&extension, &all_comps, &npc, false);
                 feasible.eval();
                 if feasible.success() {
-                    self.num_proofs += 1;
                     return ProofNode::new_leaf(
-                        format!("Longer nice path found via edge ({})!", outside_hit),
+                        format!(
+                            "Longer nice path found via outside edge ({}) and cycle rearrangement!",
+                            outside_hit
+                        ),
                         true,
                     );
                 }
             }
         }
-        return ProofNode::new_leaf(
-            format!("No outside matching hit does is a valid out edge for the last node!"),
-            false,
-        );
-    }
-}
-
-impl Tactic<SelectedHitInstance, PathContext> for LongerPathTactic {
-    fn precondition(&self, data: &SelectedHitInstance, context: &PathContext) -> bool {
-        Tactic::<AugmentedPathInstance, PathContext>::precondition(self, &data.instance, context)
     }
 
-    fn action(&mut self, data: &SelectedHitInstance, context: &PathContext) -> ProofNode {
-        Tactic::<AugmentedPathInstance, PathContext>::action(self, &data.instance, context)
-    }
-}
+    let last_comp = all_comps.first().unwrap();
+    let last_comp_nodes = last_comp.comp.matching_nodes();
+    let path_len = all_comps.len();
 
-impl Tactic<AugmentedPathInstance, PathContext> for LongerPathTactic {
-    fn action(
-        &mut self,
-        data: &AugmentedPathInstance,
-        _context: &PathContext,
-    ) -> crate::proof_tree::ProofNode {
-        self.num_calls += 1;
-
-        let outside_hits = data.outside_hits_from(Pidx::Last);
-
-        for outside_hit in outside_hits {
-            //   0 --- 1 --- 2 ---
-            //   |
-            //  out
-            if data[Pidx::Last]
-                .get_zoomed()
-                .valid_out(outside_hit.source, true)
-            {
-                self.num_proofs += 1;
-                return ProofNode::new_leaf(
-                    format!("Longer nice path found via edge ({})!", outside_hit),
-                    true,
-                );
-            }
-
-            for prelast_edge in data.fixed_edges_between(Pidx::Last, Pidx::Prelast) {
-                let prelast_cond = if let SuperNode::Zoomed(prelast) = &data[Pidx::Prelast] {
-                    prelast.valid_out(prelast_edge.endpoint_at(Pidx::Prelast).unwrap(), false)
-                } else {
-                    true
-                };
-
-                if prelast_cond
-                    && data[Pidx::Last].get_zoomed().valid_in_out(
-                        prelast_edge.endpoint_at(Pidx::Last).unwrap(),
-                        outside_hit.source,
-                        true,
-                    )
-                {
-                    self.num_proofs += 1;
-                    return ProofNode::new_leaf(
-                        format!("Longer nice path found via edge ({})!", outside_hit),
-                        true,
-                    );
-                }
-            }
-        }
-
-        if self.finite_path {
-            let start_idx = Pidx::from(data.path_len() - 1);
-            let outside_hits = data.outside_hits_from(start_idx);
-
-            for outside_hit in outside_hits {
-                //   0 --- 1 --- 2
-                //               |
-                //               out
-                if data[start_idx.succ().unwrap()]
-                    .get_zoomed()
-                    .valid_out(outside_hit.source, true)
-                {
-                    self.num_proofs += 1;
-                    return ProofNode::new_leaf(
-                        format!("Longer nice path found via edge ({})!", outside_hit),
-                        true,
-                    );
-                }
-
-                for prelast_edge in data.fixed_edges_between(start_idx, start_idx.succ().unwrap()) {
-                    let prelast_cond =
-                        if let SuperNode::Zoomed(prelast) = &data[start_idx.succ().unwrap()] {
-                            prelast.valid_in(
-                                prelast_edge.endpoint_at(start_idx.succ().unwrap()).unwrap(),
-                                false,
-                            )
+    for outside_hit in all_outside.iter().filter(|n| last_comp_nodes.contains(n)) {
+        let cons_edges = all_comps
+            .windows(2)
+            .map(|w| {
+                all_edges
+                    .iter()
+                    .filter(|e| e.between_path_nodes(w[0].path_idx, w[1].path_idx))
+                    .map(|e| {
+                        if e.path_index_n1 == w[0].path_idx {
+                            (e.n1, e.n2)
                         } else {
-                            true
-                        };
+                            (e.n2, e.n1)
+                        }
+                    })
+                    .collect_vec()
+            })
+            .collect_vec();
 
-                    if prelast_cond
-                        && data[start_idx].get_zoomed().valid_in_out(
-                            outside_hit.source,
-                            prelast_edge.endpoint_at(start_idx).unwrap(),
-                            true,
-                        )
-                    {
-                        self.num_proofs += 1;
-                        return ProofNode::new_leaf(
-                            format!("Longer nice path found via edge ({})!", outside_hit),
-                            true,
-                        );
-                    }
+        let nice_paths = product_of_first(cons_edges, path_len).collect_vec();
+        for nice_path in nice_paths {
+            if valid_in_out_npc(
+                &last_comp.comp,
+                &npc,
+                nice_path.first().unwrap().0,
+                **outside_hit,
+                true,
+                last_comp.used,
+            ) {
+                let mut extension: Vec<(Option<Node>, Pidx, Option<Node>)> =
+                    vec![(Some(nice_path.first().unwrap().1), Pidx::Last, None)];
+                for (i, w) in nice_path.windows(2).enumerate() {
+                    extension.push((Some(w[1].0), Pidx::from(i + 1), Some(w[0].1)));
+                }
+                extension.reverse();
+
+                let mut feasible =
+                    check_fixed_extension_feasible(&extension, &all_comps, &npc, false);
+                feasible.eval();
+                if feasible.success() {
+                    return ProofNode::new_leaf(
+                        format!(
+                            "Longer nice path found via outside edge ({}) and path rearrangement!",
+                            outside_hit
+                        ),
+                        true,
+                    );
                 }
             }
         }
-
-        ProofNode::new_leaf(format!("No longer nice path possible!"), false)
     }
 
-    fn precondition(&self, data: &AugmentedPathInstance, _context: &PathContext) -> bool {
-        !(data.outside_edges_on(Pidx::Last).is_empty()
-            && data
-                .outside_edges_on(Pidx::from(data.path_len() - 1))
-                .is_empty())
-    }
+    return ProofNode::new_leaf(
+        format!("No outside matching hit does is a valid out edge for the last node!"),
+        false,
+    );
 }

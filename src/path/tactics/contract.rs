@@ -2,65 +2,24 @@ use itertools::Itertools;
 
 use crate::{
     comps::Component,
-    path::{proof::PathContext, utils::hamiltonian_paths, AugmentedPathInstance, Pidx, ZoomedNode},
+    path::{proof::Instance, utils::hamiltonian_paths, Pidx},
     proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
 };
-#[derive(Clone)]
-pub struct ContractabilityTactic {
-    num_calls: usize,
-    num_proofs: usize,
-    finite: bool,
+
+pub fn check_contractability(instance: &Instance) -> ProofNode {
+    return check_for_comp(instance, Pidx::Last);
 }
 
-impl ContractabilityTactic {
-    pub fn new(finite: bool) -> Self {
-        Self {
-            num_calls: 0,
-            num_proofs: 0,
-            finite,
-        }
-    }
-}
+fn check_for_comp(instance: &Instance, idx: Pidx) -> ProofNode {
+    let all_edges = instance.all_edges();
+    let mut outside = instance.out_edges().collect_vec();
+    let mut path_comps = instance.path_nodes().collect_vec();
+    let rem_edges = instance.rem_edges();
+    let npc = instance.npc();
 
-impl Statistics for ContractabilityTactic {
-    fn print_stats(&self) {
-        println!(
-            "Contractability proof {} / {}",
-            self.num_proofs, self.num_calls
-        );
-    }
-}
+    let comp = &path_comps[idx.raw()].comp;
 
-impl Tactic<AugmentedPathInstance, PathContext> for ContractabilityTactic {
-    fn action(
-        &mut self,
-        data: &AugmentedPathInstance,
-        _context: &PathContext,
-    ) -> crate::proof_tree::ProofNode {
-        self.num_calls += 1;
-
-        
-        if self.finite {
-            for node in &data.nodes {
-                if node.is_zoomed() {
-                    let res = check_for_comp(data, node.get_comp(), node.get_zoomed(), node.path_idx());
-                        if res.success() {
-                            self.num_proofs += 1;
-                            return res
-                        }
-                }
-            }
-            return ProofNode::new_leaf(format!("No contractable components"), false)
-        } else {
-            let last = &data[Pidx::Last];
-            return check_for_comp(data, last.get_comp(), last.get_zoomed(), last.path_idx())
-        }
-
-    }
-}
-
-pub fn check_for_comp(data: &AugmentedPathInstance, comp: &Component, node: &ZoomedNode, idx: Pidx) -> ProofNode {
     if comp.is_complex() || comp.is_large() || comp.is_c3() || comp.is_c4() {
         return ProofNode::new_leaf(
             "Contractability check not applied: component is C3, Large or Complex".into(),
@@ -69,8 +28,21 @@ pub fn check_for_comp(data: &AugmentedPathInstance, comp: &Component, node: &Zoo
         .into();
     }
 
-    let free_nodes = data.nodes_without_edges(idx);
-    let used_nodes = data.nodes_with_edges(idx);
+    let nodes = comp.matching_nodes();
+    let used_nodes = nodes
+        .iter()
+        .filter(|n| {
+            outside.contains(n)
+                || rem_edges.iter().any(|e| e.source == **n)
+                || all_edges.iter().any(|e| e.node_incident(n))
+        })
+        .cloned()
+        .collect_vec();
+    let free_nodes = nodes
+        .into_iter()
+        .filter(|n| !used_nodes.contains(n))
+        .cloned()
+        .collect_vec();
 
     let num_edges_between_free_nodes = comp
         .graph()
@@ -85,7 +57,7 @@ pub fn check_for_comp(data: &AugmentedPathInstance, comp: &Component, node: &Zoo
             used_nodes
                 .iter()
                 .combinations(2)
-                .filter(|m| !node.npc.is_nice_pair(*m[0], *m[1]))
+                .filter(|m| !npc.is_nice_pair(*m[0], *m[1]))
                 .any(|m| {
                     hamiltonian_paths(*m[0], *m[1], comp.nodes())
                         .iter()
