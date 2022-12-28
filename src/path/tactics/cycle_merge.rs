@@ -9,7 +9,7 @@ use crate::{
         PseudoCycle,
     },
     proof_tree::ProofNode,
-    Credit, CreditInv,
+    Credit, CreditInv, Node,
 };
 
 pub fn check_cycle_merge(instance: &Instance) -> ProofNode {
@@ -71,7 +71,7 @@ impl PseudoCycle {
                 match comp {
                     crate::path::CycleComp::PathComp(idx) => {
                         let comp = path_comps[idx.raw()];
-                        value(comp, npc, credit_inv, lower_complex)
+                        value(comp, in_node, out_node, npc, credit_inv, lower_complex)
                     }
                     crate::path::CycleComp::Rem => {
                         credit_inv.two_ec_credit(3) - Credit::from_integer(1)
@@ -84,11 +84,13 @@ impl PseudoCycle {
 
 fn value(
     comp: &PathComp,
+    in_node: &Node,
+    out_node: &Node,
     npc: &NicePairConfig,
     credit_inv: &CreditInv,
     lower_complex: bool,
 ) -> Credit {
-    let nice_pair = npc.is_nice_pair(comp.in_node.unwrap(), comp.out_node.unwrap());
+    let nice_pair = npc.is_nice_pair(*in_node, *out_node);
 
     match comp.comp.comp_type() {
         CompType::Cycle(_) if !comp.used => {
@@ -100,7 +102,7 @@ fn value(
         }
         CompType::Cycle(_) if comp.used => {
             assert!(comp.comp.is_c5());
-            if comp.in_node != comp.out_node {
+            if in_node != out_node {
                 credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5) - Credit::from_integer(1)
             } else {
                 credit_inv.credits(&comp.comp) - Credit::from_integer(1)
@@ -115,37 +117,12 @@ fn value(
             };
             if nice_pair {
                 complex
-                    + complex_cycle_value_base(
-                        credit_inv,
-                        &comp.comp.graph(),
-                        comp.in_node.unwrap(),
-                        comp.out_node.unwrap(),
-                    )
+                    + complex_cycle_value_base(credit_inv, &comp.comp.graph(), *in_node, *out_node)
             } else {
                 complex
-                    + complex_cycle_value_base(
-                        credit_inv,
-                        &comp.comp.graph(),
-                        comp.in_node.unwrap(),
-                        comp.out_node.unwrap(),
-                    )
+                    + complex_cycle_value_base(credit_inv, &comp.comp.graph(), *in_node, *out_node)
             }
         }
         _ => panic!(),
-    }
-}
-
-impl Display for PseudoCycle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[")?;
-        write!(
-            f,
-            "{}",
-            self.cycle
-                .iter()
-                .map(|(l, idx, r)| format!("({}-[{}]-{})", l, idx, r))
-                .join(" -- ")
-        )?;
-        write!(f, "]")
     }
 }

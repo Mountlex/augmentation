@@ -40,7 +40,7 @@ impl InstPart {
         }
     }
 
-    fn new_path_comp(path_comp: PathComp) -> InstPart {
+    pub fn new_path_comp(path_comp: PathComp) -> InstPart {
         InstPart {
             path_nodes: vec![path_comp],
             nice_pairs: vec![],
@@ -55,7 +55,46 @@ impl InstPart {
 
 impl Display for InstPart {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        write!(f, "Inst [")?;
+        if !self.path_nodes.is_empty() {
+            write!(f, "PathComps: ")?;
+            write!(f, "{}", self.path_nodes.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.edges.is_empty() {
+            write!(f, "Edges: ")?;
+            write!(f, "{}", self.edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.nice_pairs.is_empty() {
+            write!(f, "NicePairs: ")?;
+            write!(
+                f,
+                "{:?}",
+                self.nice_pairs
+                    .iter()
+                    .map(|n| format!("{:?}", n))
+                    .join(", ")
+            )?;
+            write!(f, ", ")?;
+        }
+        if !self.out_edges.is_empty() {
+            write!(f, "Outside: ")?;
+            write!(f, "{}", self.out_edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.rem_edges.is_empty() {
+            write!(f, "Rem: ")?;
+            write!(f, "{}", self.rem_edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.non_rem_edges.is_empty() {
+            write!(f, "Non-Rem: ")?;
+            write!(f, "{}", self.non_rem_edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+
+        write!(f, "]")
     }
 }
 
@@ -83,8 +122,8 @@ impl Instance {
             .flat_map(|part| part.connected_nodes.iter())
     }
 
-    fn rem_edges<'a>(&'a self) -> Vec<&'a MatchingEdge> {
-        let mut rem_edges: Vec<&'a MatchingEdge> = vec![];
+    fn rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
+        let mut rem_edges: Vec<MatchingEdge> = vec![];
         for part in self.inst_parts() {
             let non_sources = &part
                 .non_rem_edges
@@ -92,10 +131,18 @@ impl Instance {
                 .map(|edge| edge.source)
                 .collect_vec();
             if non_sources.len() > 0 {
-                rem_edges.drain_filter(|edge| non_sources.contains(&edge.source));
+                for non_source in non_sources {
+                    if let Some((pos, _)) = rem_edges
+                        .iter()
+                        .find_position(|edge| non_source == &edge.source)
+                    {
+                        rem_edges.swap_remove(pos);
+                    }
+                }
             }
-            rem_edges.append(&mut part.rem_edges.iter().collect_vec());
+            rem_edges.append(&mut part.rem_edges.iter().cloned().collect_vec());
         }
+
         rem_edges
     }
 
@@ -159,6 +206,17 @@ pub struct Rearrangement {
     pub extension: Vec<(Option<Node>, Pidx, Option<Node>)>,
 }
 
+impl Display for Rearrangement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let inner = self
+            .extension
+            .iter()
+            .map(|(l, n, r)| format!("{:?}-[{}]-{:?}", l, n, r))
+            .join(", ");
+        write!(f, "Ext [ {} ]", inner)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct PseudoCycle {
     pub cycle: Vec<(Node, CycleComp, Node)>,
@@ -179,6 +237,20 @@ impl PseudoCycle {
             .collect_vec();
         indices.sort();
         indices.contains(&0) && *indices.last().unwrap() == indices.len() - 1
+    }
+}
+
+impl Display for PseudoCycle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let inner = self
+            .cycle
+            .iter()
+            .map(|(l, n, r)| match n {
+                CycleComp::PathComp(idx) => format!("{}-[{}]-{}", l, idx, r),
+                CycleComp::Rem => format!("REM"),
+            })
+            .join(", ");
+        write!(f, "PC [ {} ]", inner)
     }
 }
 
@@ -219,11 +291,47 @@ pub struct PathComp {
     path_idx: Pidx,
 }
 
+impl Display for PathComp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match (self.in_node, self.out_node) {
+            (None, None) => write!(f, "[{}, idx={}]", self.comp.short_name(), self.path_idx),
+            (None, Some(out)) => write!(
+                f,
+                "[{}, out={}, idx={}]",
+                self.comp.short_name(),
+                out,
+                self.path_idx
+            ),
+            (Some(in_n), None) => write!(
+                f,
+                "[{}, in={}, idx={}]",
+                self.comp.short_name(),
+                in_n,
+                self.path_idx
+            ),
+            (Some(in_n), Some(out_n)) => write!(
+                f,
+                "[{}, in={}, out={}, idx={}]",
+                self.comp.short_name(),
+                in_n,
+                out_n,
+                self.path_idx
+            ),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct MatchingEdge {
     source: Node,
     source_idx: Pidx,
     matching: bool,
+}
+
+impl Display for MatchingEdge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}-REM", self.source)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

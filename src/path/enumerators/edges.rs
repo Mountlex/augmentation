@@ -95,7 +95,7 @@ fn matching_iterator_between(
 
     let no_outside_or_rem_edges = nodes
         .iter()
-        .filter(|n| !outside_edges.contains(n) && !rem_edges.contains(n))
+        .filter(|n| n.is_comp() || (!outside_edges.contains(n) && !rem_edges.contains(n)))
         .cloned()
         .collect_vec();
 
@@ -108,13 +108,13 @@ fn matching_iterator_between(
 
     let free_nodes = no_outside_or_rem_edges
         .into_iter()
-        .filter(|n| !edge_nodes.contains(n))
+        .filter(|n| n.is_comp() || !edge_nodes.contains(n))
         .collect_vec();
 
     if nodes.len() - free_nodes.len() < 3 {
         let free_complement = complement
             .into_iter()
-            .filter(|n| edges.iter().filter(|e| e.node_incident(n)).count() != 1)
+            .filter(|n| n.is_comp() || edges.iter().filter(|e| e.node_incident(n)).count() != 1)
             .collect_vec();
 
         let mut hits = free_complement

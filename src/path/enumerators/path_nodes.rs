@@ -89,11 +89,13 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                 iter
             }));
 
+        //println!("edges {:?}", all_edges);
+        //println!("rem_edges {:?}", rem_edges);
+
         let iter: Box<dyn Iterator<Item = InstPart>> =
             Box::new(iter.into_iter().flat_map(move |path_comp| {
                 let comp = comp.clone();
-
-                let rem_edges_copy = rem_edges.iter().cloned().cloned().collect_vec();
+                let rem_edges_copy = rem_edges.iter().cloned().collect_vec();
                 rem_edges_copy
                     .into_iter()
                     .powerset()
@@ -120,42 +122,37 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                                 let matching_edges = matching_edges.clone();
                                 let non_rem_edges = non_rem_edges.clone();
 
-                                let tmp: Box<dyn Iterator<Item = InstPart>> = Box::new(
-                                    comp.matching_permutations(matching_edges.len())
-                                        .into_iter()
-                                        .filter(move |matched| {
-                                            if source_idx.prec() == node_idx {
-                                                if let Some(out) = path_comp.out_node {
-                                                    out.is_comp()
-                                                        || matched
-                                                            .iter()
-                                                            .all(|matched| *matched != out)
-                                                } else {
-                                                    true
-                                                }
+                                comp.matching_permutations(matching_edges.len())
+                                    .into_iter()
+                                    .filter(move |matched| {
+                                        if source_idx.prec() == node_idx {
+                                            if let Some(out) = path_comp.out_node {
+                                                out.is_comp()
+                                                    || matched.iter().all(|matched| *matched != out)
                                             } else {
                                                 true
                                             }
-                                        })
-                                        .map(move |matched| {
-                                            let mut edges = matched
-                                                .into_iter()
-                                                .zip(matching_edges.iter())
-                                                .map(|(u, v)| {
-                                                    Edge::new(v.source, source_idx, u, node_idx)
-                                                })
-                                                .collect_vec();
+                                        } else {
+                                            true
+                                        }
+                                    })
+                                    .map(move |matched| {
+                                        let mut edges = matched
+                                            .into_iter()
+                                            .zip(matching_edges.iter())
+                                            .map(|(u, v)| {
+                                                Edge::new(v.source, source_idx, u, node_idx)
+                                            })
+                                            .collect_vec();
 
-                                            let mut non_rem_edges = non_rem_edges.clone();
+                                        let mut non_rem_edges = non_rem_edges.clone();
 
-                                            let mut inst_part_copy = inst_part.clone();
-                                            inst_part_copy.edges.append(&mut edges);
-                                            inst_part_copy.non_rem_edges.append(&mut non_rem_edges);
-                                            inst_part_copy
-                                        }),
-                                );
+                                        let mut inst_part_copy = inst_part.clone();
+                                        inst_part_copy.edges.append(&mut edges);
+                                        inst_part_copy.non_rem_edges.append(&mut non_rem_edges);
 
-                                tmp
+                                        inst_part_copy
+                                    })
                             }))
                         }
 
@@ -166,8 +163,7 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
         iter
     });
 
-    Box::new(iter);
-    todo!("READ")
+    Box::new(iter)
 }
 
 fn prevalid_in_out(c: &Component, new_in: Node, new_out: Node, prelast: bool) -> bool {

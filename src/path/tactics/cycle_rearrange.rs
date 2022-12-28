@@ -124,7 +124,6 @@ pub fn check_fixed_extension_feasible(
             .into();
         }
     }
-
     let (_, hit, hit_out) = extension.first().unwrap();
     let hit_comp = &path_comps[hit.raw()];
     valid_in_out_npc(

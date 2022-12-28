@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
+use crate::path::{PathComp, Pidx};
 use crate::{comps::Component, proof_tree::ProofNode, CreditInv};
 
 use super::enumerators::edges::edge_enumerator;
@@ -38,8 +39,8 @@ impl Display for StackElement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             StackElement::Inst(part) => write!(f, "{}", part),
-            StackElement::PseudoCycle(_) => todo!(),
-            StackElement::Rearrangement(_) => todo!(),
+            StackElement::PseudoCycle(part) => write!(f, "{}", part),
+            StackElement::Rearrangement(part) => write!(f, "{}", part),
         }
     }
 }
@@ -105,9 +106,9 @@ impl Quantor {
 
         if let Some(cases) = cases {
             let mut proof = match self {
-                Quantor::All(_, _) => ProofNode::new_all(format!("TODO")),
-                Quantor::AllOpt(_, _, _) => ProofNode::new_all(format!("TODO")),
-                Quantor::Any(_, _) => ProofNode::new_any(format!("TODO")),
+                Quantor::All(e, _) => ProofNode::new_all(e.msg().to_string()),
+                Quantor::AllOpt(e, _, _) => ProofNode::new_all(e.msg().to_string()),
+                Quantor::Any(e, _) => ProofNode::new_any(e.msg().to_string()),
             };
 
             for instance in cases {
@@ -131,6 +132,7 @@ impl Quantor {
                 }
             }
 
+            proof.eval();
             proof
         } else {
             otherwise.unwrap().prove(stack)
@@ -147,6 +149,15 @@ enum Enumerator {
 }
 
 impl Enumerator {
+    fn msg(&self) -> &str {
+        match self {
+            Enumerator::PathNodes => "Enumerate new path node",
+            Enumerator::NicePairs => "Enumerate nice pairs",
+            Enumerator::PseudoCycle => "Enumerate pseudo cycles",
+            Enumerator::Rearrangments => "Enumerate rearrangements",
+        }
+    }
+
     fn get_iter(&self, stack: &Instance) -> Vec<StackElement> {
         match self {
             Enumerator::PathNodes => path_node_enumerator(stack)
@@ -171,6 +182,12 @@ enum OptEnumerator {
 }
 
 impl OptEnumerator {
+    fn msg(&self) -> &str {
+        match self {
+            OptEnumerator::Edges => "Enumerate edges",
+        }
+    }
+
     fn try_iter(&self, stack: &Instance) -> Option<Vec<StackElement>> {
         let iter = match self {
             OptEnumerator::Edges => edge_enumerator(stack),
@@ -276,13 +293,13 @@ fn all_opt(enumerator: OptEnumerator, expr: Expression, otherwise: Expression) -
 }
 
 fn any(enumerator: Enumerator, expr: Expression) -> Expression {
-    Expression::Quantor(Quantor::All(enumerator, Box::new(expr)))
+    Expression::Quantor(Quantor::Any(enumerator, Box::new(expr)))
 }
 
 fn inductive_proof() -> Expression {
-    induction_step(induction_step(induction_step(induction_step(
-        induction_step(induction_step(expr(Tactic::TacticsExhausted))),
-    ))))
+    induction_step(induction_step(induction_step(induction_step(expr(
+        Tactic::TacticsExhausted,
+    )))))
 }
 
 fn induction_step(step: Expression) -> Expression {
@@ -296,16 +313,7 @@ fn find_all_edges(otherwise: Expression) -> Expression {
     find_edge(
         find_edge(
             find_edge(
-                find_edge(
-                    find_edge(
-                        find_edge(
-                            find_edge(otherwise.clone(), otherwise.clone()),
-                            otherwise.clone(),
-                        ),
-                        otherwise.clone(),
-                    ),
-                    otherwise.clone(),
-                ),
+                find_edge(otherwise.clone(), otherwise.clone()),
                 otherwise.clone(),
             ),
             otherwise.clone(),
@@ -420,9 +428,27 @@ fn prove_last_node(
     //     &mut context,
     // );
     //proof_tactic.print_stats();
+    let comp = last_node.get_comp().clone();
+
+    let path_comp = PathComp {
+        in_node: Some(comp.fixed_node().unwrap()),
+        out_node: None,
+        comp,
+        used: last_node.is_used(),
+        path_idx: Pidx::Last,
+    };
+
+    let mut instance = Instance {
+        stack: vec![StackElement::Inst(InstPart::new_path_comp(path_comp))],
+        context: InstanceContext {
+            inv: credit_inv.clone(),
+            comps: nodes,
+        },
+    };
+
     let expr = inductive_proof();
 
-    let mut proof = ProofNode::new_leaf("TODO".into(), false);
+    let mut proof = expr.prove(&mut instance);
 
     let outcome = proof.eval();
 

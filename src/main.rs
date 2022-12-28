@@ -210,9 +210,9 @@ fn prove_path(path: Path) {
             large(),
             //complex_tree(),
             //complex_path(),
-            c3(),
-            c4(),
-            c5(),
+            //c3(),
+            //c4(),
+            //c5(),
             //c6(),
             //c7(),
         ]

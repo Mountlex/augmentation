@@ -6,7 +6,7 @@ use crate::{
     Node,
 };
 
-pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart>> {
+pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart> + '_> {
     let all_edges = instance.all_edges();
     let rem_edges = instance.rem_edges();
     let out_edges = instance.out_edges().collect_vec();
@@ -79,8 +79,7 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
         }));
     }
 
-    Box::new(cases);
-    todo!("READ")
+    Box::new(cases)
 }
 
 // Compute all possible valid nice pair configurations

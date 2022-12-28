@@ -10,13 +10,19 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     let mut iter: Box<dyn Iterator<Item = PseudoCycle>> = Box::new(std::iter::empty());
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let all_edges = instance.all_edges();
-    let all_rem_edges = instance.rem_edges().into_iter().cloned().collect_vec();
+    let mut all_rem_edges = instance.rem_edges().into_iter().collect_vec();
+    let last_comp = path_comps.last().unwrap();
+    all_rem_edges.push(MatchingEdge {
+        source: last_comp.in_node.unwrap(),
+        source_idx: last_comp.path_idx,
+        matching: true,
+    });
 
-    if path_comps.len() < 3 {
+    if path_comps.len() < 2 {
         return Box::new(std::iter::empty());
     }
 
-    for i in 3..path_comps.len() {
+    for i in 3..path_comps.len() + 2 {
         let fixed_edge_iter = pseudo_cycles_of_length(
             path_comps.clone(),
             all_edges.clone(),
@@ -84,8 +90,17 @@ pub fn product_of_first(
         let edges2 = edges.remove(0);
 
         Box::new(iproduct!(edges0, edges1, edges2).map(|(e1, e2, e3)| vec![e1, e2, e3]))
+    } else if length == 2 {
+        let edges0 = edges.remove(0);
+        let edges1 = edges.remove(0);
+
+        Box::new(iproduct!(edges0, edges1).map(|(e1, e2)| vec![e1, e2]))
+    } else if length == 1 {
+        let edges0 = edges.remove(0);
+
+        Box::new(iproduct!(edges0).map(|e1| vec![e1]))
     } else {
-        panic!()
+        panic!("Length {} not supported!", length)
     }
 }
 
@@ -136,7 +151,6 @@ fn pseudo_cycles_of_length(
         .filter(|perm| perm.iter().min() == perm.first())
         .flat_map(move |perm| {
             let length = length;
-
             let first = perm[0].clone();
             let cons_edges = vec![perm.clone(), vec![first]]
                 .concat()

@@ -75,7 +75,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
             })
             .collect_vec();
 
-        let nice_paths = product_of_first(cons_edges, path_len).collect_vec();
+        let nice_paths = product_of_first(cons_edges, path_len - 1).collect_vec();
         for nice_path in nice_paths {
             if valid_in_out_npc(
                 &last_comp.comp,
@@ -85,22 +85,29 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
                 true,
                 last_comp.used,
             ) {
-                let mut extension: Vec<(Option<Node>, Pidx, Option<Node>)> =
-                    vec![(Some(nice_path.first().unwrap().1), Pidx::Last, None)];
-                for (i, w) in nice_path.windows(2).enumerate() {
-                    extension.push((Some(w[1].0), Pidx::from(i + 1), Some(w[0].1)));
-                }
-                extension.reverse();
+                if nice_path.len() > 1 {
+                    let mut extension: Vec<(Option<Node>, Pidx, Option<Node>)> = vec![];
+                    extension.push((Some(nice_path.first().unwrap().1), Pidx::Last, None));
+                    for (i, w) in nice_path.windows(2).enumerate() {
+                        extension.push((Some(w[1].0), Pidx::from(i + 1), Some(w[0].1)));
+                    }
+                    extension.reverse();
 
-                let mut feasible =
-                    check_fixed_extension_feasible(&extension, &all_comps, &npc, false);
-                feasible.eval();
-                if feasible.success() {
-                    return ProofNode::new_leaf(
-                        format!(
+                    let mut feasible =
+                        check_fixed_extension_feasible(&extension, &all_comps, &npc, false);
+                    feasible.eval();
+                    if feasible.success() {
+                        return ProofNode::new_leaf(
+                            format!(
                             "Longer nice path found via outside edge ({}) and path rearrangement!",
                             outside_hit
                         ),
+                            true,
+                        );
+                    }
+                } else {
+                    return ProofNode::new_leaf(
+                        format!("Longer nice path found via outside edge ({})!", outside_hit),
                         true,
                     );
                 }
