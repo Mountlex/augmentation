@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::{
     path::{
         enumerators::{
-            path_nodes, pseudo_cycles::product_of_first, rearrangements::fix_in_out_direction,
+            pseudo_cycles::product_of_first
         },
         proof::Instance,
         Pidx,

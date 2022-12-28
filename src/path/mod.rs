@@ -293,29 +293,30 @@ pub struct PathComp {
 
 impl Display for PathComp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let used = if self.used { ", used" } else { "" };
         match (self.in_node, self.out_node) {
-            (None, None) => write!(f, "[{}, idx={}]", self.comp.short_name(), self.path_idx),
+            (None, None) => write!(f, "[{}, idx={}{}]", self.comp.short_name(), self.path_idx, used),
             (None, Some(out)) => write!(
                 f,
-                "[{}, out={}, idx={}]",
+                "[{}, out={}, idx={}{}]",
                 self.comp.short_name(),
                 out,
-                self.path_idx
+                self.path_idx, used
             ),
             (Some(in_n), None) => write!(
                 f,
-                "[{}, in={}, idx={}]",
+                "[{}, in={}, idx={}{}]",
                 self.comp.short_name(),
                 in_n,
-                self.path_idx
+                self.path_idx, used
             ),
             (Some(in_n), Some(out_n)) => write!(
                 f,
-                "[{}, in={}, out={}, idx={}]",
+                "[{}, in={}, out={}, idx={}{}]",
                 self.comp.short_name(),
                 in_n,
                 out_n,
-                self.path_idx
+                self.path_idx, used
             ),
         }
     }

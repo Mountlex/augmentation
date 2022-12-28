@@ -29,7 +29,7 @@ fn merge(
         } else {
             (right, right_comp)
         };
-        let (other, other_comp) = if !left_comp.is_complex() {
+        let (_, other_comp) = if !left_comp.is_complex() {
             (left, left_comp)
         } else {
             (right, right_comp)

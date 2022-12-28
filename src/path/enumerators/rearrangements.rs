@@ -15,7 +15,7 @@ pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = 
     // find path index of last node in cycle
     // We know by the precondition that all previous nodes in the path are also in this cycle
     // [...,hit,cycle_nodes]
-    let (cycle_idx, path_comp) = pc
+    let (cycle_idx, _path_comp) = pc
         .cycle
         .iter()
         .enumerate()
@@ -62,7 +62,7 @@ pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = 
 }
 
 pub fn fix_in_out_direction(extension: &mut Vec<(Node, CycleComp, Node)>) {
-    extension.iter_mut().for_each(|(n1, c, n2)| {
+    extension.iter_mut().for_each(|(n1, _c, n2)| {
         let tmp = *n1;
         *n1 = *n2;
         *n2 = tmp;

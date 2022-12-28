@@ -1,9 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::Component,
     path::{proof::Instance, utils::hamiltonian_paths, Pidx},
-    proof_logic::{Statistics, Tactic},
     proof_tree::ProofNode,
 };
 
@@ -13,8 +11,8 @@ pub fn check_contractability(instance: &Instance) -> ProofNode {
 
 fn check_for_comp(instance: &Instance, idx: Pidx) -> ProofNode {
     let all_edges = instance.all_edges();
-    let mut outside = instance.out_edges().collect_vec();
-    let mut path_comps = instance.path_nodes().collect_vec();
+    let outside = instance.out_edges().collect_vec();
+    let path_comps = instance.path_nodes().collect_vec();
     let rem_edges = instance.rem_edges();
     let npc = instance.npc();
 

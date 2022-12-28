@@ -14,6 +14,7 @@ use super::enumerators::pseudo_cycles::enumerate_pseudo_cycles;
 use super::enumerators::rearrangements::enumerate_rearrangements;
 use super::tactics::contract::check_contractability;
 use super::tactics::cycle_merge::check_cycle_merge;
+use super::tactics::cycle_rearrange::check_path_rearrangement;
 use super::tactics::local_merge::check_local_merge;
 use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
@@ -219,7 +220,7 @@ impl Tactic {
             Tactic::LongerPath => check_longer_nice_path(stack),
             Tactic::CycleMerge => check_cycle_merge(stack),
             Tactic::LocalMerge => check_local_merge(stack),
-            Tactic::Rearrangable => check_longer_nice_path(stack),
+            Tactic::Rearrangable => check_path_rearrangement(stack),
             Tactic::Contractable => check_contractability(stack),
             Tactic::Pendant => check_pendant_node(stack),
             Tactic::FiniteInstance => todo!(),
@@ -313,7 +314,10 @@ fn find_all_edges(otherwise: Expression) -> Expression {
     find_edge(
         find_edge(
             find_edge(
-                find_edge(otherwise.clone(), otherwise.clone()),
+                find_edge(
+                    find_edge(otherwise.clone(), otherwise.clone()),
+                    otherwise.clone(),
+                ),
                 otherwise.clone(),
             ),
             otherwise.clone(),

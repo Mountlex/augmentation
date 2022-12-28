@@ -1,11 +1,9 @@
-use std::fmt::Display;
-
 use itertools::Itertools;
 
 use crate::{
     comps::CompType,
     path::{
-        self, proof::Instance, utils::complex_cycle_value_base, NicePairConfig, PathComp,
+        proof::Instance, utils::complex_cycle_value_base, NicePairConfig, PathComp,
         PseudoCycle,
     },
     proof_tree::ProofNode,

@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub fn edge_enumerator(instance: &Instance) -> Option<Box<dyn Iterator<Item = InstPart>>> {
-    let mut path_comps = instance.path_nodes().collect_vec();
+    let path_comps = instance.path_nodes().collect_vec();
     let old_path_len = path_comps.len();
 
     let mut nodes_to_pidx: Vec<Option<Pidx>> = vec![None; old_path_len * 10];

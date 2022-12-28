@@ -124,7 +124,7 @@ fn comp_npcs(
                     // adjacent vertices are always nice pairs!
                     npc.nice_pairs.append(&mut comp.edges()); // C3 in out contained here
 
-                    if comp.is_c4() || (comp.is_c5() && node.used && node.path_idx.is_prelast()) {
+                    if comp.is_c3() || comp.is_c4() || (comp.is_c5() && !node.used && node.path_idx.is_prelast()) {
                         if node.in_node.is_some() && node.out_node.is_some() {
                             npc.nice_pairs
                                 .push((node.in_node.unwrap(), node.out_node.unwrap()))
