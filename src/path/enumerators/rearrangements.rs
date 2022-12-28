@@ -15,7 +15,12 @@ pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = 
     // find path index of last node in cycle
     // We know by the precondition that all previous nodes in the path are also in this cycle
     // [...,hit,cycle_nodes]
-    let (cycle_idx, path_comp) = pc.cycle.iter().enumerate().max_by_key(|n| n.1).unwrap();
+    let (cycle_idx, path_comp) = pc
+        .cycle
+        .iter()
+        .enumerate()
+        .max_by_key(|(_, (_, comp, _))| comp)
+        .unwrap();
 
     // [hit,<cycle_idx + 1>....,new_last]
     let path1 = vec![

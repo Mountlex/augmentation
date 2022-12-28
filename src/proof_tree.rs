@@ -236,7 +236,8 @@ impl ProofNode {
     ) -> anyhow::Result<()> {
         let mut new_depth = depth;
         match self {
-            ProofNode::Leaf(_) | ProofNode::Info(_) | ProofNode::All(_) | ProofNode::Any(_) => {
+            ProofNode::Leaf(_) | ProofNode::Info(_) => {
+                //| ProofNode::All(_) | ProofNode::Any(_) => {
                 if !self.is_msg_empty() {
                     new_depth += 1;
                     (0..depth).try_for_each(|_| write!(writer, "  "))?;

@@ -29,8 +29,11 @@ pub fn edge_enumerator(instance: &Instance) -> Option<Box<dyn Iterator<Item = In
     }
 
     // Prio 2: Single 3-matchings
-    path_comps.sort_by_key(|p| p.comp.matching_nodes().len());
-    for path_comp in &path_comps {
+
+    let len = path_comps.len();
+    //let mut path_comps = path_comps.into_iter().take(len - 1).collect_vec();
+    //path_comps.sort_by_key(|p| p.comp.matching_nodes().len());
+    for path_comp in path_comps.iter().take(len - 1) {
         let comp_nodes = path_comp.comp.matching_nodes().to_vec();
         let other_nodes = path_comps
             .iter()
@@ -43,6 +46,21 @@ pub fn edge_enumerator(instance: &Instance) -> Option<Box<dyn Iterator<Item = In
     }
 
     // Prio 3: Larger comps
+    for s in 2..len - 1 {
+        let comp_nodes = path_comps
+            .iter()
+            .take(s)
+            .flat_map(|c| c.comp.matching_nodes().to_vec())
+            .collect_vec();
+        let other_nodes = path_comps
+            .iter()
+            .filter(|p| p.path_idx.raw() > s)
+            .flat_map(|p| p.comp.matching_nodes().to_vec())
+            .collect_vec();
+        if let Some(iter) = matching_iterator_between(comp_nodes, other_nodes, instance) {
+            return Some(to_inst_parts(iter, nodes_to_pidx, true));
+        }
+    }
 
     // Prio 4: Edges due to contractablility
 
@@ -86,35 +104,63 @@ fn matching_iterator_between(
     complement: Vec<Node>,
     instance: &Instance,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
-    let outside_edges = instance.out_edges().cloned().collect_vec();
-    let rem_edges = instance
+    let outside_edges_at_nodes = instance
+        .out_edges()
+        .filter(|n| nodes.contains(n))
+        .cloned()
+        .collect_vec();
+    let rem_edges_at_nodes = instance
         .rem_edges()
         .into_iter()
         .map(|e| e.source)
+        .filter(|n| nodes.contains(n))
         .collect_vec();
-
-    let no_outside_or_rem_edges = nodes
-        .iter()
-        .filter(|n| n.is_comp() || (!outside_edges.contains(n) && !rem_edges.contains(n)))
-        .cloned()
-        .collect_vec();
-
-    let edges = instance
+    let edges_at_nodes = instance
         .all_edges()
         .into_iter()
-        .filter(|e| e.nodes_incident(&no_outside_or_rem_edges))
+        .filter(|e| e.one_sided_nodes_incident(&nodes))
         .collect_vec();
-    let edge_nodes = edges.iter().flat_map(|e| e.to_vec()).collect_vec();
 
-    let free_nodes = no_outside_or_rem_edges
+    let edges_nodes = edges_at_nodes.iter().flat_map(|e| e.to_vec()).collect_vec();
+    let edge_nodes_at_nodes = edges_nodes
         .into_iter()
-        .filter(|n| n.is_comp() || !edge_nodes.contains(n))
+        .filter(|n| nodes.contains(n))
         .collect_vec();
 
-    if nodes.len() - free_nodes.len() < 3 {
+    let used_non_comp_nodes = nodes
+        .iter()
+        .filter(|n| {
+            !n.is_comp()
+                && (edge_nodes_at_nodes.contains(n)
+                    || outside_edges_at_nodes.contains(n)
+                    || rem_edges_at_nodes.contains(n))
+        })
+        .unique()
+        .collect_vec();
+    let num_edges_at_comp_nodes = outside_edges_at_nodes
+        .iter()
+        .filter(|n| n.is_comp())
+        .count()
+        + rem_edges_at_nodes.iter().filter(|n| n.is_comp()).count()
+        + edge_nodes_at_nodes.iter().filter(|n| n.is_comp()).count();
+
+    let free_nodes = nodes
+        .clone()
+        .into_iter()
+        .filter(|n| {
+            n.is_comp()
+                || (!edge_nodes_at_nodes.contains(n)
+                    && !outside_edges_at_nodes.contains(&n)
+                    && !rem_edges_at_nodes.contains(n))
+        })
+        .collect_vec();
+
+    if used_non_comp_nodes.len() + num_edges_at_comp_nodes < 3 {
         let free_complement = complement
             .into_iter()
-            .filter(|n| n.is_comp() || edges.iter().filter(|e| e.node_incident(n)).count() != 1)
+            .filter(|n| {
+                n.is_comp() || edges_at_nodes.iter().filter(|e| e.node_incident(n)).count() != 1
+            })
             .collect_vec();
 
         let mut hits = free_complement
