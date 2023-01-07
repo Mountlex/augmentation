@@ -216,6 +216,15 @@ impl Component {
         }
     }
 
+    pub fn sym_matching_nodes(&self) -> &[Node] {
+        match self {
+            Component::Large(n) => std::slice::from_ref(n),
+            Component::ComplexTree(_, nodes) => nodes,
+            Component::ComplexPath(_, nodes) => nodes,
+            _ => &self.nodes()[..(self.nodes().len() / 2 + 1)],
+        }
+    }
+
     pub fn incident(&self, edge: &Edge) -> Option<Node> {
         if let Component::Large(n) = self {
             if edge.node_incident(n) {
