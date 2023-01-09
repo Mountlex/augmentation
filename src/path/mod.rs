@@ -23,7 +23,7 @@ pub struct InstPart {
     pub edges: Vec<Edge>,
     pub out_edges: Vec<Node>,
     pub rem_edges: Vec<MatchingEdge>,
-    pub non_rem_edges: Vec<MatchingEdge>,
+    pub non_rem_edges: Vec<MatchingEdgeId>,
     pub connected_nodes: Vec<Node>,
 }
 
@@ -89,7 +89,7 @@ impl Display for InstPart {
             write!(f, ", ")?;
         }
         if !self.non_rem_edges.is_empty() {
-            write!(f, "Non-Rem: ")?;
+            write!(f, "Non-Rem-Ids: ")?;
             write!(f, "{}", self.non_rem_edges.iter().join(", "))?;
             write!(f, ", ")?;
         }
@@ -125,16 +125,11 @@ impl Instance {
     fn rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
         let mut rem_edges: Vec<MatchingEdge> = vec![];
         for part in self.inst_parts() {
-            let non_sources = &part
-                .non_rem_edges
-                .iter()
-                .map(|edge| edge.source)
-                .collect_vec();
-            if non_sources.len() > 0 {
-                for non_source in non_sources {
+            if part.non_rem_edges.len() > 0 {
+                for non_rem_id in &part.non_rem_edges {
                     if let Some((pos, _)) = rem_edges
                         .iter()
-                        .find_position(|edge| non_source == &edge.source)
+                        .find_position(|edge| &edge.id == non_rem_id)
                     {
                         rem_edges.swap_remove(pos);
                     }
@@ -322,10 +317,27 @@ impl Display for PathComp {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MatchingEdgeId(pub u128);
+
+impl MatchingEdgeId {
+    pub fn inc(&mut self) {
+        self.0 += 1;
+    }
+}
+
+impl Display for MatchingEdgeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NonRem({})", self.0)
+    }
+}
+
+
 #[derive(Clone, Debug)]
 pub struct MatchingEdge {
     source: Node,
     source_idx: Pidx,
+    id: MatchingEdgeId,
     matching: bool,
 }
 

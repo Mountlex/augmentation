@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use itertools::Itertools;
 
 use crate::{
@@ -20,6 +22,9 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
     let all_comps = instance.path_nodes().cloned().collect_vec();
     let npc = instance.npc();
 
+    // TODO better error messages
+    let mut msg = String::new();
+
     if let Some(rearrangement) = instance.rearrangement() {
         let extension = &rearrangement.extension;
 
@@ -32,7 +37,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
             if valid_in_out_npc(
                 &new_last_comp.comp,
                 &npc,
-                new_last_comp.in_node.unwrap(),
+                extension.last().unwrap().0.unwrap(),
                 **outside_hit,
                 true,
                 new_last_comp.used,
@@ -48,9 +53,14 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
                         ),
                         true,
                     );
+                } else {
+                    msg.write_str(&format!("Extension is not feasible.")).unwrap();
                 }
+            } else {
+                msg.write_str(&format!("Rearr: {} is not valid out.", outside_hit)).unwrap();
             }
         }
+       
     }
 
     let last_comp = all_comps.first().unwrap();
@@ -116,7 +126,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
     }
 
     return ProofNode::new_leaf(
-        format!("No outside matching hit does is a valid out edge for the last node!"),
+        format!("No outside matching hit does is a valid out edge for the last node: {}!", msg),
         false,
     );
 }

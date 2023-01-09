@@ -1,7 +1,7 @@
 use itertools::{iproduct, Itertools};
 
 use crate::{
-    path::{proof::Instance, CycleComp, MatchingEdge, PathComp, Pidx, PseudoCycle},
+    path::{proof::Instance, CycleComp, MatchingEdge, PathComp, Pidx, PseudoCycle, MatchingEdgeId},
     types::Edge,
     Node,
 };
@@ -15,6 +15,7 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     all_rem_edges.push(MatchingEdge {
         source: last_comp.in_node.unwrap(),
         source_idx: last_comp.path_idx,
+        id: MatchingEdgeId(0),
         matching: true,
     });
 

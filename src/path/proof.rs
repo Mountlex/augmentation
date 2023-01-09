@@ -18,7 +18,7 @@ use super::tactics::cycle_rearrange::check_path_rearrangement;
 use super::tactics::local_merge::check_local_merge;
 use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
-use super::{InstPart, InstanceContext, PathNode, PseudoCycle, Rearrangement};
+use super::{InstPart, InstanceContext, PathNode, PseudoCycle, Rearrangement, MatchingEdgeId};
 
 #[derive(Clone, Debug)]
 enum StackElement {
@@ -50,6 +50,7 @@ impl Display for StackElement {
 pub struct Instance {
     stack: Vec<StackElement>,
     pub context: InstanceContext,
+    pub matching_edge_id_counter: MatchingEdgeId,
 }
 
 impl Instance {
@@ -159,7 +160,7 @@ impl Enumerator {
         }
     }
 
-    fn get_iter(&self, stack: &Instance) -> Vec<StackElement> {
+    fn get_iter(&self, stack: &mut Instance) -> Vec<StackElement> {
         match self {
             Enumerator::PathNodes => path_node_enumerator(stack)
                 .map(|part| StackElement::Inst(part))
@@ -189,7 +190,7 @@ impl OptEnumerator {
         }
     }
 
-    fn try_iter(&self, stack: &Instance) -> Option<Vec<StackElement>> {
+    fn try_iter(&self, stack: &mut Instance) -> Option<Vec<StackElement>> {
         let iter = match self {
             OptEnumerator::Edges => edge_enumerator(stack),
         };
@@ -298,9 +299,9 @@ fn any(enumerator: Enumerator, expr: Expression) -> Expression {
 }
 
 fn inductive_proof() -> Expression {
-    induction_step(induction_step(induction_step(induction_step(expr(
+    induction_step(induction_step(induction_step(induction_step(induction_step(expr(
         Tactic::TacticsExhausted,
-    )))))
+    ))))))
 }
 
 fn induction_step(step: Expression) -> Expression {
@@ -315,7 +316,10 @@ fn find_all_edges(otherwise: Expression) -> Expression {
         find_edge(
             find_edge(
                 find_edge(
+                find_edge(
                     find_edge(otherwise.clone(), otherwise.clone()),
+                    otherwise.clone(),
+                ),
                     otherwise.clone(),
                 ),
                 otherwise.clone(),
@@ -448,6 +452,7 @@ fn prove_last_node(
             inv: credit_inv.clone(),
             comps: nodes,
         },
+        matching_edge_id_counter: MatchingEdgeId(0)
     };
 
     let expr = inductive_proof();
