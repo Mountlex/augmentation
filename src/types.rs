@@ -64,6 +64,16 @@ impl Edge {
         }
     }
 
+    pub fn endpoint_in(&self, nodes: &[Node]) -> Option<Node> {
+        if nodes.contains(&self.n1) { 
+            Some(self.n1)
+        } else if nodes.contains(&self.n2) {
+            Some(self.n2)
+        } else {
+            None
+        }
+    }
+
     pub fn nodes_incident(&self, nodes: &[Node]) -> bool {
         nodes.contains(&self.n1) || nodes.contains(&self.n2)
     }
@@ -77,9 +87,21 @@ impl Edge {
         (nodes1.contains(&self.n1) && nodes2.contains(&self.n2))
             || (nodes2.contains(&self.n1) && nodes1.contains(&self.n2))
     }
+    
     pub fn node_incident(&self, n: &Node) -> bool {
         n == &self.n1 || n == &self.n2
     }
+    
+    pub fn other(&self, n: &Node) -> Option<Node> {
+        if n == &self.n1 {
+            return Some(self.n2)
+        } else if n == &self.n2 {
+            return Some(self.n1)
+        } else {
+            return None
+        }
+    }
+
     pub fn path_incident(&self, path_idx: Pidx) -> bool {
         path_idx == self.path_index_n1 || path_idx == self.path_index_n2
     }

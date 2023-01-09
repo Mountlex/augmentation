@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{proof::Instance, InstPart, MatchingEdge, Pidx},
+    path::{proof::Instance, InstPart, MatchingEdge, Pidx, PathComp, utils::hamiltonian_paths},
     types::Edge,
     Node,
 };
@@ -24,7 +24,7 @@ pub fn edge_enumerator(instance: &Instance) -> Option<Box<dyn Iterator<Item = In
         .skip(1)
         .flat_map(|p| p.comp.matching_nodes().to_vec())
         .collect_vec();
-    if let Some(iter) = matching_iterator_between(last_nodes, other_nodes, instance) {
+    if let Some(iter) = ensure_three_matching(last_nodes, other_nodes, instance) {
         return Some(to_inst_parts(iter, nodes_to_pidx, true));
     }
 
@@ -33,20 +33,20 @@ pub fn edge_enumerator(instance: &Instance) -> Option<Box<dyn Iterator<Item = In
     let len = path_comps.len();
     //let mut path_comps = path_comps.into_iter().take(len - 1).collect_vec();
     //path_comps.sort_by_key(|p| p.comp.matching_nodes().len());
-    for path_comp in path_comps.iter().take(len - 1) {
+    for path_comp in path_comps.iter().skip(1).take(len - 2) {
         let comp_nodes = path_comp.comp.matching_nodes().to_vec();
         let other_nodes = path_comps
             .iter()
             .filter(|p| p.path_idx != path_comp.path_idx)
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
-        if let Some(iter) = matching_iterator_between(comp_nodes, other_nodes, instance) {
+        if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance) {
             return Some(to_inst_parts(iter, nodes_to_pidx, true));
         }
     }
 
     // Prio 3: Larger comps
-    for s in 2..len - 1 {
+    for s in 2..=len - 1 {
         let comp_nodes = path_comps
             .iter()
             .take(s)
@@ -54,15 +54,20 @@ pub fn edge_enumerator(instance: &Instance) -> Option<Box<dyn Iterator<Item = In
             .collect_vec();
         let other_nodes = path_comps
             .iter()
-            .filter(|p| p.path_idx.raw() > s)
+            .filter(|p| p.path_idx.raw() >= s)
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
-        if let Some(iter) = matching_iterator_between(comp_nodes, other_nodes, instance) {
+        if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance) {
             return Some(to_inst_parts(iter, nodes_to_pidx, true));
         }
     }
 
     // Prio 4: Edges due to contractablility
+    for path_comp in path_comps.iter().take(len - 1) {
+        if let Some(iter) = handle_contractable_components(&path_comp, instance) {
+            return Some(to_inst_parts(iter, nodes_to_pidx, true));
+        }
+    }
 
     None
 }
@@ -99,83 +104,209 @@ enum Hit {
     Node(Node),
 }
 
-fn matching_iterator_between(
-    nodes: Vec<Node>,
-    complement: Vec<Node>,
-    instance: &Instance,
-) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
-    let outside_edges_at_nodes = instance
-        .out_edges()
-        .filter(|n| nodes.contains(n))
+
+fn handle_contractable_components(path_comp: &PathComp, instance: &Instance) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
+    let comp = &path_comp.comp;
+
+    let all_edges = instance.all_edges();
+    let outside = instance.out_edges().collect_vec();
+    let path_comps = instance.path_nodes().collect_vec();
+    let rem_edges = instance.rem_edges();
+    let npc = instance.npc();
+
+    if comp.is_complex() || comp.is_large() || comp.is_c3() || comp.is_c4() {
+        return None;
+    }
+
+    let nodes = comp.matching_nodes();
+    let used_nodes = nodes
+        .iter()
+        .filter(|n| {
+            outside.contains(n)
+                || rem_edges.iter().any(|e| e.source == **n)
+                || all_edges.iter().any(|e| e.node_incident(n))
+        })
         .cloned()
         .collect_vec();
-    let rem_edges_at_nodes = instance
+    let free_nodes = nodes
+        .into_iter()
+        .filter(|n| !used_nodes.contains(n))
+        .cloned()
+        .collect_vec();
+
+    let num_edges_between_free_nodes = comp
+        .graph()
+        .all_edges()
+        .filter(|(u, v, _)| free_nodes.contains(u) && free_nodes.contains(v))
+        .count();
+
+    let opt_lb = free_nodes.len() * 2 - num_edges_between_free_nodes;
+
+    if opt_lb * 5 >= comp.graph().node_count() * 4 {
+        let chord_implies_absent_np = free_nodes.iter().combinations(2).any(|free_edge| {
+            used_nodes
+                .iter()
+                .combinations(2)
+                .filter(|m| !npc.is_nice_pair(*m[0], *m[1]))
+                .any(|m| {
+                    hamiltonian_paths(*m[0], *m[1], comp.nodes())
+                        .iter()
+                        .any(|path| {
+                            path.windows(2).all(|e| {
+                                comp.is_adjacent(&e[0], &e[1])
+                                    || (*free_edge[0] == e[0] && *free_edge[1] == e[1])
+                                    || (*free_edge[1] == e[0] && *free_edge[0] == e[1])
+                            })
+                        })
+                })
+        });
+
+        if chord_implies_absent_np {
+            let complement = path_comps
+            .iter()
+            .filter(|p| p.path_idx != path_comp.path_idx)
+            .flat_map(|p| p.comp.matching_nodes().to_vec())
+            .collect_vec();
+
+            return edge_iterator(free_nodes, complement);
+        } 
+    } 
+
+    None
+}
+
+
+fn ensure_three_matching(
+    set: Vec<Node>,
+    compl: Vec<Node>,
+    instance: &Instance,
+) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
+    let outside_edges_at_set = instance
+        .out_edges()
+        .filter(|n| set.contains(n))
+        .cloned()
+        .collect_vec();
+    let rem_edges_at_set = instance
         .rem_edges()
         .into_iter()
         .map(|e| e.source)
-        .filter(|n| nodes.contains(n))
+        .filter(|n| set.contains(n))
         .collect_vec();
-    let edges_at_nodes = instance
+    let edges_at_set = instance
         .all_edges()
         .into_iter()
-        .filter(|e| e.one_sided_nodes_incident(&nodes))
+        .filter(|e| e.one_sided_nodes_incident(&set))
         .collect_vec();
 
-    let edges_nodes = edges_at_nodes.iter().flat_map(|e| e.to_vec()).collect_vec();
-    let edge_nodes_at_nodes = edges_nodes
-        .into_iter()
-        .filter(|n| nodes.contains(n))
-        .collect_vec();
-
-    let used_non_comp_nodes = nodes
+    // 1. step: Compute and count unique non-comp nodes in set with outgoing or REM edges.
+    let non_comp_out_or_rem = set
         .iter()
         .filter(|n| {
-            !n.is_comp()
-                && (edge_nodes_at_nodes.contains(n)
-                    || outside_edges_at_nodes.contains(n)
-                    || rem_edges_at_nodes.contains(n))
+            !n.is_comp() && (outside_edges_at_set.contains(n) || rem_edges_at_set.contains(n))
         })
         .unique()
+        .cloned()
         .collect_vec();
-    let num_edges_at_comp_nodes = outside_edges_at_nodes
-        .iter()
-        .filter(|n| n.is_comp())
-        .count()
-        + rem_edges_at_nodes.iter().filter(|n| n.is_comp()).count()
-        + edge_nodes_at_nodes.iter().filter(|n| n.is_comp()).count();
 
-    let free_nodes = nodes
-        .clone()
-        .into_iter()
-        .filter(|n| {
-            n.is_comp()
-                || (!edge_nodes_at_nodes.contains(n)
-                    && !outside_edges_at_nodes.contains(&n)
-                    && !rem_edges_at_nodes.contains(n))
+    // 2. step: Compute and count outgoing and REM edges at comp notes in set.
+    let num_edges_comp_out_or_rem = outside_edges_at_set.iter().filter(|n| n.is_comp()).count()
+        + rem_edges_at_set.iter().filter(|n| n.is_comp()).count();
+
+    // 3. step: Compute edges incident to comp nodes
+    let num_edges_incident_to_comp = edges_at_set
+        .iter()
+        .filter(|e| e.to_tuple().0.is_comp() || e.to_tuple().1.is_comp())
+        .count();
+
+    // 4. step: Compute edges incident only to non-comp nodes which are not considered in step 1
+    let edges_incident_to_non_comp = edges_at_set
+        .iter()
+        .filter(|e| {
+            !e.to_tuple().0.is_comp()
+                && !e.to_tuple().1.is_comp()
+                && !e.nodes_incident(&non_comp_out_or_rem)
         })
         .collect_vec();
 
-    if used_non_comp_nodes.len() + num_edges_at_comp_nodes < 3 {
-        let free_complement = complement
+    // 5. step: Compute minimal contribution to matching of edges in step 4
+    let num_non_comp_at_set = edges_incident_to_non_comp
+        .iter()
+        .map(|e| e.endpoint_in(&set).unwrap())
+        .unique()
+        .count();
+    let non_comp_at_compl = edges_incident_to_non_comp
+        .iter()
+        .map(|e| e.endpoint_in(&compl).unwrap())
+        .unique()
+        .collect_vec();
+    let num_min_matching_between_non_comp = num_non_comp_at_set.min(non_comp_at_compl.len());
+
+    if non_comp_out_or_rem.len()
+        + num_edges_comp_out_or_rem
+        + num_edges_incident_to_comp
+        + num_min_matching_between_non_comp
+        < 3
+    {
+        let free_complement = compl
             .into_iter()
             .filter(|n| {
-                n.is_comp() || edges_at_nodes.iter().filter(|e| e.node_incident(n)).count() != 1
+                n.is_comp()
+                    || edges_at_set
+                        .iter()
+                        .filter(|e| e.node_incident(n))
+                        .count()
+                        == 0
+                    || (edges_incident_to_non_comp
+                        .iter()
+                        .filter(|e| e.node_incident(n))
+                        .count()
+                        > 1
+                        && non_comp_at_compl.len() < num_non_comp_at_set)
             })
             .collect_vec();
 
-        let mut hits = free_complement
+        let free_set = set
             .into_iter()
-            .map(|n| Hit::Node(n))
+            .filter(|n| {
+                n.is_comp()
+                    || (!non_comp_out_or_rem.contains(n)
+                        && (edges_at_set
+                            .iter()
+                            .filter(|e| e.node_incident(n))
+                            .count()
+                            == 0
+                            || (edges_incident_to_non_comp
+                                .iter()
+                                .filter(|e| e.node_incident(n))
+                                .count()
+                                > 1
+                                && non_comp_at_compl.len() > num_non_comp_at_set)))
+            })
             .collect_vec();
-        hits.push(Hit::Outside);
-        hits.push(Hit::RemPath);
 
-        let iter = free_nodes
-            .into_iter()
-            .flat_map(move |n1| hits.clone().into_iter().map(move |hit| (n1, hit)));
-
-        return Some(Box::new(iter));
+        return edge_iterator(free_set, free_complement);
     }
 
     None
 }
+
+
+
+fn edge_iterator(
+    set: Vec<Node>,
+    complement: Vec<Node>,
+) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
+    let mut hits = complement
+    .into_iter()
+    .map(|n| Hit::Node(n))
+    .collect_vec();
+hits.push(Hit::Outside);
+hits.push(Hit::RemPath);
+
+let iter = set
+    .into_iter()
+    .flat_map(move |n1| hits.clone().into_iter().map(move |hit| (n1, hit)));
+
+return Some(Box::new(iter));
+}
+
