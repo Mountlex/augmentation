@@ -18,7 +18,7 @@ use super::tactics::cycle_rearrange::check_path_rearrangement;
 use super::tactics::local_merge::check_local_merge;
 use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
-use super::{InstPart, InstanceContext, PathNode, PseudoCycle, Rearrangement, MatchingEdgeId};
+use super::{InstPart, InstanceContext, MatchingEdgeId, PathNode, PseudoCycle, Rearrangement};
 
 #[derive(Clone, Debug)]
 enum StackElement {
@@ -100,10 +100,18 @@ impl Quantor {
     }
 
     fn prove(&self, stack: &mut Instance) -> ProofNode {
+        let mut enum_msg = String::new();
         let (cases, otherwise) = match self {
             Quantor::All(e, _) => (Some(e.get_iter(stack)), None),
             Quantor::Any(e, _) => (Some(e.get_iter(stack)), None),
-            Quantor::AllOpt(e, _, otherwise) => (e.try_iter(stack), Some(otherwise)),
+            Quantor::AllOpt(e, _, otherwise) => {
+                if let Some((cases, msg)) = e.try_iter(stack) {
+                    enum_msg = msg;
+                    (Some(cases), Some(otherwise))
+                } else {
+                    (None, Some(otherwise))
+                }
+            }
         };
 
         if let Some(cases) = cases {
@@ -114,7 +122,7 @@ impl Quantor {
             };
 
             for instance in cases {
-                let item_msg = format!("{}", instance);
+                let item_msg = format!("{} {}", instance, enum_msg);
                 stack.push(instance);
                 let mut proof_item = self.formula().prove(stack);
                 proof_item = ProofNode::new_info(item_msg, proof_item);
@@ -190,13 +198,16 @@ impl OptEnumerator {
         }
     }
 
-    fn try_iter(&self, stack: &mut Instance) -> Option<Vec<StackElement>> {
-        let iter = match self {
+    fn try_iter(&self, stack: &mut Instance) -> Option<(Vec<StackElement>, String)> {
+        let result = match self {
             OptEnumerator::Edges => edge_enumerator(stack),
         };
 
-        if let Some(iter) = iter {
-            Some(iter.map(|part| StackElement::Inst(part)).collect_vec())
+        if let Some((case_iter, msg)) = result {
+            Some((
+                case_iter.map(|part| StackElement::Inst(part)).collect_vec(),
+                msg,
+            ))
         } else {
             None
         }
@@ -213,6 +224,7 @@ enum Tactic {
     Pendant,
     FiniteInstance,
     TacticsExhausted,
+    Print,
 }
 
 impl Tactic {
@@ -226,6 +238,22 @@ impl Tactic {
             Tactic::Pendant => check_pendant_node(stack),
             Tactic::FiniteInstance => todo!(),
             Tactic::TacticsExhausted => ProofNode::new_leaf("Tactics exhausted!".into(), false),
+            Tactic::Print => {
+                let all_edges = stack.all_edges();
+                let outside = stack.out_edges().collect_vec();
+                let path_comps = stack.path_nodes().collect_vec();
+                let rem_edges = stack.rem_edges();
+
+                let msg = format!(
+                    "Instance: [{}][{}][{}][{}]",
+                    path_comps.iter().join(", "),
+                    all_edges.iter().join(","),
+                    outside.iter().join(","),
+                    rem_edges.iter().join(",")
+                );
+
+                ProofNode::new_leaf(msg, false)
+            }
         }
     }
 }
@@ -299,15 +327,18 @@ fn any(enumerator: Enumerator, expr: Expression) -> Expression {
 }
 
 fn inductive_proof() -> Expression {
-    induction_step(induction_step(induction_step(induction_step(induction_step(expr(
-        Tactic::TacticsExhausted,
-    ))))))
+    induction_step(induction_step(induction_step(induction_step(
+        induction_step(expr(Tactic::TacticsExhausted)),
+    ))))
 }
 
 fn induction_step(step: Expression) -> Expression {
     all(
         Enumerator::PathNodes,
-        all(Enumerator::NicePairs, or(progress(), find_all_edges(step))),
+        all(
+            Enumerator::NicePairs,
+            or3(expr(Tactic::Print), progress(), find_all_edges(step)),
+        ),
     )
 }
 
@@ -316,10 +347,10 @@ fn find_all_edges(otherwise: Expression) -> Expression {
         find_edge(
             find_edge(
                 find_edge(
-                find_edge(
-                    find_edge(otherwise.clone(), otherwise.clone()),
-                    otherwise.clone(),
-                ),
+                    find_edge(
+                        find_edge(otherwise.clone(), otherwise.clone()),
+                        otherwise.clone(),
+                    ),
                     otherwise.clone(),
                 ),
                 otherwise.clone(),
@@ -452,7 +483,7 @@ fn prove_last_node(
             inv: credit_inv.clone(),
             comps: nodes,
         },
-        matching_edge_id_counter: MatchingEdgeId(0)
+        matching_edge_id_counter: MatchingEdgeId(0),
     };
 
     let expr = inductive_proof();

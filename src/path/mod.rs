@@ -245,7 +245,7 @@ impl Display for PseudoCycle {
                 CycleComp::Rem => format!("REM"),
             })
             .join(", ");
-        write!(f, "PC [ {} ]", inner)
+        write!(f, "PC [ {} ] (length={})", inner, self.cycle.len())
     }
 }
 

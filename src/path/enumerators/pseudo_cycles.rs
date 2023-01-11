@@ -1,13 +1,12 @@
 use itertools::{iproduct, Itertools};
 
 use crate::{
-    path::{proof::Instance, CycleComp, MatchingEdge, PathComp, Pidx, PseudoCycle, MatchingEdgeId},
+    path::{proof::Instance, CycleComp, MatchingEdge, PathComp, Pidx, PseudoCycle},
     types::Edge,
     Node,
 };
 
 pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle> + '_> {
-    let mut iter: Box<dyn Iterator<Item = PseudoCycle>> = Box::new(std::iter::empty());
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let all_edges = instance.all_edges();
     let mut all_rem_edges = instance.rem_edges().into_iter().collect_vec();
@@ -15,15 +14,16 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     all_rem_edges.push(MatchingEdge {
         source: last_comp.in_node.unwrap(),
         source_idx: last_comp.path_idx,
-        id: MatchingEdgeId(0),
+        id: instance.matching_edge_id_counter.clone(),
         matching: true,
     });
-
+    
     if path_comps.len() < 2 {
         return Box::new(std::iter::empty());
     }
 
-    for i in 3..path_comps.len() + 2 {
+    let mut iter: Box<dyn Iterator<Item = PseudoCycle>> = Box::new(std::iter::empty());
+    for i in 3..=(path_comps.len() + 1) {
         let fixed_edge_iter = pseudo_cycles_of_length(
             path_comps.clone(),
             all_edges.clone(),
@@ -158,6 +158,13 @@ fn pseudo_cycles_of_length(
                 .windows(2)
                 .map(|e| edges_between(&all_edges, &all_rem_edges, &e[0], &e[1]))
                 .collect_vec();
+
+            if path_comps.len() == 5 && path_comps[0].comp.is_c3() && path_comps[1].comp.is_c3()&& path_comps[2].comp.is_c4()&& path_comps[3].comp.is_large() && path_comps[4].comp.is_large() && perm.len() == 4 && all_edges.len() == 8 && all_rem_edges.len() == 1 && perm == vec![CycleComp::PathComp(0.into()),CycleComp::PathComp(1.into()),CycleComp::PathComp(2.into()),CycleComp::PathComp(3.into())] {
+                println!("perm {:?}", perm);
+                println!("cons_edges {:?}", cons_edges);
+            }
+
+            assert_eq!(length, cons_edges.len());
 
             product_of_first(cons_edges, length).map(move |e| {
                 let cycle_indices = &perm;
