@@ -1,8 +1,8 @@
 use itertools::Itertools;
 
 use crate::{
+    path::PathProofNode,
     path::{proof::Instance, InstanceContext, NicePairConfig, PathComp},
-    proof_tree::ProofNode,
     types::Edge,
     Credit,
 };
@@ -13,12 +13,12 @@ fn merge(
     edges_between: &[Edge],
     npc: &NicePairConfig,
     context: &InstanceContext,
-) -> ProofNode {
+) -> PathProofNode {
     let left_comp = &left.comp;
     let right_comp = &right.comp;
 
     if left_comp.is_complex() && right_comp.is_complex() {
-        return ProofNode::new_leaf("Merge two complex components".into(), true);
+        return PathProofNode::new_leaf("Merge two complex components".into(), true);
     }
 
     let total_comp_credit = context.inv.credits(&left_comp) + context.inv.credits(&right_comp);
@@ -52,14 +52,14 @@ fn merge(
 
             if total_block_merge >= Credit::from_integer(3) {
                 // we have to pay for block credit and two edges
-                return ProofNode::new_leaf_success(
+                return PathProofNode::new_leaf_success(
                     "Local merge to complex".into(),
                     total_block_merge == Credit::from_integer(3),
                 );
             }
 
             if complex_comp.is_adjacent(&complex1, &complex2) && other_comp.is_large() {
-                return ProofNode::new_leaf("Merge complex and large to complex!".into(), true);
+                return PathProofNode::new_leaf("Merge complex and large to complex!".into(), true);
             }
 
             if complex_comp.is_adjacent(&complex1, &complex2)
@@ -72,7 +72,7 @@ fn merge(
                 let created_black_degree = 2 * other_comp.num_edges() + 2;
                 if total_complex_merge >= context.inv.complex_black(created_black_degree as i64) {
                     // we have to pay for creation of black vertices
-                    return ProofNode::new_leaf("Local merge to complex".into(), true);
+                    return PathProofNode::new_leaf("Local merge to complex".into(), true);
                 }
             }
         }
@@ -96,14 +96,17 @@ fn merge(
                 .inv
                 .two_ec_credit(left_comp.num_edges() + right_comp.num_edges());
             if credits >= req_credits {
-                return ProofNode::new_leaf_success("Local merge".into(), credits == req_credits);
+                return PathProofNode::new_leaf_success(
+                    "Local merge".into(),
+                    credits == req_credits,
+                );
             }
         }
     }
-    ProofNode::new_leaf("Local merge impossible".into(), false)
+    PathProofNode::new_leaf("Local merge impossible".into(), false)
 }
 
-pub fn check_local_merge(instance: &Instance) -> ProofNode {
+pub fn check_local_merge(instance: &Instance) -> PathProofNode {
     let all_edges = instance.all_edges();
     let all_comps = instance.path_nodes().cloned().collect_vec();
     let npc = instance.npc();
@@ -129,7 +132,7 @@ pub fn check_local_merge(instance: &Instance) -> ProofNode {
     if res.is_some() {
         res.unwrap()
     } else {
-        ProofNode::new_leaf(
+        PathProofNode::new_leaf(
             "No local merge found between any two zoomed nodes".into(),
             false,
         )

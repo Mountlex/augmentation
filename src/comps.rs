@@ -91,10 +91,21 @@ pub fn complex_tree() -> Component {
     )
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CompType {
     Cycle(usize),
     Large,
     Complex,
+}
+
+impl Display for CompType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CompType::Cycle(i) => write!(f, "C{}", i),
+            CompType::Large => write!(f, "Lrg"),
+            CompType::Complex => write!(f, "Cpx"),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

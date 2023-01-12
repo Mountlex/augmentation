@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::proof_tree::ProofNode;
+use crate::proof_tree::DefaultProofNode;
 
 pub trait EnumeratorTactic<I, O, C> {
     type Enumer<'a>: Enumerator<O, C>
@@ -43,7 +43,7 @@ pub trait Tactic<I, C> {
         true
     }
 
-    fn action(&mut self, data: &I, context: &C) -> ProofNode;
+    fn action(&mut self, data: &I, context: &C) -> DefaultProofNode;
 }
 
 pub trait Statistics {
@@ -79,7 +79,7 @@ where
         (self.cond)(data)
     }
 
-    fn action(&mut self, data: &I, context: &C) -> ProofNode {
+    fn action(&mut self, data: &I, context: &C) -> DefaultProofNode {
         self.tactic.action(data, context)
     }
 }
@@ -126,14 +126,14 @@ where
     A1: Tactic<I, C>,
     A2: Tactic<I, C>,
 {
-    fn action(&mut self, data: &I, context: &C) -> ProofNode {
+    fn action(&mut self, data: &I, context: &C) -> DefaultProofNode {
         let mut proof1 = self.tactic1.action(data, context);
         let outcome = proof1.eval();
         if !outcome.success() {
             return proof1;
         } else {
             let proof2 = self.tactic2.action(data, context);
-            return ProofNode::new_and(proof1, proof2);
+            return DefaultProofNode::new_and(proof1, proof2);
         }
     }
 
@@ -227,7 +227,7 @@ where
     A1: Tactic<I, C>,
     A2: Tactic<I, C>,
 {
-    fn action(&mut self, data: &I, context: &C) -> ProofNode {
+    fn action(&mut self, data: &I, context: &C) -> DefaultProofNode {
         if self.tactic1.precondition(data, context) {
             let mut proof1 = self.tactic1.action(data, context);
             let outcome = proof1.eval();
@@ -235,7 +235,7 @@ where
                 return proof1;
             } else {
                 let proof2 = self.tactic2.action(data, context);
-                return ProofNode::new_or(proof1, proof2);
+                return DefaultProofNode::new_or(proof1, proof2);
             }
         } else {
             self.tactic2.action(data, context)
@@ -281,16 +281,16 @@ where
     A: Tactic<O, C>,
     T: Tactic<I, C>,
 {
-    fn action(&mut self, data_in: &I, context: &C) -> ProofNode {
+    fn action(&mut self, data_in: &I, context: &C) -> DefaultProofNode {
         if let Some(iter) = self.enum_tactic.get_enumerator(data_in).iter(context) {
-            let mut proof = ProofNode::new_all(self.enum_tactic.msg(&data_in));
+            let mut proof = DefaultProofNode::new_all(self.enum_tactic.msg(&data_in));
             for d in iter {
                 let res = if !self.item_tactic.precondition(&d, context) {
                     false
                 } else {
                     let item_msg = self.enum_tactic.item_msg(&d);
                     let mut proof_item = self.item_tactic.action(&d, context);
-                    proof_item = ProofNode::new_info(item_msg, proof_item);
+                    proof_item = DefaultProofNode::new_info(item_msg, proof_item);
                     let outcome = proof_item.eval();
                     proof.add_child(proof_item);
                     outcome.success()
@@ -351,8 +351,8 @@ where
     E: EnumeratorTactic<I, O, C>,
     A: Tactic<O, C>,
 {
-    fn action(&mut self, data_in: &I, context: &C) -> ProofNode {
-        let mut proof = ProofNode::new_all(self.enum_tactic.msg(&data_in));
+    fn action(&mut self, data_in: &I, context: &C) -> DefaultProofNode {
+        let mut proof = DefaultProofNode::new_all(self.enum_tactic.msg(&data_in));
 
         let enumerator = self.enum_tactic.get_enumerator(data_in);
 
@@ -362,7 +362,7 @@ where
             } else {
                 let item_msg = self.enum_tactic.item_msg(&d);
                 let mut proof_item = self.item_tactic.action(&d, context);
-                proof_item = ProofNode::new_info(item_msg, proof_item);
+                proof_item = DefaultProofNode::new_info(item_msg, proof_item);
                 let outcome = proof_item.eval();
                 proof.add_child(proof_item);
                 outcome.success()
@@ -411,8 +411,8 @@ where
     E: EnumeratorTactic<I, O, C>,
     A: Tactic<O, C>,
 {
-    fn action(&mut self, data_in: &I, context: &C) -> ProofNode {
-        let mut proof = ProofNode::new_any(self.enum_tactic.msg(&data_in));
+    fn action(&mut self, data_in: &I, context: &C) -> DefaultProofNode {
+        let mut proof = DefaultProofNode::new_any(self.enum_tactic.msg(&data_in));
 
         let enumerator = self.enum_tactic.get_enumerator(data_in);
         enumerator.iter(context).any(|d| {
@@ -421,7 +421,7 @@ where
             } else {
                 let item_msg = self.enum_tactic.item_msg(&d);
                 let mut proof_item = self.item_tactic.action(&d, context);
-                proof_item = ProofNode::new_info(item_msg, proof_item);
+                proof_item = DefaultProofNode::new_info(item_msg, proof_item);
                 let outcome = proof_item.eval();
                 proof.add_child(proof_item);
                 outcome.success()

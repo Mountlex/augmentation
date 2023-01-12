@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::{
     comps::Component,
     proof_logic::*,
-    proof_tree::ProofNode,
+    proof_tree::DefaultProofNode,
     tree::{
         enumerators::{
             cases::CompEnum, contractable_comps::ContractableCompsEnum,
@@ -169,9 +169,9 @@ impl Tactic<TreeCaseInstance, TreeContext> for TacticsExhausted {
         true
     }
 
-    fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> ProofNode {
+    fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> DefaultProofNode {
         self.num_calls += 1;
-        ProofNode::new_leaf("Tactics exhausted!".into(), false)
+        DefaultProofNode::new_leaf("Tactics exhausted!".into(), false)
     }
 }
 
@@ -197,7 +197,7 @@ impl Tactic<TreeCaseInstance, TreeContext> for CoreTriangle {
         true
     }
 
-    fn action(&mut self, data: &TreeCaseInstance, _context: &TreeContext) -> ProofNode {
+    fn action(&mut self, data: &TreeCaseInstance, _context: &TreeContext) -> DefaultProofNode {
         self.num_calls += 1;
         let res = if data.comps.len() == 2 {
             data.comps.iter().any(|c| c.is_c3()) && data.comps.iter().any(|c| c.is_large())
@@ -206,9 +206,9 @@ impl Tactic<TreeCaseInstance, TreeContext> for CoreTriangle {
         };
 
         if res {
-            ProofNode::new_leaf("Core triangle configuration!".into(), true)
+            DefaultProofNode::new_leaf("Core triangle configuration!".into(), true)
         } else {
-            ProofNode::new_leaf("No core triangle configuration!".into(), false)
+            DefaultProofNode::new_leaf("No core triangle configuration!".into(), false)
         }
     }
 }
@@ -237,9 +237,9 @@ impl Tactic<TreeCaseInstance, TreeContext> for ExternalProofs {
             && data.comps.iter().any(|c| c.is_complex())
     }
 
-    fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> ProofNode {
+    fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> DefaultProofNode {
         self.num_calls += 1;
-        ProofNode::new_leaf("Complex - C4 instance!".into(), true)
+        DefaultProofNode::new_leaf("Complex - C4 instance!".into(), true)
     }
 }
 
@@ -267,9 +267,9 @@ impl Tactic<TreeCaseInstance, TreeContext> for CountTactic {
         true
     }
 
-    fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> ProofNode {
+    fn action(&mut self, _data: &TreeCaseInstance, _context: &TreeContext) -> DefaultProofNode {
         self.num_calls += 1;
-        ProofNode::new_leaf(String::new(), false)
+        DefaultProofNode::new_leaf(String::new(), false)
     }
 }
 

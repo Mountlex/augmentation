@@ -2,15 +2,14 @@ use itertools::Itertools;
 
 use crate::{
     comps::CompType,
+    path::PathProofNode,
     path::{
-        proof::Instance, utils::complex_cycle_value_base, NicePairConfig, PathComp,
-        PseudoCycle,
+        proof::Instance, utils::complex_cycle_value_base, NicePairConfig, PathComp, PseudoCycle,
     },
-    proof_tree::ProofNode,
     Credit, CreditInv, Node,
 };
 
-pub fn check_cycle_merge(instance: &Instance) -> ProofNode {
+pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
     let pc = instance.pseudo_cycle().unwrap();
     let path_comps = instance.path_nodes().collect_vec();
     let npc = instance.npc();
@@ -26,12 +25,12 @@ pub fn check_cycle_merge(instance: &Instance) -> ProofNode {
     }
 
     if cycle_value >= Credit::from_integer(2) {
-        ProofNode::new_leaf_success(
+        PathProofNode::new_leaf(
             format!("Merged pseudo cycle with value {}!", cycle_value),
-            cycle_value == Credit::from_integer(2),
+            true,
         )
     } else {
-        ProofNode::new_leaf(
+        PathProofNode::new_leaf(
             format!(
                 "Failed cycle merge with value {}",
                 //data.pseudo_cycle,

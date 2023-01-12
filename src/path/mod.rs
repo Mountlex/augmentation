@@ -4,17 +4,19 @@ mod tactics;
 mod utils;
 
 use core::panic;
-use std::fmt::write;
 use std::{cmp::Ordering, fmt::Display};
 
 use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 
-use crate::{path::utils::complex_cycle_value_base, Credit, CreditInv, Node};
+use crate::proof_tree::ProofNode;
+use crate::{CreditInv, Node};
 
 use crate::{comps::*, types::Edge};
 
 use self::proof::Instance;
+
+pub type PathProofNode = ProofNode<InstanceProfile>;
 
 #[derive(Clone, Debug)]
 pub struct InstPart {
@@ -104,7 +106,40 @@ pub struct InstanceContext {
     pub comps: Vec<PathNode>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct InstanceProfile {
+    pub comp_types: Vec<CompType>,
+    pub success: bool,
+}
+
+impl InstanceProfile {
+    pub fn includes(&self, other: &InstanceProfile) -> bool {
+        other.comp_types.len() < self.comp_types.len()
+            && self
+                .comp_types
+                .iter()
+                .zip(other.comp_types.iter())
+                .filter(|(t1, t2)| t1 != t2)
+                .count()
+                == 0
+    }
+}
+
+impl Display for InstanceProfile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.comp_types.iter().join(" -- "))
+    }
+}
+
 impl Instance {
+    pub fn get_profile(&self, success: bool) -> InstanceProfile {
+        let comps = self.path_nodes().map(|n| n.comp.comp_type()).collect_vec();
+        InstanceProfile {
+            comp_types: comps,
+            success,
+        }
+    }
+
     fn path_nodes<'a>(&'a self) -> impl Iterator<Item = &'a PathComp> {
         self.inst_parts().flat_map(|part| part.path_nodes.iter())
     }
@@ -249,7 +284,7 @@ impl Display for PseudoCycle {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CycleComp {
     PathComp(Pidx),
     Rem,
@@ -290,20 +325,28 @@ impl Display for PathComp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let used = if self.used { ", used" } else { "" };
         match (self.in_node, self.out_node) {
-            (None, None) => write!(f, "[{}, idx={}{}]", self.comp.short_name(), self.path_idx, used),
+            (None, None) => write!(
+                f,
+                "[{}, idx={}{}]",
+                self.comp.short_name(),
+                self.path_idx,
+                used
+            ),
             (None, Some(out)) => write!(
                 f,
                 "[{}, out={}, idx={}{}]",
                 self.comp.short_name(),
                 out,
-                self.path_idx, used
+                self.path_idx,
+                used
             ),
             (Some(in_n), None) => write!(
                 f,
                 "[{}, in={}, idx={}{}]",
                 self.comp.short_name(),
                 in_n,
-                self.path_idx, used
+                self.path_idx,
+                used
             ),
             (Some(in_n), Some(out_n)) => write!(
                 f,
@@ -311,7 +354,8 @@ impl Display for PathComp {
                 self.comp.short_name(),
                 in_n,
                 out_n,
-                self.path_idx, used
+                self.path_idx,
+                used
             ),
         }
     }
@@ -331,7 +375,6 @@ impl Display for MatchingEdgeId {
         write!(f, "NonRem({})", self.0)
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct MatchingEdge {
@@ -394,7 +437,7 @@ impl NicePairConfig {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Hash)]
 pub enum Pidx {
     Last,
     Prelast,

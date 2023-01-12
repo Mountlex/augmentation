@@ -6,7 +6,7 @@ use crate::{
     comps::{edges_of_type, EdgeType},
     path::Pidx,
     proof_logic::{Statistics, Tactic},
-    proof_tree::ProofNode,
+    proof_tree::DefaultProofNode,
     tree::{utils::get_merge_graph, TreeCaseInstance, TreeContext},
     types::Edge,
     Credit, CreditInv, Graph, Node,
@@ -35,7 +35,7 @@ impl Statistics for DirectMerge {
 }
 
 impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
-    fn action(&mut self, data: &TreeCaseInstance, context: &TreeContext) -> ProofNode {
+    fn action(&mut self, data: &TreeCaseInstance, context: &TreeContext) -> DefaultProofNode {
         self.num_calls += 1;
 
         if data
@@ -43,7 +43,7 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
             .windows(2)
             .any(|w| w[0].is_large() && w[1].is_large())
         {
-            return ProofNode::new_leaf("Direct merge between two Large".into(), true);
+            return DefaultProofNode::new_leaf("Direct merge between two Large".into(), true);
         }
 
         let graph = get_merge_graph(&data.comps, &data.edges);
@@ -98,7 +98,7 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
         match result {
             MergeResult::Feasible2EC(merge) => {
                 self.num_proofs += 1;
-                return ProofNode::new_leaf(
+                return DefaultProofNode::new_leaf(
                     format!(
                         "Direct merge to 2EC possible [bought = {}, sold = {}, new = {}]",
                         merge.bought_edges.iter().join(", "),
@@ -110,7 +110,7 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
             }
             MergeResult::FeasibleComplex(merge) => {
                 self.num_proofs += 1;
-                return ProofNode::new_leaf(
+                return DefaultProofNode::new_leaf(
                     format!(
                         "Direct merge to complex possible [bought = {}, sold = {}, new = {}]",
                         merge.bought_edges.iter().join(", "),
@@ -121,7 +121,7 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
                 );
             }
             MergeResult::Impossible => {
-                return ProofNode::new_leaf(
+                return DefaultProofNode::new_leaf(
                     format!(
                         "Direct merge impossible [available credits: {}]",
                         total_component_credits

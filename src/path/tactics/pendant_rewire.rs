@@ -1,9 +1,9 @@
 use crate::{
+    path::PathProofNode,
     path::{proof::Instance, Pidx},
-    proof_tree::ProofNode,
 };
 
-pub fn check_pendant_node(instance: &Instance) -> ProofNode {
+pub fn check_pendant_node(instance: &Instance) -> PathProofNode {
     let all_edges = instance.all_edges();
     let mut outside = instance.out_edges();
     let mut path_comps = instance.path_nodes();
@@ -28,8 +28,8 @@ pub fn check_pendant_node(instance: &Instance) -> ProofNode {
     let d = rem_edges.iter().all(|e| e.source_idx != Pidx::Last);
 
     if a && b && c && d {
-        return ProofNode::new_leaf(format!("Rewire pendant node!",), true);
+        return PathProofNode::new_leaf(format!("Rewire pendant node!",), true);
     } else {
-        return ProofNode::new_leaf(format!("No pendant node!",), false);
+        return PathProofNode::new_leaf(format!("No pendant node!",), false);
     }
 }

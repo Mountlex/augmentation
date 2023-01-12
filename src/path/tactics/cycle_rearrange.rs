@@ -2,12 +2,12 @@ use itertools::Itertools;
 
 use crate::{
     comps::Component,
+    path::PathProofNode,
     path::{proof::Instance, NicePairConfig, PathComp, Pidx},
-    proof_tree::ProofNode,
     Node,
 };
 
-pub fn check_path_rearrangement(instance: &Instance) -> ProofNode {
+pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
     let rearrangement = instance.rearrangement().unwrap();
 
     let path_comps = instance.path_nodes().cloned().collect_vec();
@@ -31,7 +31,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> ProofNode {
 
         // Reduce C3 to anything except C3
         if old_last_comp.is_c3() && !new_last_comp.is_c3() {
-            return ProofNode::new_leaf(
+            return PathProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),
                 true,
             );
@@ -39,7 +39,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> ProofNode {
 
         // Reduce C6 to anything except C3 and C6
         if old_last_comp.is_c6() && !new_last_comp.is_c3() && !new_last_comp.is_c6() {
-            return ProofNode::new_leaf(
+            return PathProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),
                 true,
             );
@@ -51,7 +51,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> ProofNode {
             && !new_last_comp.is_c6()
             && !new_last_comp.is_c7()
         {
-            return ProofNode::new_leaf(
+            return PathProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),
                 true,
             );
@@ -64,7 +64,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> ProofNode {
             && !new_last_comp.is_c6()
             && !new_last_comp.is_c7()
         {
-            return ProofNode::new_leaf(
+            return PathProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),
                 true,
             );
@@ -72,7 +72,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> ProofNode {
 
         // Reduce C4 to C5
         if old_last_comp.is_c4() && new_last_comp.is_c5() {
-            return ProofNode::new_leaf(
+            return PathProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),
                 true,
             );
@@ -80,13 +80,13 @@ pub fn check_path_rearrangement(instance: &Instance) -> ProofNode {
 
         // Reduce anything that is not complex to complex
         if !old_last_comp.is_complex() && new_last_comp.is_complex() {
-            return ProofNode::new_leaf(
+            return PathProofNode::new_leaf(
                 format!("Rearrange cycle: now ends with {}!", new_last_comp),
                 true,
             );
         }
 
-        return ProofNode::new_leaf(
+        return PathProofNode::new_leaf(
             format!(
                 "No feasible reduction (old_last = {}, new_last = {}",
                 old_last_comp, new_last_comp
@@ -101,7 +101,7 @@ pub fn check_fixed_extension_feasible(
     path_comps: &Vec<PathComp>,
     npc: &NicePairConfig,
     prelast_is_prelast: bool,
-) -> ProofNode {
+) -> PathProofNode {
     // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]
 
     // check for inner zoomed nodes of extension that they fullfil nice path properties
@@ -117,7 +117,7 @@ pub fn check_fixed_extension_feasible(
             comp.used,
         );
         if !valid_in_out {
-            return ProofNode::new_leaf(
+            return PathProofNode::new_leaf(
                 format!("New path does not fulfill nice path properties!"),
                 false,
             )
@@ -135,7 +135,7 @@ pub fn check_fixed_extension_feasible(
         hit_comp.used,
     );
 
-    ProofNode::new_leaf("Feasible path".into(), true)
+    PathProofNode::new_leaf("Feasible path".into(), true)
 }
 
 pub fn valid_in_out_npc(

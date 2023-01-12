@@ -3,20 +3,14 @@ use std::fmt::Write;
 use itertools::Itertools;
 
 use crate::{
-    path::{
-        enumerators::{
-            pseudo_cycles::product_of_first
-        },
-        proof::Instance,
-        Pidx,
-    },
-    proof_tree::ProofNode,
+    path::PathProofNode,
+    path::{enumerators::pseudo_cycles::product_of_first, proof::Instance, Pidx},
     Node,
 };
 
 use super::cycle_rearrange::{check_fixed_extension_feasible, valid_in_out_npc};
 
-pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
+pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
     let all_outside = instance.out_edges().collect_vec();
     let all_edges = instance.all_edges();
     let all_comps = instance.path_nodes().cloned().collect_vec();
@@ -46,7 +40,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
                     check_fixed_extension_feasible(&extension, &all_comps, &npc, false);
                 feasible.eval();
                 if feasible.success() {
-                    return ProofNode::new_leaf(
+                    return PathProofNode::new_leaf(
                         format!(
                             "Longer nice path found via outside edge ({}) and cycle rearrangement!",
                             outside_hit
@@ -54,13 +48,14 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
                         true,
                     );
                 } else {
-                    msg.write_str(&format!("Extension is not feasible.")).unwrap();
+                    msg.write_str(&format!("Extension is not feasible."))
+                        .unwrap();
                 }
             } else {
-                msg.write_str(&format!("Rearr: {} is not valid out.", outside_hit)).unwrap();
+                msg.write_str(&format!("Rearr: {} is not valid out.", outside_hit))
+                    .unwrap();
             }
         }
-       
     }
 
     let last_comp = all_comps.first().unwrap();
@@ -107,7 +102,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
                         check_fixed_extension_feasible(&extension, &all_comps, &npc, false);
                     feasible.eval();
                     if feasible.success() {
-                        return ProofNode::new_leaf(
+                        return PathProofNode::new_leaf(
                             format!(
                             "Longer nice path found via outside edge ({}) and path rearrangement!",
                             outside_hit
@@ -116,7 +111,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
                         );
                     }
                 } else {
-                    return ProofNode::new_leaf(
+                    return PathProofNode::new_leaf(
                         format!("Longer nice path found via outside edge ({})!", outside_hit),
                         true,
                     );
@@ -125,8 +120,11 @@ pub fn check_longer_nice_path(instance: &Instance) -> ProofNode {
         }
     }
 
-    return ProofNode::new_leaf(
-        format!("No outside matching hit does is a valid out edge for the last node: {}!", msg),
+    return PathProofNode::new_leaf(
+        format!(
+            "No outside matching hit does is a valid out edge for the last node: {}!",
+            msg
+        ),
         false,
     );
 }

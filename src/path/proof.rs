@@ -5,7 +5,7 @@ use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::path::{PathComp, Pidx};
-use crate::{comps::Component, proof_tree::ProofNode, CreditInv};
+use crate::{comps::Component, path::PathProofNode, CreditInv};
 
 use super::enumerators::edges::edge_enumerator;
 use super::enumerators::nice_pairs::nice_pairs_enumerator;
@@ -99,7 +99,7 @@ impl Quantor {
         }
     }
 
-    fn prove(&self, stack: &mut Instance) -> ProofNode {
+    fn prove(&self, stack: &mut Instance) -> PathProofNode {
         let mut enum_msg = String::new();
         let (cases, otherwise) = match self {
             Quantor::All(e, _) => (Some(e.get_iter(stack)), None),
@@ -116,17 +116,22 @@ impl Quantor {
 
         if let Some(cases) = cases {
             let mut proof = match self {
-                Quantor::All(e, _) => ProofNode::new_all(e.msg().to_string()),
-                Quantor::AllOpt(e, _, _) => ProofNode::new_all(e.msg().to_string()),
-                Quantor::Any(e, _) => ProofNode::new_any(e.msg().to_string()),
+                Quantor::All(e, _) => PathProofNode::new_all(e.msg().to_string()),
+                Quantor::AllOpt(e, _, _) => PathProofNode::new_all(e.msg().to_string()),
+                Quantor::Any(e, _) => PathProofNode::new_any(e.msg().to_string()),
             };
 
             for instance in cases {
                 let item_msg = format!("{} {}", instance, enum_msg);
                 stack.push(instance);
                 let mut proof_item = self.formula().prove(stack);
-                proof_item = ProofNode::new_info(item_msg, proof_item);
+                proof_item = PathProofNode::new_info(item_msg, proof_item);
                 let outcome = proof_item.eval();
+
+                if let Quantor::All(Enumerator::PathNodes, _) = self {
+                    proof_item.add_payload(stack.get_profile(outcome.success()));
+                }
+
                 proof.add_child(proof_item);
                 let res = outcome.success();
                 stack.pop();
@@ -143,6 +148,7 @@ impl Quantor {
             }
 
             proof.eval();
+
             proof
         } else {
             otherwise.unwrap().prove(stack)
@@ -228,8 +234,8 @@ enum Tactic {
 }
 
 impl Tactic {
-    fn prove(&self, stack: &Instance) -> ProofNode {
-        match self {
+    fn prove(&self, stack: &Instance) -> PathProofNode {
+        let proof = match self {
             Tactic::LongerPath => check_longer_nice_path(stack),
             Tactic::CycleMerge => check_cycle_merge(stack),
             Tactic::LocalMerge => check_local_merge(stack),
@@ -237,7 +243,7 @@ impl Tactic {
             Tactic::Contractable => check_contractability(stack),
             Tactic::Pendant => check_pendant_node(stack),
             Tactic::FiniteInstance => todo!(),
-            Tactic::TacticsExhausted => ProofNode::new_leaf("Tactics exhausted!".into(), false),
+            Tactic::TacticsExhausted => PathProofNode::new_leaf("Tactics exhausted!".into(), false),
             Tactic::Print => {
                 let all_edges = stack.all_edges();
                 let outside = stack.out_edges().collect_vec();
@@ -252,9 +258,10 @@ impl Tactic {
                     rem_edges.iter().join(",")
                 );
 
-                ProofNode::new_leaf(msg, false)
+                PathProofNode::new_leaf(msg, false)
             }
-        }
+        };
+        proof
     }
 }
 
@@ -266,7 +273,7 @@ enum Expression {
 }
 
 impl Expression {
-    fn prove(&self, stack: &mut Instance) -> ProofNode {
+    fn prove(&self, stack: &mut Instance) -> PathProofNode {
         match self {
             Expression::Quantor(q) => q.prove(stack),
             Expression::Tactic(t) => t.prove(stack),
@@ -277,7 +284,7 @@ impl Expression {
                     proof1
                 } else {
                     let proof2 = f2.prove(stack);
-                    ProofNode::new_or(proof1, proof2)
+                    PathProofNode::new_or(proof1, proof2)
                 }
             }
         }
@@ -487,11 +494,10 @@ fn prove_last_node(
     };
 
     let expr = inductive_proof();
-
     let mut proof = expr.prove(&mut instance);
-
     let outcome = proof.eval();
 
+    print_path_statistics(&proof);
     let filename = if outcome.success() {
         println!(
             "✔️ Proved nice path progress ending in {}",
@@ -522,122 +528,25 @@ fn prove_last_node(
     std::fs::write(filename, buf).expect("Unable to write file");
 }
 
-// fn inductive_proof(
-//     comps: Vec<PathNode>,
-//     sc: bool,
-// ) -> impl Tactic<PathEnumeratorInput, PathContext> + Statistics {
-//     induction_start(induction_steps(comps), sc)
-//     //induction_start(TacticsExhausted::new(), sc)
-// }
+fn print_path_statistics(proof: &PathProofNode) {
+    let mut profiles = vec![];
+    proof.get_payloads(&mut profiles);
+    let mut profiles = profiles.into_iter().unique().collect_vec();
 
-// fn induction_start<T>(
-//     induction_steps: T,
-//     sc: bool,
-// ) -> impl Tactic<PathEnumeratorInput, PathContext> + Statistics
-// where
-//     T: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
-// {
-//     all_sc(
-//         sc,
-//         PathEnum, // Done
-//         all(
-//             ExpandLastEnum::new(false), // Done
-//             all(
-//                 MatchingHitEnum, // Done
-//                 all(
-//                     ExpandLastEnum::new(false), // Done
-//                     or3(
-//                         LongerPathTactic::new(false),
-//                         any(
-//                             PseudoCyclesEnum, // Done
-//                             or(
-//                                 CycleMergeTactic::new(),                                 // Done
-//                                 any(PathRearrangementEnum, CycleRearrangeTactic::new()), // Done
-//                             ),
-//                         ),
-//                         all(
-//                             MatchingHitEnum,
-//                             all(
-//                                 ExpandAllEnum, // this also fixes matching edges
-//                                 or(progress(), find_all_matching_edges(induction_steps)),
-//                             ),
-//                         ),
-//                     ),
-//                 ),
-//             ),
-//         ),
-//     )
-// }
+    let p_copy = profiles.clone();
 
-// fn induction_steps(
-//     comps: Vec<PathNode>,
-// ) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone {
-//     single_induction_step(
-//         single_induction_step(
-//             single_induction_step(TacticsExhausted::new(), comps.clone()),
-//             comps.clone(),
-//         ),
-//         comps.clone(),
-//     )
-// }
+    profiles.drain_filter(|p| {
+        p.success
+            && p_copy
+                .iter()
+                .any(|p2| p.comp_types == p2.comp_types && !p2.success)
+    });
+    profiles.drain_filter(|p| !p.success);
 
-// fn single_induction_step<T>(
-//     step: T,
-//     comps: Vec<PathNode>,
-// ) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone
-// where
-//     T: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
-// {
-//     all(
-//         IterCompEnum::new(comps), // Done
-//         //or(
-//             //progress(), // progress without expansion
-//             all(
-//                 ExpandAllEnum,
-//                 or(
-//                     progress(), // progress with expansion
-//                     find_all_matching_edges(step),
-//                 ),
-//             //),
-//         ),
-//     )
-// }
+    let p_copy = profiles.clone();
+    profiles.drain_filter(|p| p_copy.iter().any(|p2| p2.includes(p)));
 
-// fn find_all_matching_edges<T>(
-//     otherwise: T,
-// ) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone
-// where
-//     T: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
-// {
-//     find_matching_edge(
-//         find_matching_edge(
-//         find_matching_edge(
-//         find_matching_edge(
-//             find_matching_edge(
-//                 find_matching_edge(otherwise.clone(), otherwise.clone()),
-//                 otherwise.clone(),
-//             ),
-//             otherwise.clone(),
-//             ),
-//             otherwise.clone(),
-//             ),
-//             otherwise.clone(),
-//         ),
-//         otherwise.clone(),
-//     )
-// }
-
-// fn find_matching_edge<T1, T2>(
-//     enumerator: T1,
-//     otherwise: T2,
-// ) -> impl Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone
-// where
-//     T1: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
-//     T2: Tactic<AugmentedPathInstance, PathContext> + Statistics + Clone,
-// {
-//     all_opt(
-//         FindMatchingEdgesEnum::new(false),
-//         otherwise,
-//         all(ExpandAllEnum, or(progress(), enumerator)),
-//     )
-// }
+    for profile in profiles {
+        println!("{}", profile);
+    }
+}

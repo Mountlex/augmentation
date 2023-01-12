@@ -116,7 +116,8 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                                 .filter(|e| e.source_idx == source_idx)
                                 .collect_vec();
 
-                            let non_rem_edges = hits_node.iter().map(|e| e.id.clone()).collect_vec();
+                            let non_rem_edges =
+                                hits_node.iter().map(|e| e.id.clone()).collect_vec();
 
                             iter = Box::new(iter.into_iter().flat_map(move |inst_part| {
                                 let matching_edges = matching_edges.clone();

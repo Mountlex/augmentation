@@ -1,15 +1,15 @@
 use itertools::Itertools;
 
 use crate::{
+    path::PathProofNode,
     path::{proof::Instance, utils::hamiltonian_paths, Pidx},
-    proof_tree::ProofNode,
 };
 
-pub fn check_contractability(instance: &Instance) -> ProofNode {
+pub fn check_contractability(instance: &Instance) -> PathProofNode {
     return check_for_comp(instance, Pidx::Last);
 }
 
-fn check_for_comp(instance: &Instance, idx: Pidx) -> ProofNode {
+fn check_for_comp(instance: &Instance, idx: Pidx) -> PathProofNode {
     let all_edges = instance.all_edges();
     let outside = instance.out_edges().collect_vec();
     let path_comps = instance.path_nodes().collect_vec();
@@ -19,7 +19,7 @@ fn check_for_comp(instance: &Instance, idx: Pidx) -> ProofNode {
     let comp = &path_comps[idx.raw()].comp;
 
     if comp.is_complex() || comp.is_large() || comp.is_c3() || comp.is_c4() {
-        return ProofNode::new_leaf(
+        return PathProofNode::new_leaf(
             "Contractability check not applied: component is C3, Large or Complex".into(),
             false,
         )
@@ -70,7 +70,7 @@ fn check_for_comp(instance: &Instance, idx: Pidx) -> ProofNode {
         });
 
         if chord_implies_absent_np {
-            return ProofNode::new_leaf(
+            return PathProofNode::new_leaf(
                 format!(
                     "Component {} is contractable and chords imply absent nice pairs!",
                     comp
@@ -79,13 +79,13 @@ fn check_for_comp(instance: &Instance, idx: Pidx) -> ProofNode {
             )
             .into();
         } else {
-            return ProofNode::new_leaf(
+            return PathProofNode::new_leaf(
                     format!("Component {} is contractable, but there might be inner chords which don't contradict nice pairs!", comp),
                     false,
                 ).into();
         }
     } else {
-        return ProofNode::new_leaf(format!("Component {} is not contractable!", comp), false)
+        return PathProofNode::new_leaf(format!("Component {} is not contractable!", comp), false)
             .into();
     }
 }
