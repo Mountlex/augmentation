@@ -2,6 +2,7 @@ mod enumerators;
 mod proof;
 mod tactics;
 mod utils;
+mod util;
 
 use core::panic;
 use std::{cmp::Ordering, fmt::Display};
