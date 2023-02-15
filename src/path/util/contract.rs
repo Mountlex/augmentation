@@ -7,7 +7,7 @@ use crate::{Node, path::proof::Instance, types::Edge};
 
 
 
-pub fn is_contractible(vertices: Vec<Node>, ham_cycle: Vec<Edge>,  instance: &Instance) -> bool {
+pub fn is_contractible(vertices: Vec<Node>,  instance: &Instance) -> bool {
 
     let outside_edges = instance.out_edges().collect_vec();
     let rem_edge = instance.rem_edges();
@@ -76,7 +76,7 @@ pub fn is_contractible(vertices: Vec<Node>, ham_cycle: Vec<Edge>,  instance: &In
         }
     }
 
-    let alg = ham_cycle.len();
+    let alg = vertices.len();
    
     return (alg as f64) / (lb as f64) <= 1.25
 

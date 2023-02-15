@@ -6,6 +6,8 @@ use crate::{
     Node,
 };
 
+use super::pseudo_cycles::pseudo_cycles_of_length;
+
 pub fn edge_enumerator(
     instance: &mut Instance,
 ) -> Option<(Box<dyn Iterator<Item = InstPart> + '_>, String)> {
@@ -76,6 +78,27 @@ pub fn edge_enumerator(
         if let Some(iter) = handle_contractable_components(&path_comp, instance) {
             let iter = to_inst_parts(iter, nodes_to_pidx, false, instance);
             return Some((iter, format!("Contractablility of {}", idx)));
+        }
+    }
+
+
+    // Prio 5: Larger contractable comps
+    let all_edges = instance.all_edges();
+    let relevant_comps = path_comps.iter().filter(|c| c.comp.is_c3() ||  c.comp.is_c4() ||  c.comp.is_c5() ||  c.comp.is_c6()).cloned().cloned().collect_vec();
+    for i in 3..=3 {
+        for pc in pseudo_cycles_of_length(relevant_comps.clone(), all_edges.clone(), vec![], i, false) {
+            let mut vertices = vec![];
+            for (n1, c, n2) in pc.cycle {
+                let idx = c.to_idx();
+                let comp = relevant_comps.iter().find(|comp| comp.path_idx == *idx).unwrap();
+                if n1 == n2 {
+                    vertices.push(n1);
+                } else if comp.comp.is_adjacent(&n1, &n2) {
+                    vertices.append(&mut comp.comp.nodes().into_iter().cloned().collect_vec())
+                } else {
+                    // enumerate both
+                }
+            }
         }
     }
 

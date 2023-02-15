@@ -29,6 +29,7 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
             all_edges.clone(),
             all_rem_edges.clone(),
             i,
+            true
         );
         iter = Box::new(iter.chain(fixed_edge_iter))
     }
@@ -137,17 +138,29 @@ fn edges_between(
     }
 }
 
-fn pseudo_cycles_of_length(
+pub fn pseudo_cycles_of_length(
     path_comps: Vec<PathComp>,
     all_edges: Vec<Edge>,
     all_rem_edges: Vec<MatchingEdge>,
     length: usize,
+    with_rem: bool,
 ) -> impl Iterator<Item = PseudoCycle> {
-    let path_len = path_comps.len();
-    Pidx::range(path_len)
+    let indices = path_comps.iter().map(|c| c.path_idx).collect_vec();
+    
+    let comps = 
+    if with_rem {
+        indices
         .into_iter()
         .map(|idx| CycleComp::PathComp(idx))
-        .chain(std::iter::once(CycleComp::Rem))
+        .chain(std::iter::once(CycleComp::Rem)).collect_vec()
+    } else {
+        indices
+        .into_iter()
+        .map(|idx| CycleComp::PathComp(idx))
+        .collect_vec()
+    };
+
+    comps.into_iter()
         .permutations(length)
         .filter(|perm| perm.iter().min() == perm.first())
         .flat_map(move |perm| {
