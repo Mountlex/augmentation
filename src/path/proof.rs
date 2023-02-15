@@ -358,12 +358,9 @@ fn find_all_edges(otherwise: Expression) -> Expression {
     find_edge(
         find_edge(
             find_edge(
-                find_edge(
                     find_edge(
                         find_edge(otherwise.clone(), otherwise.clone()),
                         otherwise.clone(),
-                    ),
-                    otherwise.clone(),
                 ),
                 otherwise.clone(),
             ),

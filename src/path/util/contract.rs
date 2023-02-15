@@ -7,7 +7,7 @@ use crate::{Node, path::proof::Instance, types::Edge};
 
 
 
-pub fn is_contractible(vertices: Vec<Node>,  instance: &Instance) -> bool {
+pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> bool {
 
     let outside_edges = instance.out_edges().collect_vec();
     let rem_edge = instance.rem_edges();
@@ -20,7 +20,7 @@ pub fn is_contractible(vertices: Vec<Node>,  instance: &Instance) -> bool {
 
     // INIT
 
-    for node in &vertices {
+    for node in vertices {
         if outside_edges.contains(&node) {
             labels.insert(*node, 0);
         } else if rem_edge.iter().any(|e| e.source == *node) {

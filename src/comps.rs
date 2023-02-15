@@ -144,6 +144,33 @@ impl Component {
         matches!(self, Component::C3(_))
     }
 
+    pub fn paths_between(&self, v: &Node, u: &Node) -> (Vec<Node>, Vec<Node>) {
+        let nodes = self.nodes().to_owned();
+
+        let mut path1 = vec![v.clone()];
+        let mut iter = nodes.iter().cycle();
+        while Some(v) != iter.next() {}
+        while let Some(node) = iter.next() {
+            path1.push(*node);
+            if node == u {
+                break;
+            }
+        }
+
+        let mut path2 = vec![u.clone()];
+        let mut iter = nodes.iter().cycle();
+        while Some(u) != iter.next() {}
+        while let Some(node) = iter.next() {
+            path1.push(*node);
+            if node == v {
+                break;
+            }
+        }
+
+
+        (path1, path2)
+    }
+
     pub fn symmetric_combs(&self) -> Vec<[Node; 2]> {
         match self {
             // must be consistent with the fact that fixed node is n[0]!!!

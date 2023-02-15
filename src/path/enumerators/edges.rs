@@ -1,7 +1,10 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{proof::Instance, utils::hamiltonian_paths, InstPart, MatchingEdge, PathComp, Pidx},
+    path::{
+        proof::Instance, util::contract::is_contractible, utils::hamiltonian_paths, InstPart,
+        MatchingEdge, PathComp, Pidx,
+    },
     types::Edge,
     Node,
 };
@@ -81,22 +84,55 @@ pub fn edge_enumerator(
         }
     }
 
-
     // Prio 5: Larger contractable comps
     let all_edges = instance.all_edges();
-    let relevant_comps = path_comps.iter().filter(|c| c.comp.is_c3() ||  c.comp.is_c4() ||  c.comp.is_c5() ||  c.comp.is_c6()).cloned().cloned().collect_vec();
+    let relevant_comps = path_comps
+        .iter()
+        .filter(|c| c.comp.is_c3() || c.comp.is_c4() || c.comp.is_c5() || c.comp.is_c6())
+        .cloned()
+        .cloned()
+        .collect_vec();
     for i in 3..=3 {
-        for pc in pseudo_cycles_of_length(relevant_comps.clone(), all_edges.clone(), vec![], i, false) {
-            let mut vertices = vec![];
+        for pc in
+            pseudo_cycles_of_length(relevant_comps.clone(), all_edges.clone(), vec![], i, false)
+        {
+            let mut vertices_sets = vec![vec![]];
             for (n1, c, n2) in pc.cycle {
                 let idx = c.to_idx();
-                let comp = relevant_comps.iter().find(|comp| comp.path_idx == *idx).unwrap();
+                let comp = relevant_comps
+                    .iter()
+                    .find(|comp| comp.path_idx == *idx)
+                    .unwrap();
                 if n1 == n2 {
-                    vertices.push(n1);
+                    vertices_sets.iter_mut().for_each(|set| set.push(n1));
                 } else if comp.comp.is_adjacent(&n1, &n2) {
-                    vertices.append(&mut comp.comp.nodes().into_iter().cloned().collect_vec())
+                    vertices_sets.iter_mut().for_each(|set| {
+                        set.append(&mut comp.comp.nodes().into_iter().cloned().collect_vec())
+                    });
                 } else {
-                    // enumerate both
+                    let (p1, p2) = comp.comp.paths_between(&n1, &n2);
+                    vertices_sets = vertices_sets
+                        .into_iter()
+                        .flat_map(|set| {
+                            vec![
+                                vec![set.clone(), p1.clone()].concat(),
+                                vec![set, p2.clone()].concat(),
+                            ]
+                        })
+                        .collect_vec();
+                }
+            }
+
+            for set in vertices_sets {
+                if is_contractible(&set, &instance) {
+                    let all_nodes = instance
+                        .path_nodes()
+                        .flat_map(|c| c.comp.matching_nodes())
+                        .cloned()
+                        .collect_vec();
+                    let iter = edge_iterator(set.clone(), all_nodes).unwrap();
+                    let iter = to_inst_parts(iter, nodes_to_pidx, false, instance);
+                    return Some((iter, format!("Contractablility of large set {:?}", set)));
                 }
             }
         }
@@ -124,12 +160,18 @@ fn to_inst_parts(
                 });
                 //instance.matching_edge_id_counter.inc();
             }
-            Hit::Node(hit_node) => part.edges.push(Edge::new(
-                node,
-                nodes_to_pidx[node.get_id() as usize].unwrap().clone(),
-                hit_node,
-                nodes_to_pidx[hit_node.get_id() as usize].unwrap().clone(),
-            )),
+            Hit::Node(hit_node) => {
+                if nodes_to_pidx[node.get_id() as usize].unwrap()
+                    != nodes_to_pidx[hit_node.get_id() as usize].unwrap()
+                {
+                    part.edges.push(Edge::new(
+                        node,
+                        nodes_to_pidx[node.get_id() as usize].unwrap().clone(),
+                        hit_node,
+                        nodes_to_pidx[hit_node.get_id() as usize].unwrap().clone(),
+                    ))
+                }
+            }
         }
         part
     }))
