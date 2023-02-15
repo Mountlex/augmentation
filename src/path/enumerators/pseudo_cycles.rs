@@ -159,26 +159,26 @@ fn pseudo_cycles_of_length(
                 .map(|e| edges_between(&all_edges, &all_rem_edges, &e[0], &e[1]))
                 .collect_vec();
 
-            if path_comps.len() == 5
-                && path_comps[0].comp.is_c3()
-                && path_comps[1].comp.is_c3()
-                && path_comps[2].comp.is_c4()
-                && path_comps[3].comp.is_large()
-                && path_comps[4].comp.is_large()
-                && perm.len() == 4
-                && all_edges.len() == 8
-                && all_rem_edges.len() == 1
-                && perm
-                    == vec![
-                        CycleComp::PathComp(0.into()),
-                        CycleComp::PathComp(1.into()),
-                        CycleComp::PathComp(2.into()),
-                        CycleComp::PathComp(3.into()),
-                    ]
-            {
-                println!("perm {:?}", perm);
-                println!("cons_edges {:?}", cons_edges);
-            }
+            // if path_comps.len() == 5
+            //     && path_comps[0].comp.is_c3()
+            //     && path_comps[1].comp.is_c3()
+            //     && path_comps[2].comp.is_c4()
+            //     && path_comps[3].comp.is_large()
+            //     && path_comps[4].comp.is_large()
+            //     && perm.len() == 4
+            //     && all_edges.len() == 8
+            //     && all_rem_edges.len() == 1
+            //     && perm
+            //         == vec![
+            //             CycleComp::PathComp(0.into()),
+            //             CycleComp::PathComp(1.into()),
+            //             CycleComp::PathComp(2.into()),
+            //             CycleComp::PathComp(3.into()),
+            //         ]
+            // {
+            //     println!("perm {:?}", perm);
+            //     println!("cons_edges {:?}", cons_edges);
+            // }
 
             assert_eq!(length, cons_edges.len());
 

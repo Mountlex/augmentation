@@ -85,7 +85,7 @@ impl Instance {
 
 #[derive(Debug, Clone)]
 enum Quantor {
-    All(Enumerator, Box<Expression>),
+    All(Enumerator, Box<Expression>, bool),
     AllOpt(OptEnumerator, Box<Expression>, Box<Expression>),
     Any(Enumerator, Box<Expression>),
 }
@@ -93,7 +93,7 @@ enum Quantor {
 impl Quantor {
     fn formula(&self) -> &Box<Expression> {
         match self {
-            Quantor::All(_, t) => t,
+            Quantor::All(_, t, _) => t,
             Quantor::AllOpt(_, t, _) => t,
             Quantor::Any(_, t) => t,
         }
@@ -101,8 +101,8 @@ impl Quantor {
 
     fn prove(&self, stack: &mut Instance) -> PathProofNode {
         let mut enum_msg = String::new();
-        let (cases, otherwise) = match self {
-            Quantor::All(e, _) => (Some(e.get_iter(stack)), None),
+        let (cases, otherwise ) = match self {
+            Quantor::All(e, _, sc) => (Some(e.get_iter(stack)), None),
             Quantor::Any(e, _) => (Some(e.get_iter(stack)), None),
             Quantor::AllOpt(e, _, otherwise) => {
                 if let Some((cases, msg)) = e.try_iter(stack) {
@@ -116,7 +116,7 @@ impl Quantor {
 
         if let Some(cases) = cases {
             let mut proof = match self {
-                Quantor::All(e, _) => PathProofNode::new_all(e.msg().to_string()),
+                Quantor::All(e, _, _) => PathProofNode::new_all(e.msg().to_string()),
                 Quantor::AllOpt(e, _, _) => PathProofNode::new_all(e.msg().to_string()),
                 Quantor::Any(e, _) => PathProofNode::new_any(e.msg().to_string()),
             };
@@ -128,7 +128,7 @@ impl Quantor {
                 proof_item = PathProofNode::new_info(item_msg, proof_item);
                 let outcome = proof_item.eval();
 
-                if let Quantor::All(Enumerator::PathNodes, _) = self {
+                if let Quantor::All(Enumerator::PathNodes, _, _) = self {
                     proof_item.add_payload(stack.get_profile(outcome.success()));
                 }
 
@@ -138,7 +138,7 @@ impl Quantor {
 
                 let should_break = match self {
                     Quantor::AllOpt(_, _, _) => !res,
-                    Quantor::All(_, _) => !res,
+                    Quantor::All(_, _, sc) => !res && *sc,
                     Quantor::Any(_, _) => res,
                 };
 
@@ -317,8 +317,12 @@ fn expr(tactic: Tactic) -> Expression {
     Expression::Tactic(tactic)
 }
 
-fn all(enumerator: Enumerator, expr: Expression) -> Expression {
-    Expression::Quantor(Quantor::All(enumerator, Box::new(expr)))
+fn all_sc(enumerator: Enumerator, expr: Expression) -> Expression {
+    Expression::Quantor(Quantor::All(enumerator, Box::new(expr), true))
+}
+
+fn all(enumerator: Enumerator, expr: Expression, sc: bool) -> Expression {
+    Expression::Quantor(Quantor::All(enumerator, Box::new(expr), sc))
 }
 
 fn all_opt(enumerator: OptEnumerator, expr: Expression, otherwise: Expression) -> Expression {
@@ -333,19 +337,20 @@ fn any(enumerator: Enumerator, expr: Expression) -> Expression {
     Expression::Quantor(Quantor::Any(enumerator, Box::new(expr)))
 }
 
-fn inductive_proof() -> Expression {
-    induction_step(induction_step(induction_step(induction_step(
-        induction_step(expr(Tactic::TacticsExhausted)),
-    ))))
+fn inductive_proof(sc: bool) -> Expression {
+    induction_step(induction_step(
+        induction_step(expr(Tactic::TacticsExhausted), sc), sc
+    ), sc)
 }
 
-fn induction_step(step: Expression) -> Expression {
+fn induction_step(step: Expression, sc: bool) -> Expression {
     all(
         Enumerator::PathNodes,
-        all(
+        all_sc(
             Enumerator::NicePairs,
             or3(expr(Tactic::Print), progress(), find_all_edges(step)),
         ),
+        sc
     )
 }
 
@@ -371,7 +376,7 @@ fn find_all_edges(otherwise: Expression) -> Expression {
 fn find_edge(enumerator: Expression, otherwise: Expression) -> Expression {
     all_opt(
         OptEnumerator::Edges,
-        all(Enumerator::NicePairs, or(progress(), enumerator)),
+        all_sc(Enumerator::NicePairs, or(progress(), enumerator)),
         otherwise,
     )
 }
@@ -493,7 +498,7 @@ fn prove_last_node(
         matching_edge_id_counter: MatchingEdgeId(0),
     };
 
-    let expr = inductive_proof();
+    let expr = inductive_proof(sc);
     let mut proof = expr.prove(&mut instance);
     let outcome = proof.eval();
 
