@@ -53,11 +53,14 @@ impl Display for Instance {
         let all_edges = self.all_edges();
         let mut outside = self.out_edges();
         let rem_edges = self.rem_edges();
-        write!(f, "Instance: [{}][{}][{}][{}]",
-                    path_comps.join(", "),
-                    all_edges.iter().join(","),
-                    outside.join(","),
-                    rem_edges.iter().join(","))
+        write!(
+            f,
+            "Instance: [{}][{}][{}][{}]",
+            path_comps.join(", "),
+            all_edges.iter().join(","),
+            outside.join(","),
+            rem_edges.iter().join(",")
+        )
     }
 }
 
@@ -98,9 +101,13 @@ impl Instance {
     }
 
     pub fn component_edges(&self) -> impl Iterator<Item = Edge> + '_ {
-        self.path_nodes().flat_map(|c| c.comp.edges().into_iter().map(|(u,v)| Edge::new(u, c.path_idx, v, c.path_idx)))
+        self.path_nodes().flat_map(|c| {
+            c.comp
+                .edges()
+                .into_iter()
+                .map(|(u, v)| Edge::new(u, c.path_idx, v, c.path_idx))
+        })
     }
-
 }
 
 #[derive(Debug, Clone)]
@@ -248,6 +255,7 @@ enum Tactic {
     Rearrangable,
     Contractable,
     Pendant,
+    ManualCheck,
     FiniteInstance,
     TacticsExhausted,
     Print,
@@ -263,6 +271,17 @@ impl Tactic {
             Tactic::Contractable => check_contractability(stack),
             Tactic::Pendant => check_pendant_node(stack),
             Tactic::FiniteInstance => todo!(),
+            Tactic::ManualCheck => {
+                let nodes = stack.path_nodes().collect_vec();
+                if nodes.len() >= 3
+                    && nodes[0].comp.is_c3()
+                    && nodes[1].comp.is_c3()
+                    && nodes[2].comp.is_c4()
+                {
+                    return PathProofNode::new_leaf("Manual proof for C3-C3-C4.".into(), true);
+                }
+                PathProofNode::new_leaf("No manual proof!".into(), false)
+            }
             Tactic::TacticsExhausted => PathProofNode::new_leaf("Tactics exhausted!".into(), false),
             Tactic::Print => {
                 let all_edges = stack.all_edges();
@@ -369,7 +388,12 @@ fn induction_step(step: Expression, sc: bool) -> Expression {
         Enumerator::PathNodes,
         all_sc(
             Enumerator::NicePairs,
-            or3(expr(Tactic::Print), progress(), find_all_edges(step)),
+            or4(
+                expr(Tactic::Print),
+                expr(Tactic::ManualCheck),
+                progress(),
+                find_all_edges(step),
+            ),
         ),
         sc,
     )
@@ -380,17 +404,17 @@ fn find_all_edges(otherwise: Expression) -> Expression {
         find_edge(
             find_edge(
                 find_edge(
-                find_edge(
-                find_edge(
-                find_edge(
                     find_edge(
-                        find_edge(otherwise.clone(), otherwise.clone()),
-                        otherwise.clone(),
-                    ),
-                        otherwise.clone(),
-                    ),
-                        otherwise.clone(),
-                    ),
+                        find_edge(
+                            find_edge(
+                                find_edge(
+                                    find_edge(otherwise.clone(), otherwise.clone()),
+                                    otherwise.clone(),
+                                ),
+                                otherwise.clone(),
+                            ),
+                            otherwise.clone(),
+                        ),
                         otherwise.clone(),
                     ),
                     otherwise.clone(),
