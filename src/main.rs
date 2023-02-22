@@ -210,11 +210,11 @@ fn prove_path(path: Path) {
             large(),
             //complex_tree(),
             //complex_path(),
-            //c3(),
-            //c4(),
-            //c5(),
-            //c6(),
-            //c7(),
+            c3(),
+            c4(),
+            c5(),
+            c6(),
+            c7(),
         ]
     } else {
         vec![
@@ -230,7 +230,16 @@ fn prove_path(path: Path) {
 
     prove_nice_path_progress(
         comps.clone(),
-        comps,
+        vec![
+            //large(),
+            //complex_tree(),
+            //complex_path(),
+            c3(),
+            //c4(),
+            //c5(),
+            //c6(),
+            //c7(),
+        ],
         &inv,
         path.output_dir,
         path.output_depth,

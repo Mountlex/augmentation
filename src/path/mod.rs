@@ -43,6 +43,17 @@ impl InstPart {
         }
     }
 
+    pub fn is_empty(&self) -> bool {      
+        self.path_nodes.is_empty() &&
+        self.nice_pairs.is_empty() &&
+        self.edges.is_empty() &&
+        self.out_edges.is_empty() &&
+        self.rem_edges.is_empty() &&
+        self.non_rem_edges.is_empty() &&
+        self.connected_nodes.is_empty() 
+        
+    }
+
     pub fn new_path_comp(path_comp: PathComp) -> InstPart {
         InstPart {
             path_nodes: vec![path_comp],

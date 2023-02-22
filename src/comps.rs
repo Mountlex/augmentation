@@ -161,7 +161,7 @@ impl Component {
         let mut iter = nodes.iter().cycle();
         while Some(u) != iter.next() {}
         while let Some(node) = iter.next() {
-            path1.push(*node);
+            path2.push(*node);
             if node == v {
                 break;
             }

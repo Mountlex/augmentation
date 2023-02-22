@@ -7,11 +7,11 @@ use crate::{Node, path::proof::Instance, types::Edge};
 
 
 
-pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> bool {
+pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> Option<Vec<Node>> {
 
     let outside_edges = instance.out_edges().collect_vec();
     let rem_edge = instance.rem_edges();
-    let edges = instance.all_edges();
+    let edges = vec![instance.all_edges(), instance.component_edges().collect_vec()].concat();
 
     let inner_edges = edges.iter().filter(|e| e.between_sets(&vertices, &vertices)).collect_vec();
     let mut labels = FxHashMap::<Node, u8>::default();
@@ -37,6 +37,8 @@ pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> bool {
         }
     }
 
+    let good_verts = labels.iter().filter(|(_, &label)| label > 0).map(|(n,_)| *n).collect_vec();
+
     for edge in inner_edges {
         let (u,v) = edge.to_tuple();
         if labels.get(&u) == Some(&0) || labels.get(&v) == Some(&0) {
@@ -45,6 +47,7 @@ pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> bool {
             good_unused_edges.push(edge);
         }
     }
+    //println!("labels before: {:?}", labels);
 
     let mut lb = 0;
 
@@ -76,9 +79,15 @@ pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> bool {
         }
     }
 
+    
     let alg = vertices.len();
+    //println!("LB={}, ALG={}", lb, alg);
    
-    return (alg as f64) / (lb as f64) <= 1.25
+    if (alg as f64) / (lb as f64) <= 1.25 {
+        return Some(good_verts)
+    } else {
+        return None
+    }
 
 }
 

@@ -5,6 +5,7 @@ use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::path::{PathComp, Pidx};
+use crate::types::Edge;
 use crate::{comps::Component, path::PathProofNode, CreditInv};
 
 use super::enumerators::edges::edge_enumerator;
@@ -46,6 +47,20 @@ impl Display for StackElement {
     }
 }
 
+impl Display for Instance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut path_comps = self.path_nodes();
+        let all_edges = self.all_edges();
+        let mut outside = self.out_edges();
+        let rem_edges = self.rem_edges();
+        write!(f, "Instance: [{}][{}][{}][{}]",
+                    path_comps.join(", "),
+                    all_edges.iter().join(","),
+                    outside.join(","),
+                    rem_edges.iter().join(","))
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Instance {
     stack: Vec<StackElement>,
@@ -81,6 +96,11 @@ impl Instance {
             None
         }
     }
+
+    pub fn component_edges(&self) -> impl Iterator<Item = Edge> + '_ {
+        self.path_nodes().flat_map(|c| c.comp.edges().into_iter().map(|(u,v)| Edge::new(u, c.path_idx, v, c.path_idx)))
+    }
+
 }
 
 #[derive(Debug, Clone)]
@@ -101,7 +121,7 @@ impl Quantor {
 
     fn prove(&self, stack: &mut Instance) -> PathProofNode {
         let mut enum_msg = String::new();
-        let (cases, otherwise ) = match self {
+        let (cases, otherwise) = match self {
             Quantor::All(e, _, sc) => (Some(e.get_iter(stack)), None),
             Quantor::Any(e, _) => (Some(e.get_iter(stack)), None),
             Quantor::AllOpt(e, _, otherwise) => {
@@ -338,9 +358,10 @@ fn any(enumerator: Enumerator, expr: Expression) -> Expression {
 }
 
 fn inductive_proof(sc: bool) -> Expression {
-    induction_step(induction_step(
-        induction_step(expr(Tactic::TacticsExhausted), sc), sc
-    ), sc)
+    induction_step(
+        induction_step(induction_step(expr(Tactic::TacticsExhausted), sc), sc),
+        sc,
+    )
 }
 
 fn induction_step(step: Expression, sc: bool) -> Expression {
@@ -350,7 +371,7 @@ fn induction_step(step: Expression, sc: bool) -> Expression {
             Enumerator::NicePairs,
             or3(expr(Tactic::Print), progress(), find_all_edges(step)),
         ),
-        sc
+        sc,
     )
 }
 
@@ -358,9 +379,21 @@ fn find_all_edges(otherwise: Expression) -> Expression {
     find_edge(
         find_edge(
             find_edge(
+                find_edge(
+                find_edge(
+                find_edge(
+                find_edge(
                     find_edge(
                         find_edge(otherwise.clone(), otherwise.clone()),
                         otherwise.clone(),
+                    ),
+                        otherwise.clone(),
+                    ),
+                        otherwise.clone(),
+                    ),
+                        otherwise.clone(),
+                    ),
+                    otherwise.clone(),
                 ),
                 otherwise.clone(),
             ),

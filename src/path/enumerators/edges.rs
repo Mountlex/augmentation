@@ -93,9 +93,11 @@ pub fn edge_enumerator(
         .cloned()
         .collect_vec();
     for i in 3..=3 {
+       // println!("Instance: {}", instance);
         for pc in
             pseudo_cycles_of_length(relevant_comps.clone(), all_edges.clone(), vec![], i, false)
         {
+          //  println!("{}", pc);
             let mut vertices_sets = vec![vec![]];
             for (n1, c, n2) in pc.cycle {
                 let idx = c.to_idx();
@@ -111,6 +113,7 @@ pub fn edge_enumerator(
                     });
                 } else {
                     let (p1, p2) = comp.comp.paths_between(&n1, &n2);
+                   // println!("set {:?}, p1 {:?}, p2 {:?}", vertices_sets, p1, p2);
                     vertices_sets = vertices_sets
                         .into_iter()
                         .flat_map(|set| {
@@ -123,16 +126,22 @@ pub fn edge_enumerator(
                 }
             }
 
-            for set in vertices_sets {
-                if is_contractible(&set, &instance) {
+            
+            for set in vertices_sets {              
+                if let Some(good_verts) = is_contractible(&set, &instance) {
                     let all_nodes = instance
                         .path_nodes()
                         .flat_map(|c| c.comp.matching_nodes())
+                        .filter(|n| !set.contains(n) ) //|| good_verts.contains(n))
                         .cloned()
                         .collect_vec();
-                    let iter = edge_iterator(set.clone(), all_nodes).unwrap();
-                    let iter = to_inst_parts(iter, nodes_to_pidx, false, instance);
-                    return Some((iter, format!("Contractablility of large set {:?}", set)));
+                    
+                   // println!("contractable set!: {:?}, good: {:?}", set, good_verts);
+
+                    let iter = edge_iterator(good_verts.clone(), all_nodes).unwrap();
+                    let iter = to_inst_parts(iter, nodes_to_pidx, false, instance).collect_vec();
+                    //println!("iter: {}", iter.iter().join(", "));
+                    return Some((Box::new(iter.into_iter()), format!("Contractablility of large set {:?}", set)));
                 }
             }
         }
@@ -147,8 +156,10 @@ fn to_inst_parts(
     matching: bool,
     instance: &Instance,
 ) -> Box<dyn Iterator<Item = InstPart> + '_> {
-    Box::new(iter.map(move |(node, hit)| {
+    let all_edges = instance.all_edges();
+    Box::new(iter.flat_map(move |(node, hit)| {
         let mut part = InstPart::empty();
+    
         match hit {
             Hit::Outside => part.out_edges.push(node),
             Hit::RemPath => {
@@ -162,18 +173,25 @@ fn to_inst_parts(
             }
             Hit::Node(hit_node) => {
                 if nodes_to_pidx[node.get_id() as usize].unwrap()
-                    != nodes_to_pidx[hit_node.get_id() as usize].unwrap()
+                    != nodes_to_pidx[hit_node.get_id() as usize].unwrap() 
                 {
-                    part.edges.push(Edge::new(
+                    let edge = Edge::new(
                         node,
                         nodes_to_pidx[node.get_id() as usize].unwrap().clone(),
                         hit_node,
                         nodes_to_pidx[hit_node.get_id() as usize].unwrap().clone(),
-                    ))
-                }
+                    );
+                    if !all_edges.contains(&edge) {
+                        part.edges.push(edge);
+                    }
+                } 
             }
         }
-        part
+        if part.is_empty() {
+            return None
+        } else {
+            return Some(part)
+        }
     }))
 }
 
