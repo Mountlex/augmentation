@@ -208,8 +208,8 @@ fn prove_path(path: Path) {
     let comps = if inv.c < Credit::new(2, 7) {
         vec![
             large(),
-            //complex_tree(),
-            //complex_path(),
+            complex_tree(),
+            complex_path(),
             c3(),
             c4(),
             c5(),
@@ -230,7 +230,15 @@ fn prove_path(path: Path) {
 
     prove_nice_path_progress(
         comps.clone(),
-        comps,
+        vec![
+            large(),
+            complex_tree(),
+            complex_path(),
+            c3(),
+            c4(),
+            c5(),
+            c6(),
+        ],
         &inv,
         path.output_dir,
         path.output_depth,

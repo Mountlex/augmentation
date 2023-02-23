@@ -289,6 +289,8 @@ impl Tactic {
                 let path_comps = stack.path_nodes().collect_vec();
                 let rem_edges = stack.rem_edges();
 
+            //    println!("{}", stack.get_profile(true));
+
                 let msg = format!(
                     "Instance: [{}][{}][{}][{}]",
                     path_comps.iter().join(", "),

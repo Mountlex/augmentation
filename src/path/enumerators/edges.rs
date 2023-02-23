@@ -84,6 +84,17 @@ pub fn edge_enumerator(
         }
     }
 
+    // let nodes = instance.path_nodes().collect_vec();
+    //             if !(nodes.len() >= 3
+    //                 && nodes[0].comp.is_c3()
+    //                 && nodes[1].comp.is_c3()
+    //                 && nodes[2].comp.is_c4()) || !(nodes.len() >= 3
+    //                 && nodes[0].comp.is_c4()
+    //                 && nodes[1].comp.is_c3()
+    //                 && nodes[2].comp.is_c3()) {
+    //                     return None;
+    //                 }
+
     // Prio 5: Larger contractable comps
     let all_edges = instance.all_edges();
     let relevant_comps = path_comps
