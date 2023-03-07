@@ -76,7 +76,7 @@ pub fn edge_enumerator(
     }
 
     // Prio 4: Edges due to contractablility
-    for path_comp in path_comps.iter().take(len - 1) {
+    for path_comp in path_comps.iter() { //}.take(len - 1) {
         let idx = path_comp.path_idx;
         if let Some(iter) = handle_contractable_components(&path_comp, instance) {
             let iter = to_inst_parts(iter, nodes_to_pidx, false, instance);

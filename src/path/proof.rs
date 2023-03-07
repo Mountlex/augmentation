@@ -274,6 +274,8 @@ impl Tactic {
             Tactic::ManualCheck => {
                 let nodes = stack.path_nodes().collect_vec();
                 let outside = stack.out_edges().collect_vec();
+                let rem_edges = stack.rem_edges();
+                let edges = stack.all_edges();
                 let npc = stack.npc();
                 if nodes.len() >= 3
                     && nodes[0].comp.is_c3()
@@ -282,15 +284,39 @@ impl Tactic {
                 {
                     return PathProofNode::new_leaf("Manual proof for C3-C3-C4.".into(), true);
                 }
-                if nodes.len() >= 2 && nodes[0].comp.is_c3() && nodes[1].comp.is_c6() {
-                    let c6_in = nodes[1].in_node.unwrap();
-                    if outside.iter().any(|&o| npc.is_nice_pair(*o, c6_in)) {
-                        return PathProofNode::new_leaf(
-                            "Manual proof for C3-C6: Better nice path found!".into(),
-                            true,
-                        );
+                if nodes.len() >= 3 && nodes[0].comp.is_c3() && nodes[1].comp.is_c6() {
+                    let relevant_edges = edges.iter().filter(|e| e.between_path_nodes(1.into(), 2.into()));
+                    for e in relevant_edges {
+                        let c6_endpoint = e.endpoint_at(1.into()).unwrap();
+                        if outside.iter().any(|&o| npc.is_nice_pair(*o, c6_endpoint)) {
+                            return PathProofNode::new_leaf(
+                                "Manual proof for C3-C6: Better nice path found!".into(),
+                                true,
+                            );
+                        }
                     }
                 }
+
+                for c5 in nodes.iter().filter(|c| c.comp.is_c5()) {
+                    if !c5.path_idx.is_last() && edges.iter().all(|e| !e.path_incident(c5.path_idx) || (e.path_incident(c5.path_idx.succ().unwrap()) || e.path_incident(c5.path_idx.prec()))) {
+                        if outside.iter().filter(|n| c5.comp.contains(n)).count() >= 1 {
+                            return PathProofNode::new_leaf(
+                                "Manual proof for in=out-C5: Better nice path found!".into(),
+                                true,
+                            );
+                        }
+                    }
+                }
+
+                if nodes.len() >= 3 && nodes[0].comp.is_c3() && nodes[1].comp.is_c6() && nodes[2].comp.is_c5() {
+                    if rem_edges.iter().filter(|e| e.source_idx.is_last()).count() >= 2 {
+                            return PathProofNode::new_leaf(
+                                "Manual proof for C3-C6-C5 with double C3-REM!".into(),
+                                true,
+                            );
+                    }
+                }
+               
                 PathProofNode::new_leaf("No manual proof!".into(), false)
             }
             Tactic::TacticsExhausted => PathProofNode::new_leaf("Tactics exhausted!".into(), false),
@@ -401,7 +427,7 @@ fn any(enumerator: Enumerator, expr: Expression) -> Expression {
 }
 
 fn inductive_proof(sc: bool) -> Expression {
-    induction_step(induction_step(induction_step(expr(Tactic::TacticsExhausted), sc), sc), sc)
+    induction_step(induction_step(or3( expr(Tactic::ManualCheck), expr(Tactic::Print), expr(Tactic::TacticsExhausted)), sc), sc)
 }
 
 fn induction_step(step: Expression, sc: bool) -> Expression {
@@ -457,12 +483,11 @@ fn find_edge(enumerator: Expression, otherwise: Expression) -> Expression {
 }
 
 fn progress() -> Expression {
-    or6(
+    or5(
         expr(Tactic::LocalMerge),
         expr(Tactic::Pendant),
         expr(Tactic::Contractable),
         expr(Tactic::LongerPath),
-        expr(Tactic::ManualCheck),
         any(
             Enumerator::PseudoCycle,
             or(
