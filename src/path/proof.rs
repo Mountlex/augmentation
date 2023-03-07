@@ -273,12 +273,23 @@ impl Tactic {
             Tactic::FiniteInstance => todo!(),
             Tactic::ManualCheck => {
                 let nodes = stack.path_nodes().collect_vec();
+                let outside = stack.out_edges().collect_vec();
+                let npc = stack.npc();
                 if nodes.len() >= 3
                     && nodes[0].comp.is_c3()
                     && nodes[1].comp.is_c3()
                     && nodes[2].comp.is_c4()
                 {
                     return PathProofNode::new_leaf("Manual proof for C3-C3-C4.".into(), true);
+                }
+                if nodes.len() >= 2 && nodes[0].comp.is_c3() && nodes[1].comp.is_c6() {
+                    let c6_in = nodes[1].in_node.unwrap();
+                    if outside.iter().any(|&o| npc.is_nice_pair(*o, c6_in)) {
+                        return PathProofNode::new_leaf(
+                            "Manual proof for C3-C6: Better nice path found!".into(),
+                            true,
+                        );
+                    }
                 }
                 PathProofNode::new_leaf("No manual proof!".into(), false)
             }
@@ -289,7 +300,7 @@ impl Tactic {
                 let path_comps = stack.path_nodes().collect_vec();
                 let rem_edges = stack.rem_edges();
 
-            //    println!("{}", stack.get_profile(true));
+                //println!("{}", stack.get_profile(true));
 
                 let msg = format!(
                     "Instance: [{}][{}][{}][{}]",
@@ -354,6 +365,17 @@ fn or5(
     or(expr1, or4(expr2, expr3, expr4, expr5))
 }
 
+fn or6(
+    expr1: Expression,
+    expr2: Expression,
+    expr3: Expression,
+    expr4: Expression,
+    expr5: Expression,
+    expr6: Expression,
+) -> Expression {
+    or(expr1, or5(expr2, expr3, expr4, expr5, expr6))
+}
+
 fn expr(tactic: Tactic) -> Expression {
     Expression::Tactic(tactic)
 }
@@ -379,10 +401,7 @@ fn any(enumerator: Enumerator, expr: Expression) -> Expression {
 }
 
 fn inductive_proof(sc: bool) -> Expression {
-    induction_step(
-        induction_step(induction_step(expr(Tactic::TacticsExhausted), sc), sc),
-        sc,
-    )
+    induction_step(induction_step(induction_step(expr(Tactic::TacticsExhausted), sc), sc), sc)
 }
 
 fn induction_step(step: Expression, sc: bool) -> Expression {
@@ -438,11 +457,12 @@ fn find_edge(enumerator: Expression, otherwise: Expression) -> Expression {
 }
 
 fn progress() -> Expression {
-    or5(
+    or6(
         expr(Tactic::LocalMerge),
         expr(Tactic::Pendant),
         expr(Tactic::Contractable),
         expr(Tactic::LongerPath),
+        expr(Tactic::ManualCheck),
         any(
             Enumerator::PseudoCycle,
             or(

@@ -43,7 +43,7 @@ pub fn edge_enumerator(
     let len = path_comps.len();
     //let mut path_comps = path_comps.into_iter().take(len - 1).collect_vec();
     //path_comps.sort_by_key(|p| p.comp.matching_nodes().len());
-    for path_comp in path_comps.iter().skip(1).take(len - 2) {
+    for path_comp in path_comps.iter().skip(1).take(len - 1) {
         let idx = path_comp.path_idx;
         let comp_nodes = path_comp.comp.matching_nodes().to_vec();
         let other_nodes = path_comps
