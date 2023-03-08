@@ -10,11 +10,11 @@ pub fn check_contractability(instance: &Instance) -> PathProofNode {
 }
 
 fn check_for_comp(instance: &Instance, idx: Pidx) -> PathProofNode {
-    let all_edges = instance.all_edges();
-    let outside = instance.out_edges().collect_vec();
+    let all_edges = &instance.edges;
+    let outside = &instance.outside_edges;
     let path_comps = instance.path_nodes().collect_vec();
-    let rem_edges = instance.rem_edges();
-    let npc = instance.npc();
+    let rem_edges = &instance.rem_edges;
+    let npc = &instance.npc;
 
     let comp = &path_comps[idx.raw()].comp;
 

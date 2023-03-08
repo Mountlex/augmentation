@@ -8,9 +8,9 @@ use crate::{
 
 pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle> + '_> {
     let path_comps = instance.path_nodes().cloned().collect_vec();
-    let all_edges = instance.all_edges();
+    let all_edges = &instance.edges;
     let new_edges = instance.last_added_edges();
-    let mut all_rem_edges = instance.rem_edges().into_iter().collect_vec();
+    let mut all_rem_edges = instance.rem_edges.clone();
     let last_comp = path_comps.last().unwrap();
     all_rem_edges.push(MatchingEdge {
         source: last_comp.in_node.unwrap(),

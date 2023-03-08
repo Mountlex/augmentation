@@ -156,92 +156,16 @@ impl Instance {
         self.inst_parts().flat_map(|part| part.path_nodes.iter())
     }
 
-    fn nice_pairs<'a>(&'a self) -> impl Iterator<Item = &'a (Node, Node)> {
-        self.inst_parts().flat_map(|part| part.nice_pairs.iter())
-    }
 
-    fn out_edges<'a>(&'a self) -> impl Iterator<Item = &'a Node> {
-        self.inst_parts().flat_map(|part| part.out_edges.iter())
-    }
 
     fn connected_nodes<'a>(&'a self) -> impl Iterator<Item = &'a Node> {
         self.inst_parts()
             .flat_map(|part| part.connected_nodes.iter())
     }
 
-    fn rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
-        let mut rem_edges: Vec<MatchingEdge> = vec![];
-        for part in self.inst_parts() {
-            if part.non_rem_edges.len() > 0 {
-                for non_rem_id in &part.non_rem_edges {
-                    if let Some((pos, _)) = rem_edges
-                        .iter()
-                        .find_position(|edge| &edge.id == non_rem_id)
-                    {
-                        rem_edges.swap_remove(pos);
-                    }
-                }
-            }
-            rem_edges.append(&mut part.rem_edges.iter().cloned().collect_vec());
-        }
+   
 
-        rem_edges
-    }
-
-    fn npc<'a>(&'a self) -> NicePairConfig {
-        let tuples = self
-            .inst_parts()
-            .flat_map(|part| part.nice_pairs.iter())
-            .unique()
-            .cloned()
-            .collect_vec();
-        NicePairConfig { nice_pairs: tuples }
-    }
-
-    fn implied_edges<'a>(&'a self) -> impl Iterator<Item = &'a Edge> {
-        self.inst_parts().flat_map(|part| part.edges.iter())
-    }
-
-    fn all_edges<'a>(&'a self) -> Vec<Edge> {
-        let mut implied_edges = self.implied_edges().cloned().collect_vec();
-        let nodes = self.path_nodes().collect_vec();
-        for w in nodes.windows(2) {
-            implied_edges.push(Edge::new(
-                w[0].in_node.unwrap(),
-                w[0].path_idx,
-                w[1].out_node.unwrap(),
-                w[1].path_idx,
-            ));
-        }
-
-        implied_edges
-    }
-
-    fn last_added_edges<'a>(&'a self) -> Vec<Edge> {
-        let mut last_edges = vec![];
-        for part in self.inst_parts() {
-            if !part.edges.is_empty() {
-                last_edges = part.edges.clone();
-            }
-            if !part.path_nodes.is_empty() {
-                last_edges = vec![];
-            }
-            if !part.rem_edges.is_empty() {
-                last_edges = vec![];
-            }
-        }
-        last_edges
-    }
-
-    fn last_added_rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
-        let mut last_edges = vec![];
-        for part in self.inst_parts() {
-            if !part.edges.is_empty() {
-                last_edges = part.rem_edges.clone();
-            }
-        }
-        last_edges
-    }
+    
 
 }
 

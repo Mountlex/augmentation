@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
+use crate::Node;
 use crate::path::{PathComp, Pidx};
 use crate::types::Edge;
 use crate::{comps::Component, path::PathProofNode, CreditInv};
@@ -19,7 +20,7 @@ use super::tactics::cycle_rearrange::check_path_rearrangement;
 use super::tactics::local_merge::check_local_merge;
 use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
-use super::{InstPart, InstanceContext, MatchingEdgeId, PathNode, PseudoCycle, Rearrangement};
+use super::{InstPart, InstanceContext, MatchingEdgeId, PathNode, PseudoCycle, Rearrangement, NicePairConfig, MatchingEdge};
 
 #[derive(Clone, Debug)]
 enum StackElement {
@@ -69,19 +70,134 @@ pub struct Instance {
     stack: Vec<StackElement>,
     pub context: InstanceContext,
     pub matching_edge_id_counter: MatchingEdgeId,
+    pub edges: Vec<Edge>,
+    pub rem_edges: Vec<MatchingEdge>,
+    pub outside_edges: Vec<Node>,
+    pub npc: NicePairConfig,
 }
 
 impl Instance {
     fn push(&mut self, ele: StackElement) {
-        self.stack.push(ele);
+        if let Some(part) = ele.as_inst_part() {
+            self.stack.push(ele.clone());
+            self.update_instance(part)
+        } else {
+            self.stack.push(ele);
+        }
     }
 
     fn pop(&mut self) {
-        self.stack.pop();
+        let ele = self.stack.pop().unwrap();
+        if let Some(part) = ele.as_inst_part() {
+            self.stack.push(ele.clone());
+            self.update_instance(part)
+        } else {
+            self.stack.push(ele);
+        }
+    }
+
+    fn update_instance(&mut self, part: &InstPart) {
+        if !part.edges.is_empty() {
+            self.edges = self.all_edges();
+        }
+
+        if !part.out_edges.is_empty() {
+            self.outside_edges = self.out_edges().cloned().collect();
+        }
+
+        if !part.rem_edges.is_empty() || !part.non_rem_edges.is_empty() {
+            self.rem_edges = self.rem_edges();
+        }
+
+        if !part.nice_pairs.is_empty() {
+            self.npc = self.npc()
+        }
     }
 
     pub fn inst_parts<'a>(&'a self) -> impl Iterator<Item = &'a InstPart> {
         self.stack.iter().flat_map(|ele| ele.as_inst_part())
+    }
+
+    fn nice_pairs<'a>(&'a self) -> impl Iterator<Item = &'a (Node, Node)> {
+        self.inst_parts().flat_map(|part| part.nice_pairs.iter())
+    }
+
+    fn out_edges<'a>(&'a self) -> impl Iterator<Item = &'a Node> {
+        self.inst_parts().flat_map(|part| part.out_edges.iter())
+    }
+
+    fn npc<'a>(&'a self) -> NicePairConfig {
+        let tuples = self
+            .inst_parts()
+            .flat_map(|part| part.nice_pairs.iter())
+            .unique()
+            .cloned()
+            .collect_vec();
+        NicePairConfig { nice_pairs: tuples }
+    }
+
+    fn implied_edges<'a>(&'a self) -> impl Iterator<Item = &'a Edge> {
+        self.inst_parts().flat_map(|part| part.edges.iter())
+    }
+
+    fn all_edges<'a>(&'a self) -> Vec<Edge> {
+        let mut implied_edges = self.implied_edges().cloned().collect_vec();
+        let nodes = self.path_nodes().collect_vec();
+        for w in nodes.windows(2) {
+            implied_edges.push(Edge::new(
+                w[0].in_node.unwrap(),
+                w[0].path_idx,
+                w[1].out_node.unwrap(),
+                w[1].path_idx,
+            ));
+        }
+
+        implied_edges
+    }
+
+    pub fn last_added_edges<'a>(&'a self) -> Vec<Edge> {
+        let mut last_edges = vec![];
+        for part in self.inst_parts() {
+            if !part.edges.is_empty() {
+                last_edges = part.edges.clone();
+            }
+            if !part.path_nodes.is_empty() {
+                last_edges = vec![];
+            }
+            if !part.rem_edges.is_empty() {
+                last_edges = vec![];
+            }
+        }
+        last_edges
+    }
+
+    fn last_added_rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
+        let mut last_edges = vec![];
+        for part in self.inst_parts() {
+            if !part.edges.is_empty() {
+                last_edges = part.rem_edges.clone();
+            }
+        }
+        last_edges
+    }
+
+    fn rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
+        let mut rem_edges: Vec<MatchingEdge> = vec![];
+        for part in self.inst_parts() {
+            if part.non_rem_edges.len() > 0 {
+                for non_rem_id in &part.non_rem_edges {
+                    if let Some((pos, _)) = rem_edges
+                        .iter()
+                        .find_position(|edge| &edge.id == non_rem_id)
+                    {
+                        rem_edges.swap_remove(pos);
+                    }
+                }
+            }
+            rem_edges.append(&mut part.rem_edges.iter().cloned().collect_vec());
+        }
+
+        rem_edges
     }
 
     pub fn pseudo_cycle<'a>(&'a self) -> Option<&'a PseudoCycle> {
@@ -149,7 +265,7 @@ impl Quantor {
             };
 
             for instance in cases {
-                let item_msg = format!("{} {}", instance, enum_msg);
+                let item_msg = String::new(); //format!("{} {}", instance, enum_msg);
                 stack.push(instance);
                 let mut proof_item = self.formula().prove(stack);
                 proof_item = PathProofNode::new_info(item_msg, proof_item);
@@ -603,13 +719,19 @@ fn prove_last_node(
     };
 
     let mut instance = Instance {
-        stack: vec![StackElement::Inst(InstPart::new_path_comp(path_comp))],
+        stack: vec![],
         context: InstanceContext {
             inv: credit_inv.clone(),
             comps: nodes,
         },
         matching_edge_id_counter: MatchingEdgeId(0),
+        edges: vec![],
+        rem_edges: vec![],
+        outside_edges: vec![],
+        npc: NicePairConfig::empty(),
+        
     };
+    instance.push(StackElement::Inst(InstPart::new_path_comp(path_comp)));
 
     let expr = inductive_proof(sc);
     let mut proof = expr.prove(&mut instance);

@@ -96,7 +96,7 @@ pub fn edge_enumerator(
     //                 }
 
     // Prio 5: Larger contractable comps
-    let all_edges = instance.all_edges();
+    let all_edges = &instance.edges;
     let relevant_comps = path_comps
         .iter()
         .filter(|c| c.comp.is_c3() || c.comp.is_c4() || c.comp.is_c5() || c.comp.is_c6())
@@ -167,7 +167,7 @@ fn to_inst_parts(
     matching: bool,
     instance: &Instance,
 ) -> Box<dyn Iterator<Item = InstPart> + '_> {
-    let all_edges = instance.all_edges();
+    let all_edges = &instance.edges;
     Box::new(iter.flat_map(move |(node, hit)| {
         let mut part = InstPart::empty();
     
@@ -219,11 +219,11 @@ fn handle_contractable_components(
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
     let comp = &path_comp.comp;
 
-    let all_edges = instance.all_edges();
-    let outside = instance.out_edges().collect_vec();
+    let all_edges = &instance.edges;
+    let outside = &instance.outside_edges;
     let path_comps = instance.path_nodes().collect_vec();
-    let rem_edges = instance.rem_edges();
-    let npc = instance.npc();
+    let rem_edges = &instance.rem_edges;
+    let npc = &instance.npc;
 
     if comp.is_complex() || comp.is_large() || comp.is_c3() || comp.is_c4() {
         return None;
@@ -292,19 +292,19 @@ fn ensure_three_matching(
     instance: &Instance,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
     let outside_edges_at_set = instance
-        .out_edges()
+        .outside_edges.iter()
         .filter(|n| set.contains(n))
         .cloned()
         .collect_vec();
     let rem_edges_at_set = instance
-        .rem_edges()
+        .rem_edges.iter()
         .into_iter()
         .map(|e| e.source)
         .filter(|n| set.contains(n))
         .collect_vec();
     let edges_at_set = instance
-        .all_edges()
-        .into_iter()
+        .edges
+        .iter()
         .filter(|e| e.one_sided_nodes_incident(&set))
         .collect_vec();
 

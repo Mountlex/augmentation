@@ -7,17 +7,17 @@ use crate::{
 };
 
 pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart> + '_> {
-    let all_edges = instance.all_edges();
-    let rem_edges = instance.rem_edges();
-    let out_edges = instance.out_edges().collect_vec();
-    let npc = instance.npc();
+    let all_edges = &instance.edges;
+    let rem_edges = &instance.rem_edges;
+    let out_edges = &instance.outside_edges;
+    let npc = &instance.npc;
     let connected_nodes = instance.connected_nodes().collect_vec();
 
     let nodes_with_edges = all_edges
         .iter()
         .flat_map(|e| e.to_vec())
         .chain(rem_edges.iter().map(|e| e.source))
-        .chain(out_edges.iter().cloned().cloned())
+        .chain(out_edges.iter().cloned())
         .collect_vec();
 
     let mut cases: Box<dyn Iterator<Item = InstPart>> =
