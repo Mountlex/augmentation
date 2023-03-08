@@ -9,6 +9,7 @@ use crate::{
 pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle> + '_> {
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let all_edges = instance.all_edges();
+    let new_edges = instance.last_added_edges();
     let mut all_rem_edges = instance.rem_edges().into_iter().collect_vec();
     let last_comp = path_comps.last().unwrap();
     all_rem_edges.push(MatchingEdge {
@@ -26,10 +27,11 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     for i in 3..=(path_comps.len() + 1) {
         let fixed_edge_iter = pseudo_cycles_of_length(
             path_comps.clone(),
+            new_edges.clone(),
             all_edges.clone(),
             all_rem_edges.clone(),
             i,
-            true
+            true,
         );
         iter = Box::new(iter.chain(fixed_edge_iter))
     }
@@ -108,22 +110,23 @@ pub fn product_of_first(
 
 fn edges_between(
     edges: &[Edge],
+    new_edges: &[Edge],
     rem_edges: &[MatchingEdge],
     i1: &CycleComp,
     i2: &CycleComp,
 ) -> Vec<(Node, Node)> {
     match (i1, i2) {
-        (CycleComp::PathComp(idx1), CycleComp::PathComp(idx2)) => edges
-            .iter()
-            .filter(|e| e.between_path_nodes(*idx1, *idx2))
-            .map(|e| {
-                if e.path_index_n1 == *idx1 {
-                    (e.n1, e.n2)
-                } else {
-                    (e.n2, e.n1)
-                }
-            })
-            .collect_vec(),
+        (CycleComp::PathComp(idx1), CycleComp::PathComp(idx2)) => {
+         if new_edges.len() == 1 && new_edges[0].between_path_nodes(*idx1, *idx2) {
+                vec![new_edges[0].nodes_between_path_nodes(*idx1, *idx2)]
+         } else {
+                edges
+                    .iter()
+                    .filter(|e| e.between_path_nodes(*idx1, *idx2))
+                    .map(|e| e.nodes_between_path_nodes(*idx1, *idx2))
+                    .collect_vec()
+           }
+        }
         (CycleComp::PathComp(idx), CycleComp::Rem) => rem_edges
             .iter()
             .filter(|e| e.source_idx == *idx)
@@ -140,27 +143,29 @@ fn edges_between(
 
 pub fn pseudo_cycles_of_length(
     path_comps: Vec<PathComp>,
+    new_edges: Vec<Edge>,
     all_edges: Vec<Edge>,
     all_rem_edges: Vec<MatchingEdge>,
     length: usize,
     with_rem: bool,
 ) -> impl Iterator<Item = PseudoCycle> {
     let indices = path_comps.iter().map(|c| c.path_idx).collect_vec();
-    
-    let comps = 
-    if with_rem {
+
+    let comps = if with_rem {
         indices
-        .into_iter()
-        .map(|idx| CycleComp::PathComp(idx))
-        .chain(std::iter::once(CycleComp::Rem)).collect_vec()
+            .into_iter()
+            .map(|idx| CycleComp::PathComp(idx))
+            .chain(std::iter::once(CycleComp::Rem))
+            .collect_vec()
     } else {
         indices
-        .into_iter()
-        .map(|idx| CycleComp::PathComp(idx))
-        .collect_vec()
+            .into_iter()
+            .map(|idx| CycleComp::PathComp(idx))
+            .collect_vec()
     };
 
-    comps.into_iter()
+    comps
+        .into_iter()
         .permutations(length)
         .filter(|perm| perm.iter().min() == perm.first())
         .flat_map(move |perm| {
@@ -169,7 +174,7 @@ pub fn pseudo_cycles_of_length(
             let cons_edges = vec![perm.clone(), vec![first]]
                 .concat()
                 .windows(2)
-                .map(|e| edges_between(&all_edges, &all_rem_edges, &e[0], &e[1]))
+                .map(|e| edges_between(&all_edges, &new_edges, &all_rem_edges, &e[0], &e[1]))
                 .collect_vec();
 
             // if path_comps.len() == 5

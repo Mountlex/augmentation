@@ -110,6 +110,16 @@ impl Edge {
         self.path_incident(path_idx1) && self.path_incident(path_idx2)
     }
 
+    pub fn nodes_between_path_nodes(&self, idx1: Pidx, idx2: Pidx) -> (Node, Node) {
+        if !self.between_path_nodes(idx1, idx2) {
+            panic!("edge not between path nodes!")
+        } else if self.path_index_n1 == idx1 {
+            (self.n1, self.n2)
+        } else {
+            (self.n2, self.n1)
+        }
+    }
+
     pub fn edge_incident(&self, edge: &Edge) -> bool {
         self.n1 == edge.n1 || self.n2 == edge.n1 || self.n1 == edge.n2 || self.n2 == edge.n2
     }

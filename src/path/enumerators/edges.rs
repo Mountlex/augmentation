@@ -106,7 +106,7 @@ pub fn edge_enumerator(
     for i in 3..=3 {
        // println!("Instance: {}", instance);
         for pc in
-            pseudo_cycles_of_length(relevant_comps.clone(), all_edges.clone(), vec![], i, false)
+            pseudo_cycles_of_length(relevant_comps.clone(), all_edges.clone(), all_edges.clone(), vec![], i, false)
         {
           //  println!("{}", pc);
             let mut vertices_sets = vec![vec![]];

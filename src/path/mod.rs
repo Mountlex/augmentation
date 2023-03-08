@@ -216,6 +216,33 @@ impl Instance {
 
         implied_edges
     }
+
+    fn last_added_edges<'a>(&'a self) -> Vec<Edge> {
+        let mut last_edges = vec![];
+        for part in self.inst_parts() {
+            if !part.edges.is_empty() {
+                last_edges = part.edges.clone();
+            }
+            if !part.path_nodes.is_empty() {
+                last_edges = vec![];
+            }
+            if !part.rem_edges.is_empty() {
+                last_edges = vec![];
+            }
+        }
+        last_edges
+    }
+
+    fn last_added_rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
+        let mut last_edges = vec![];
+        for part in self.inst_parts() {
+            if !part.edges.is_empty() {
+                last_edges = part.rem_edges.clone();
+            }
+        }
+        last_edges
+    }
+
 }
 
 #[derive(Clone, Debug)]
