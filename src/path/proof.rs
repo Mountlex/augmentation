@@ -279,12 +279,12 @@ impl Tactic {
                 let npc = stack.npc();
 
 
-               if nodes.len() >= 2
-                && nodes[0].comp.is_c3()
-                && nodes[1].comp.is_c6()
-            {
-                return PathProofNode::new_leaf("Manual proof for C3-C6-C5.".into(), true);
-            }
+            //    if nodes.len() >= 2
+            //     && nodes[0].comp.is_c3()
+            //     && nodes[1].comp.is_c6()
+            // {
+            //     return PathProofNode::new_leaf("Manual proof for C3-C6-C5.".into(), true);
+            // }
 
 
 
