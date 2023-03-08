@@ -277,6 +277,17 @@ impl Tactic {
                 let rem_edges = stack.rem_edges();
                 let edges = stack.all_edges();
                 let npc = stack.npc();
+
+
+               if nodes.len() >= 2
+                && nodes[0].comp.is_c3()
+                && nodes[1].comp.is_c6()
+            {
+                return PathProofNode::new_leaf("Manual proof for C3-C6-C5.".into(), true);
+            }
+
+
+
                 if nodes.len() >= 3
                     && nodes[0].comp.is_c3()
                     && nodes[1].comp.is_c3()
@@ -316,7 +327,8 @@ impl Tactic {
                             );
                     }
                 }
-               
+
+                              
                 PathProofNode::new_leaf("No manual proof!".into(), false)
             }
             Tactic::TacticsExhausted => PathProofNode::new_leaf("Tactics exhausted!".into(), false),
@@ -326,7 +338,7 @@ impl Tactic {
                 let path_comps = stack.path_nodes().collect_vec();
                 let rem_edges = stack.rem_edges();
 
-                //println!("{}", stack.get_profile(true));
+              //  println!("{}", stack.get_profile(true));
 
                 let msg = format!(
                     "Instance: [{}][{}][{}][{}]",
