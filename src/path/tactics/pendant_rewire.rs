@@ -5,7 +5,7 @@ use crate::{
 
 pub fn check_pendant_node(instance: &Instance) -> PathProofNode {
     let all_edges = &instance.edges;
-    let mut outside = &instance.outside_edges;
+    let outside = &instance.outside_edges;
     let mut path_comps = instance.path_nodes();
     let rem_edges = &instance.rem_edges;
 

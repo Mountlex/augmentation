@@ -2,11 +2,11 @@
 
 use std::{fmt::Display, fs::OpenOptions, path::PathBuf};
 
-use clap::Parser;
+use clap::{Parser, arg};
 
 pub use credit::*;
 use num_rational::Rational64;
-use path::prove_nice_path_progress;
+use path::{prove_nice_path_progress, PathProofOptions};
 
 use comps::*;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
@@ -124,6 +124,9 @@ struct Path {
     c_numer: i64,
     c_demon: i64,
 
+    #[arg(value_enum)]
+    last_comp: LastComp,
+
     #[clap(short, long, default_value = "proofs_path")]
     output_dir: PathBuf,
 
@@ -135,6 +138,21 @@ struct Path {
 
     #[clap(short, long)]
     sc: bool,
+
+    #[clap(short = 'n', long = "node_depth", default_value = "3")]
+    node_depth: u8,
+
+    #[clap(short = 'e', long = "edge_depth", default_value = "5")]
+    edge_depth: u8,
+}
+
+#[derive(clap::ValueEnum, Clone)]
+enum LastComp {
+   C3,
+   C4,
+   C5,
+   C6,
+   L
 }
 
 fn main() -> anyhow::Result<()> {
@@ -228,21 +246,21 @@ fn prove_path(path: Path) {
         ]
     };
 
+    let last_comp = match path.last_comp {
+        LastComp::C3 => c3(),
+        LastComp::C4 => c4(),
+        LastComp::C5 => c5(),
+        LastComp::C6 => c6(),
+        LastComp::L => large(),
+    };
+
     prove_nice_path_progress(
         comps.clone(),
-        vec![
-            //large(),
-            //complex_tree(),
-            //complex_path(),
-            c3(),
-            //c4(),
-            //c5(),
-            //c6(),
-        ],
+        last_comp,
         &inv,
         path.output_dir,
         path.output_depth,
-        path.sc,
+        PathProofOptions { edge_depth: path.edge_depth, node_depth: path.node_depth, sc: path.sc },
         path.parallel,
     )
 }

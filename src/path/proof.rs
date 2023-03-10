@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
-use crate::Node;
 use crate::path::{PathComp, Pidx};
 use crate::types::Edge;
+use crate::Node;
 use crate::{comps::Component, path::PathProofNode, CreditInv};
 
 use super::enumerators::edges::edge_enumerator;
@@ -20,7 +20,10 @@ use super::tactics::cycle_rearrange::check_path_rearrangement;
 use super::tactics::local_merge::check_local_merge;
 use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
-use super::{InstPart, InstanceContext, MatchingEdgeId, PathNode, PseudoCycle, Rearrangement, NicePairConfig, MatchingEdge};
+use super::{
+    InstPart, InstanceContext, MatchingEdge, MatchingEdgeId, NicePairConfig, PathNode, PseudoCycle,
+    Rearrangement,
+};
 
 #[derive(Clone, Debug)]
 enum StackElement {
@@ -89,15 +92,12 @@ impl Instance {
     fn pop(&mut self) {
         let ele = self.stack.pop().unwrap();
         if let Some(part) = ele.as_inst_part() {
-            self.stack.push(ele.clone());
             self.update_instance(part)
-        } else {
-            self.stack.push(ele);
         }
     }
 
     fn update_instance(&mut self, part: &InstPart) {
-        if !part.edges.is_empty() {
+        if !part.edges.is_empty() || !part.path_nodes.is_empty() {
             self.edges = self.all_edges();
         }
 
@@ -118,6 +118,7 @@ impl Instance {
         self.stack.iter().flat_map(|ele| ele.as_inst_part())
     }
 
+    #[allow(dead_code)]
     fn nice_pairs<'a>(&'a self) -> impl Iterator<Item = &'a (Node, Node)> {
         self.inst_parts().flat_map(|part| part.nice_pairs.iter())
     }
@@ -171,6 +172,7 @@ impl Instance {
         last_edges
     }
 
+    #[allow(dead_code)]
     fn last_added_rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
         let mut last_edges = vec![];
         for part in self.inst_parts() {
@@ -389,20 +391,17 @@ impl Tactic {
             Tactic::FiniteInstance => todo!(),
             Tactic::ManualCheck => {
                 let nodes = stack.path_nodes().collect_vec();
-                let outside = stack.out_edges().collect_vec();
-                let rem_edges = stack.rem_edges();
-                let edges = stack.all_edges();
-                let npc = stack.npc();
+                // let outside = &stack.outside_edges;
+                // let rem_edges = &stack.rem_edges;
+                // let edges = &stack.edges;
+                // let npc = &stack.npc;
 
-
-            //    if nodes.len() >= 2
-            //     && nodes[0].comp.is_c3()
-            //     && nodes[1].comp.is_c6()
-            // {
-            //     return PathProofNode::new_leaf("Manual proof for C3-C6-C5.".into(), true);
-            // }
-
-
+                //    if nodes.len() >= 2
+                //     && nodes[0].comp.is_c3()
+                //     && nodes[1].comp.is_c6()
+                // {
+                //     return PathProofNode::new_leaf("Manual proof for C3-C6-C5.".into(), true);
+                // }
 
                 if nodes.len() >= 3
                     && nodes[0].comp.is_c3()
@@ -411,40 +410,52 @@ impl Tactic {
                 {
                     return PathProofNode::new_leaf("Manual proof for C3-C3-C4.".into(), true);
                 }
-                if nodes.len() >= 3 && nodes[0].comp.is_c3() && nodes[1].comp.is_c6() {
-                    let relevant_edges = edges.iter().filter(|e| e.between_path_nodes(1.into(), 2.into()));
-                    for e in relevant_edges {
-                        let c6_endpoint = e.endpoint_at(1.into()).unwrap();
-                        if outside.iter().any(|&o| npc.is_nice_pair(*o, c6_endpoint)) {
-                            return PathProofNode::new_leaf(
-                                "Manual proof for C3-C6: Better nice path found!".into(),
-                                true,
-                            );
-                        }
-                    }
-                }
 
-                for c5 in nodes.iter().filter(|c| c.comp.is_c5()) {
-                    if !c5.path_idx.is_last() && edges.iter().all(|e| !e.path_incident(c5.path_idx) || (e.path_incident(c5.path_idx.succ().unwrap()) || e.path_incident(c5.path_idx.prec()))) {
-                        if outside.iter().filter(|n| c5.comp.contains(n)).count() >= 1 {
-                            return PathProofNode::new_leaf(
-                                "Manual proof for in=out-C5: Better nice path found!".into(),
-                                true,
-                            );
-                        }
-                    }
-                }
+                // if nodes.len() >= 3 && nodes[0].comp.is_c3() && nodes[1].comp.is_c6() {
+                //     let relevant_edges = edges
+                //         .iter()
+                //         .filter(|e| e.between_path_nodes(1.into(), 2.into()));
+                //     for e in relevant_edges {
+                //         let c6_endpoint = e.endpoint_at(1.into()).unwrap();
+                //         if outside.iter().any(|&o| npc.is_nice_pair(o, c6_endpoint)) {
+                //             return PathProofNode::new_leaf(
+                //                 "Manual proof for C3-C6: Better nice path found!".into(),
+                //                 true,
+                //             );
+                //         }
+                //     }
+                // }
 
-                if nodes.len() >= 3 && nodes[0].comp.is_c3() && nodes[1].comp.is_c6() && nodes[2].comp.is_c5() {
-                    if rem_edges.iter().filter(|e| e.source_idx.is_last()).count() >= 2 {
-                            return PathProofNode::new_leaf(
-                                "Manual proof for C3-C6-C5 with double C3-REM!".into(),
-                                true,
-                            );
-                    }
-                }
+                // for c5 in nodes.iter().filter(|c| c.comp.is_c5()) {
+                //     if !c5.path_idx.is_last()
+                //         && edges.iter().all(|e| {
+                //             !e.path_incident(c5.path_idx)
+                //                 || (e.path_incident(c5.path_idx.succ().unwrap())
+                //                     || e.path_incident(c5.path_idx.prec()))
+                //         })
+                //     {
+                //         if outside.iter().filter(|n| c5.comp.contains(n)).count() >= 1 {
+                //             return PathProofNode::new_leaf(
+                //                 "Manual proof for in=out-C5: Better nice path found!".into(),
+                //                 true,
+                //             );
+                //         }
+                //     }
+                // }
 
-                              
+                // if nodes.len() >= 3
+                //     && nodes[0].comp.is_c3()
+                //     && nodes[1].comp.is_c6()
+                //     && nodes[2].comp.is_c5()
+                // {
+                //     if rem_edges.iter().filter(|e| e.source_idx.is_last()).count() >= 2 {
+                //         return PathProofNode::new_leaf(
+                //             "Manual proof for C3-C6-C5 with double C3-REM!".into(),
+                //             true,
+                //         );
+                //     }
+                // }
+
                 PathProofNode::new_leaf("No manual proof!".into(), false)
             }
             Tactic::TacticsExhausted => PathProofNode::new_leaf("Tactics exhausted!".into(), false),
@@ -454,7 +465,7 @@ impl Tactic {
                 let path_comps = stack.path_nodes().collect_vec();
                 let rem_edges = stack.rem_edges();
 
-              //  println!("{}", stack.get_profile(true));
+                //  println!("{}", stack.get_profile(true));
 
                 let msg = format!(
                     "Instance: [{}][{}][{}][{}]",
@@ -519,6 +530,7 @@ fn or5(
     or(expr1, or4(expr2, expr3, expr4, expr5))
 }
 
+#[allow(dead_code)]
 fn or6(
     expr1: Expression,
     expr2: Expression,
@@ -554,11 +566,19 @@ fn any(enumerator: Enumerator, expr: Expression) -> Expression {
     Expression::Quantor(Quantor::Any(enumerator, Box::new(expr)))
 }
 
-fn inductive_proof(sc: bool) -> Expression {
-    induction_step(induction_step(or3( expr(Tactic::ManualCheck), expr(Tactic::Print), expr(Tactic::TacticsExhausted)), sc), sc)
+fn inductive_proof(options: PathProofOptions, depth: u8) -> Expression {
+    if depth > 0 {
+        induction_step(options, inductive_proof(options, depth - 1))
+    } else {
+        or3(
+            expr(Tactic::ManualCheck),
+            expr(Tactic::Print),
+            expr(Tactic::TacticsExhausted),
+        )
+    }
 }
 
-fn induction_step(step: Expression, sc: bool) -> Expression {
+fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
     all(
         Enumerator::PathNodes,
         all_sc(
@@ -567,39 +587,19 @@ fn induction_step(step: Expression, sc: bool) -> Expression {
                 expr(Tactic::Print),
                 expr(Tactic::ManualCheck),
                 progress(),
-                find_all_edges(step),
+                find_all_edges(options.edge_depth, step),
             ),
         ),
-        sc,
+        options.sc,
     )
 }
 
-fn find_all_edges(otherwise: Expression) -> Expression {
-    find_edge(
-        find_edge(
-            find_edge(
-                find_edge(
-                    find_edge(
-                        find_edge(
-                            find_edge(
-                                find_edge(
-                                    find_edge(otherwise.clone(), otherwise.clone()),
-                                    otherwise.clone(),
-                                ),
-                                otherwise.clone(),
-                            ),
-                            otherwise.clone(),
-                        ),
-                        otherwise.clone(),
-                    ),
-                    otherwise.clone(),
-                ),
-                otherwise.clone(),
-            ),
-            otherwise.clone(),
-        ),
-        otherwise,
-    )
+fn find_all_edges(depth: u8, otherwise: Expression) -> Expression {
+    if depth > 0 {
+        find_edge(find_all_edges(depth - 1, otherwise.clone()), otherwise)
+    } else {
+        otherwise
+    }
 }
 
 fn find_edge(enumerator: Expression, otherwise: Expression) -> Expression {
@@ -629,13 +629,20 @@ fn progress() -> Expression {
     )
 }
 
+#[derive(Clone, Copy)]
+pub struct PathProofOptions {
+    pub edge_depth: u8,
+    pub node_depth: u8,
+    pub sc: bool,
+}
+
 pub fn prove_nice_path_progress(
     comps: Vec<Component>,
-    last_comps: Vec<Component>,
+    last_comp: Component,
     credit_inv: &CreditInv,
     output_dir: PathBuf,
     output_depth: usize,
-    sc: bool,
+    options: PathProofOptions,
     parallel: bool,
 ) {
     std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
@@ -651,16 +658,14 @@ pub fn prove_nice_path_progress(
         })
         .collect_vec();
 
-    let last_nodes = last_comps
-        .into_iter()
-        .flat_map(|comp| {
-            if comp.is_c5() {
-                vec![PathNode::Unused(comp.clone()), PathNode::Used(comp.clone())]
-            } else {
-                vec![PathNode::Unused(comp.clone())]
-            }
-        })
-        .collect_vec();
+    let last_nodes = if last_comp.is_c5() {
+        vec![
+            PathNode::Unused(last_comp.clone()),
+            PathNode::Used(last_comp.clone()),
+        ]
+    } else {
+        vec![PathNode::Unused(last_comp.clone())]
+    };
 
     let proof_cases = last_nodes;
 
@@ -672,7 +677,7 @@ pub fn prove_nice_path_progress(
                 credit_inv.clone(),
                 &output_dir,
                 output_depth,
-                sc,
+                options,
             )
         })
     } else {
@@ -683,7 +688,7 @@ pub fn prove_nice_path_progress(
                 credit_inv.clone(),
                 &output_dir,
                 output_depth,
-                sc,
+                options,
             )
         })
     };
@@ -695,7 +700,7 @@ fn prove_last_node(
     credit_inv: CreditInv,
     output_dir: &PathBuf,
     output_depth: usize,
-    sc: bool,
+    options: PathProofOptions,
 ) {
     // let mut context = PathContext {
     //     credit_inv: credit_inv.clone(),
@@ -729,11 +734,10 @@ fn prove_last_node(
         rem_edges: vec![],
         outside_edges: vec![],
         npc: NicePairConfig::empty(),
-        
     };
     instance.push(StackElement::Inst(InstPart::new_path_comp(path_comp)));
 
-    let expr = inductive_proof(sc);
+    let expr = inductive_proof(options, options.node_depth);
     let mut proof = expr.prove(&mut instance);
     let outcome = proof.eval();
 

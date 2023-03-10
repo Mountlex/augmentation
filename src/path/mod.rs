@@ -9,6 +9,7 @@ use std::{cmp::Ordering, fmt::Display};
 
 use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
+pub use proof::PathProofOptions;
 
 use crate::proof_tree::ProofNode;
 use crate::{CreditInv, Node};
@@ -328,6 +329,7 @@ impl Display for PathComp {
 pub struct MatchingEdgeId(pub u128);
 
 impl MatchingEdgeId {
+    #[allow(dead_code)]
     pub fn inc(&mut self) {
         self.0 += 1;
     }

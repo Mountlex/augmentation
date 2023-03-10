@@ -84,6 +84,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 pub fn ifcond<I, A, F>(cond: F, tactic: A) -> If<I, A, F>
 where
     F: Fn(&I) -> bool,
@@ -191,6 +192,7 @@ pub fn or5<I, A1, A2, A3, A4, A5>(
     or4(tactic1, tactic2, tactic3, or(tactic4, tactic5))
 }
 
+#[allow(dead_code)]
 pub fn or6<I, A1, A2, A3, A4, A5, A6>(
     tactic1: A1,
     tactic2: A2,
@@ -256,6 +258,8 @@ pub struct AllOpt<O, E, T, A> {
     _phantom_data: PhantomData<O>,
 }
 
+
+#[allow(dead_code)]
 pub fn all_opt<O, E, T, A>(enum_tactic: E, else_tactic: T, item_tactic: A) -> AllOpt<O, E, T, A> {
     AllOpt {
         enum_tactic,

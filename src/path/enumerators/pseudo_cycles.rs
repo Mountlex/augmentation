@@ -117,9 +117,9 @@ fn edges_between(
 ) -> Vec<(Node, Node)> {
     match (i1, i2) {
         (CycleComp::PathComp(idx1), CycleComp::PathComp(idx2)) => {
-         if new_edges.len() == 1 && new_edges[0].between_path_nodes(*idx1, *idx2) {
-                vec![new_edges[0].nodes_between_path_nodes(*idx1, *idx2)]
-         } else {
+          if new_edges.len() == 1 && new_edges[0].between_path_nodes(*idx1, *idx2) {
+                 vec![new_edges[0].nodes_between_path_nodes(*idx1, *idx2)]
+          } else {
                 edges
                     .iter()
                     .filter(|e| e.between_path_nodes(*idx1, *idx2))
