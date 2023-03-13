@@ -302,8 +302,8 @@ fn ensure_three_matching(
         .map(|e| e.source)
         .filter(|n| set.contains(n))
         .collect_vec();
-    let edges_at_set = instance
-        .all_edges()
+    let edges = instance.all_edges();
+    let edges_at_set = edges
         .iter()
         .filter(|e| e.one_sided_nodes_incident(&set))
         .collect_vec();

@@ -81,19 +81,19 @@ pub struct Instance {
 
 impl Instance {
     fn push(&mut self, ele: StackElement) {
-        if let Some(part) = ele.as_inst_part() {
-            self.check_validy(&part);
+        // if let Some(part) = ele.as_inst_part() {
+        //     self.check_validy(&part);
+        //     self.stack.push(ele);
+        // } else {
             self.stack.push(ele);
-        } else {
-            self.stack.push(ele);
-        }
+        //}
     }
 
     fn pop(&mut self) {
         let ele = self.stack.pop().unwrap();
-        if let Some(part) = ele.as_inst_part() {
-            self.check_validy(&part);
-        }
+        // if let Some(part) = ele.as_inst_part() {
+        //     self.check_validy(&part);
+        // }
     }
 
     fn check_validy(&mut self, part: &InstPart) {
@@ -123,38 +123,42 @@ impl Instance {
         self.inst_parts().flat_map(|part| part.nice_pairs.iter())
     }
 
-    pub fn out_edges<'a>(&'a self) -> &'a Vec<Node> {
-        if let Some(out) = &self.outside_edges {
-            return out;
-        } else {
-            self.outside_edges = Some(self.inst_parts().flat_map(|part| part.out_edges.iter()).cloned().collect_vec());
-            return self.outside_edges.as_ref().unwrap();
-        }
+    pub fn out_edges<'a>(&'a self) -> Vec<Node> {
+        // if let Some(out) = &self.outside_edges {
+        //     return out;
+        // } else {
+        //    self.outside_edges = Some(
+                self.inst_parts().flat_map(|part| part.out_edges.iter()).cloned().collect_vec()
+        //     );
+        //     return self.outside_edges.as_ref().unwrap();
+        // }
     }
 
-    pub fn npc<'a>(&'a self) -> &'a NicePairConfig {
-        if let Some(np) = &self.npc {
-            return np;
-        } else {
+    pub fn npc<'a>(&'a self) -> NicePairConfig {
+        // if let Some(np) = &self.npc {
+        //     return np;
+        // } else {
             let tuples = self
             .inst_parts()
             .flat_map(|part| part.nice_pairs.iter())
             .unique()
             .cloned()
             .collect_vec();
-            self.npc = Some(NicePairConfig { nice_pairs: tuples });
-            return self.npc.as_ref().unwrap()
-        }
+            // self.npc = Some(
+                NicePairConfig { nice_pairs: tuples }
+        //     );
+        //     return self.npc.as_ref().unwrap()
+        // }
     }
 
     fn implied_edges<'a>(&'a self) -> impl Iterator<Item = &'a Edge> {
         self.inst_parts().flat_map(|part| part.edges.iter())
     }
 
-    pub fn all_edges<'a>(&'a self) -> &Vec<Edge> {
-        if let Some(edges) = &self.edges {
-            return edges;
-        } else {
+    pub fn all_edges<'a>(&'a self) -> Vec<Edge> {
+        // if let Some(edges) = &self.edges {
+        //     return edges;
+        // } else {
             let mut implied_edges = self.implied_edges().cloned().collect_vec();
             let nodes = self.path_nodes().collect_vec();
             for w in nodes.windows(2) {
@@ -166,9 +170,11 @@ impl Instance {
                 ));
             }
             
-            self.edges = Some(implied_edges);
-            return self.edges.as_ref().unwrap();
-        }
+            //self.edges = Some(
+                implied_edges
+        //     );
+        //     return self.edges.as_ref().unwrap();
+        // }
     }
 
     pub fn last_added_edges<'a>(&'a self) -> Vec<Edge> {
@@ -198,10 +204,10 @@ impl Instance {
         last_edges
     }
 
-    pub fn rem_edges<'a>(&'a self) -> &'a Vec<MatchingEdge> {
-        if let Some(rem_edges) = &self.rem_edges {
-            return rem_edges;
-        } else {
+    pub fn rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
+        // if let Some(rem_edges) = &self.rem_edges {
+        //     return rem_edges;
+        // } else {
             let mut rem_edges: Vec<MatchingEdge> = vec![];
             for part in self.inst_parts() {
             if part.non_rem_edges.len() > 0 {
@@ -217,9 +223,11 @@ impl Instance {
             rem_edges.append(&mut part.rem_edges.iter().cloned().collect_vec());
         }
         
-        self.rem_edges = Some(rem_edges);
-        return self.rem_edges.as_ref().unwrap();
-        }
+        //self.rem_edges = Some(
+            rem_edges
+        // );
+        // return self.rem_edges.as_ref().unwrap();
+        // }
     }
 
     pub fn pseudo_cycle<'a>(&'a self) -> Option<&'a PseudoCycle> {
