@@ -63,8 +63,6 @@ pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = 
 
 pub fn fix_in_out_direction(extension: &mut Vec<(Node, CycleComp, Node)>) {
     extension.iter_mut().for_each(|(n1, _c, n2)| {
-        let tmp = *n1;
-        *n1 = *n2;
-        *n2 = tmp;
+        std::mem::swap(&mut (*n1), &mut (*n2));
     });
 }

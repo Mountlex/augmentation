@@ -130,7 +130,7 @@ impl<T: Clone> ProofNode<T> {
             msg: "and".into(),
             payload: None,
             outcome: None,
-            childs: vec![child1.into(), child2.into()],
+            childs: vec![child1, child2],
         })
     }
 

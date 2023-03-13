@@ -28,8 +28,8 @@ pub fn check_pendant_node(instance: &Instance) -> PathProofNode {
     let d = rem_edges.iter().all(|e| e.source_idx != Pidx::Last);
 
     if a && b && c && d {
-        return PathProofNode::new_leaf(format!("Rewire pendant node!",), true);
+        PathProofNode::new_leaf("Rewire pendant node!".to_string(), true)
     } else {
-        return PathProofNode::new_leaf(format!("No pendant node!",), false);
+        PathProofNode::new_leaf("No pendant node!".to_string(), false)
     }
 }

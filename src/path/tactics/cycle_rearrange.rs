@@ -17,7 +17,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
         check_fixed_extension_feasible(&rearrangement.extension, &path_comps, &npc, true);
     feasible.eval();
     if !feasible.success() {
-        return feasible;
+        feasible
     } else {
         let extension = &rearrangement.extension;
 
@@ -86,13 +86,13 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
             );
         }
 
-        return PathProofNode::new_leaf(
+        PathProofNode::new_leaf(
             format!(
                 "No feasible reduction (old_last = {}, new_last = {}",
                 old_last_comp, new_last_comp
             ),
             false,
-        );
+        )
     }
 }
 
@@ -118,10 +118,9 @@ pub fn check_fixed_extension_feasible(
         );
         if !valid_in_out {
             return PathProofNode::new_leaf(
-                format!("New path does not fulfill nice path properties!"),
+                "New path does not fulfill nice path properties!".to_string(),
                 false,
-            )
-            .into();
+            );
         }
     }
     let (_, hit, hit_out) = extension.first().unwrap();

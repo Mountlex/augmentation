@@ -16,7 +16,7 @@ use crate::{CreditInv, Node};
 
 use crate::{comps::*, types::Edge};
 
-use self::proof::Instance;
+
 
 pub type PathProofNode = ProofNode<InstanceProfile>;
 
@@ -214,7 +214,7 @@ impl Display for PseudoCycle {
             .iter()
             .map(|(l, n, r)| match n {
                 CycleComp::PathComp(idx) => format!("{}-[{}]-{}", l, idx, r),
-                CycleComp::Rem => format!("REM"),
+                CycleComp::Rem => "REM".to_string(),
             })
             .join(", ");
         write!(f, "PC [ {} ] (length={})", inner, self.cycle.len())
@@ -356,8 +356,7 @@ impl NicePairConfig {
     pub fn is_nice_pair(&self, u: Node, v: Node) -> bool {
         self.nice_pairs
             .iter()
-            .find(|(a, b)| (*a == u && *b == v) || (*a == v && *b == u))
-            .is_some()
+            .any(|(a, b)| (*a == u && *b == v) || (*a == v && *b == u))
     }
 
     /// Checks whether this configuration is consistent with `consistent_npc` on the node set `consistent_nodes`.
@@ -391,7 +390,7 @@ impl Pidx {
     }
 
     pub fn range(len: usize) -> Vec<Pidx> {
-        (0..len).map(|i| Pidx::from(i)).collect_vec()
+        (0..len).map(Pidx::from).collect_vec()
     }
 
     pub fn raw(&self) -> usize {

@@ -98,7 +98,7 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
         match result {
             MergeResult::Feasible2EC(merge) => {
                 self.num_proofs += 1;
-                return DefaultProofNode::new_leaf(
+                DefaultProofNode::new_leaf(
                     format!(
                         "Direct merge to 2EC possible [bought = {}, sold = {}, new = {}]",
                         merge.bought_edges.iter().join(", "),
@@ -106,11 +106,11 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
                         merge.new_comp_credit
                     ),
                     true,
-                );
+                )
             }
             MergeResult::FeasibleComplex(merge) => {
                 self.num_proofs += 1;
-                return DefaultProofNode::new_leaf(
+                DefaultProofNode::new_leaf(
                     format!(
                         "Direct merge to complex possible [bought = {}, sold = {}, new = {}]",
                         merge.bought_edges.iter().join(", "),
@@ -118,16 +118,16 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
                         merge.new_comp_credit
                     ),
                     true,
-                );
+                )
             }
             MergeResult::Impossible => {
-                return DefaultProofNode::new_leaf(
+                DefaultProofNode::new_leaf(
                     format!(
                         "Direct merge impossible [available credits: {}]",
                         total_component_credits
                     ),
                     false,
-                );
+                )
             }
         }
     }
@@ -177,11 +177,7 @@ where
             let check_graph = EdgeFiltered::from_fn(graph, |(v1, v2, t)| {
                 if t == &EdgeType::Sellable && sell.contains(&Edge::from_tuple(v1, v2)) {
                     false
-                } else if t == &EdgeType::Buyable && !buy.contains(&Edge::from_tuple(v1, v2)) {
-                    false
-                } else {
-                    true
-                }
+                } else { !(t == &EdgeType::Buyable && !buy.contains(&Edge::from_tuple(v1, v2))) }
             });
 
             //println!("sell {}", sell.iter().join(","));
@@ -190,7 +186,7 @@ where
             if !one_is_complex {
                 if total >= req_credits {
                     if connected_components(&check_graph) == 1 {
-                        if is_complex(&check_graph, &vec![], true).has_bridges() {
+                        if is_complex(&check_graph, &[], true).has_bridges() {
                             continue;
                         } else {
                             return MergeResult::Feasible2EC(FeasibleMerge {
@@ -253,5 +249,5 @@ where
             }
         }
     }
-    return MergeResult::Impossible;
+    MergeResult::Impossible
 }

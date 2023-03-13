@@ -39,12 +39,11 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
             let matching_endpoints_at_new = all_edges
                 .iter()
                 .filter(|&edge| edge.between_path_nodes(succ, node_idx))
-                .into_iter()
                 .flat_map(|e| e.endpoint_at(node_idx))
                 .collect_vec();
 
             comp.matching_nodes()
-                .into_iter()
+                .iter()
                 .filter(|&n| !matching_endpoints_at_new.contains(n))
                 .cloned()
                 .collect_vec()
@@ -52,17 +51,15 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
 
         let in_nodes = if !node_idx.is_last() {
             comp.sym_matching_nodes().to_vec()
+        } else if let Some(fixed) = comp.fixed_node() {
+            vec![fixed]
         } else {
-            if let Some(fixed) = comp.fixed_node() {
-                vec![fixed]
-            } else {
-                comp.sym_matching_nodes().to_vec()
-            }
+            comp.sym_matching_nodes().to_vec()
         };
 
         let comp_filter = comp.clone();
         let comp_map = comp.clone();
-        let node_map = node.clone();
+        let node_map = node;
 
         let iter: Box<dyn Iterator<Item = PathComp>> =
             Box::new(in_nodes.into_iter().flat_map(move |in_node| {
@@ -119,7 +116,7 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                             let non_rem_edges =
                                 hits_node.iter().map(|e| e.id.clone()).collect_vec();
 
-                            iter = Box::new(iter.into_iter().flat_map(move |inst_part| {
+                            iter = Box::new(iter.flat_map(move |inst_part| {
                                 let matching_edges = matching_edges.clone();
                                 let non_rem_edges = non_rem_edges.clone();
 

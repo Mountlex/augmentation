@@ -40,7 +40,7 @@ where
     let mut node_count = 0;
 
     if let Some(start) = g.node_identifiers().next() {
-        depth_first_search(&g, Some(start), |event| -> Control<()> {
+        depth_first_search(g, Some(start), |event| -> Control<()> {
             match event {
                 DfsEvent::TreeEdge(u, v) => {
                     parent[g.to_index(v)] = Some(u);
@@ -259,7 +259,7 @@ mod test_complex {
     fn test_complex_triangle() {
         let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0)]);
         assert!(matches!(
-            is_complex(&g, &vec![], false),
+            is_complex(&g, &[], false),
             ComplexCheckResult::NoBridges
         ));
     }
@@ -268,7 +268,7 @@ mod test_complex {
     fn test_complex_two_edges() {
         let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (2, 3)]);
         assert!(matches!(
-            is_complex(&g, &vec![], false),
+            is_complex(&g, &[], false),
             ComplexCheckResult::NotConnected
         ));
     }
@@ -278,10 +278,10 @@ mod test_complex {
         let g: UnGraph<(), ()> =
             UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3), (2, 3)]);
         assert!(matches!(
-            is_complex(&g, &vec![], false),
+            is_complex(&g, &[], false),
             ComplexCheckResult::Complex(_, _)
         ));
-        if let ComplexCheckResult::Complex(bridges, blacks) = is_complex(&g, &vec![], false) {
+        if let ComplexCheckResult::Complex(bridges, blacks) = is_complex(&g, &[], false) {
             assert_eq!(bridges, vec![(n(3), n(2))]);
             assert_eq!(blacks, vec![])
         }
@@ -304,10 +304,10 @@ mod test_complex {
             (9, 6),
         ]);
         assert!(matches!(
-            is_complex(&g, &vec![], false),
+            is_complex(&g, &[], false),
             ComplexCheckResult::Complex(_, _)
         ));
-        if let ComplexCheckResult::Complex(bridges, blacks) = is_complex(&g, &vec![], false) {
+        if let ComplexCheckResult::Complex(bridges, blacks) = is_complex(&g, &[], false) {
             assert_eq!(bridges, vec![(n(6), n(9)), (n(3), n(9)), (n(9), n(0))]);
             assert_eq!(blacks, vec![n(9)])
         }
@@ -322,33 +322,33 @@ mod test_bridge_detection {
     #[test]
     fn triangle_has_no_bridge() {
         let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0)]);
-        assert!(!is_complex(&g, &vec![], true).has_bridges());
+        assert!(!is_complex(&g, &[], true).has_bridges());
     }
 
     #[test]
     fn four_cycle_has_no_bridge() {
         let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (1, 2), (2, 3), (3, 0)]);
-        assert!(!is_complex(&g, &vec![], true).has_bridges());
+        assert!(!is_complex(&g, &[], true).has_bridges());
     }
 
     #[test]
     fn line_has_bridges() {
         let g: UnGraph<(), ()> = UnGraph::from_edges(&[(0, 1), (1, 2), (2, 3)]);
-        assert!(is_complex(&g, &vec![], true).has_bridges());
+        assert!(is_complex(&g, &[], true).has_bridges());
     }
 
     #[test]
     fn tree_has_bridges() {
         let g: UnGraph<(), ()> =
             UnGraph::from_edges(&[(0, 1), (1, 2), (2, 3), (2, 4), (4, 5), (4, 6)]);
-        assert!(is_complex(&g, &vec![], true).has_bridges());
+        assert!(is_complex(&g, &[], true).has_bridges());
     }
 
     #[test]
     fn one_matching_between_triangles_has_bridges() {
         let g: UnGraph<(), ()> =
             UnGraph::from_edges(&[(0, 1), (1, 2), (2, 0), (2, 3), (3, 4), (4, 5), (5, 3)]);
-        assert!(is_complex(&g, &vec![], true).has_bridges());
+        assert!(is_complex(&g, &[], true).has_bridges());
     }
 
     #[test]
@@ -363,7 +363,7 @@ mod test_bridge_detection {
             (4, 5),
             (5, 3),
         ]);
-        assert!(!is_complex(&g, &vec![], true).has_bridges());
+        assert!(!is_complex(&g, &[], true).has_bridges());
     }
 
     #[test]
@@ -379,6 +379,6 @@ mod test_bridge_detection {
             (4, 5),
             (5, 3),
         ]);
-        assert!(!is_complex(&g, &vec![], true).has_bridges());
+        assert!(!is_complex(&g, &[], true).has_bridges());
     }
 }

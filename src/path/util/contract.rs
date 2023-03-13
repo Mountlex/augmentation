@@ -7,14 +7,14 @@ pub fn is_contractible(vertices: &[Node], instance: &Instance) -> Option<Vec<Nod
     let outside_edges = instance.out_edges();
     let rem_edge = instance.rem_edges();
     let edges = vec![
-        instance.all_edges().clone(),
+        instance.all_edges(),
         instance.component_edges().collect_vec(),
     ]
     .concat();
 
     let inner_edges = edges
         .iter()
-        .filter(|e| e.between_sets(&vertices, &vertices))
+        .filter(|e| e.between_sets(vertices, vertices))
         .collect_vec();
     let mut labels = FxHashMap::<Node, u8>::default();
     let mut good_unused_edges = Vec::<&Edge>::new();
@@ -23,7 +23,7 @@ pub fn is_contractible(vertices: &[Node], instance: &Instance) -> Option<Vec<Nod
     // INIT
 
     for node in vertices {
-        if outside_edges.contains(&node) {
+        if outside_edges.contains(node) {
             labels.insert(*node, 0);
         } else if rem_edge.iter().any(|e| e.source == *node) {
             labels.insert(*node, 0);
@@ -33,8 +33,8 @@ pub fn is_contractible(vertices: &[Node], instance: &Instance) -> Option<Vec<Nod
     }
 
     for edge in &edges {
-        if edge.one_sided_nodes_incident(&vertices) {
-            let node = edge.endpoint_in(&vertices).unwrap();
+        if edge.one_sided_nodes_incident(vertices) {
+            let node = edge.endpoint_in(vertices).unwrap();
             decrease_label_if_possible(&mut labels, node);
         }
     }
@@ -91,15 +91,15 @@ pub fn is_contractible(vertices: &[Node], instance: &Instance) -> Option<Vec<Nod
     //println!("LB={}, ALG={}", lb, alg);
 
     if (alg as f64) / (lb as f64) <= 1.25 {
-        return Some(good_verts);
+        Some(good_verts)
     } else {
-        return None;
+        None
     }
 }
 
 fn decrease_label_if_possible(labels: &mut FxHashMap<Node, u8>, node: Node) {
     let label = labels.get_mut(&node).unwrap();
     if *label > 0 {
-        *label = *label - 1;
+        *label -= 1;
     }
 }

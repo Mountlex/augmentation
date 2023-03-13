@@ -37,7 +37,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
                 new_last_comp.used,
             ) {
                 let mut feasible =
-                    check_fixed_extension_feasible(&extension, &all_comps, &npc, false);
+                    check_fixed_extension_feasible(extension, &all_comps, &npc, false);
                 feasible.eval();
                 if feasible.success() {
                     return PathProofNode::new_leaf(
@@ -48,7 +48,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
                         true,
                     );
                 } else {
-                    msg.write_str(&format!("Extension is not feasible."))
+                    msg.write_str("Extension is not feasible.")
                         .unwrap();
                 }
             } else {
@@ -120,11 +120,11 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
         }
     }
 
-    return PathProofNode::new_leaf(
+    PathProofNode::new_leaf(
         format!(
             "No outside matching hit does is a valid out edge for the last node: {}!",
             msg
         ),
         false,
-    );
+    )
 }

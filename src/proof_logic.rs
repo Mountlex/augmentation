@@ -131,10 +131,10 @@ where
         let mut proof1 = self.tactic1.action(data, context);
         let outcome = proof1.eval();
         if !outcome.success() {
-            return proof1;
+            proof1
         } else {
             let proof2 = self.tactic2.action(data, context);
-            return DefaultProofNode::new_and(proof1, proof2);
+            DefaultProofNode::new_and(proof1, proof2)
         }
     }
 
@@ -234,10 +234,10 @@ where
             let mut proof1 = self.tactic1.action(data, context);
             let outcome = proof1.eval();
             if outcome.success() || !self.tactic2.precondition(data, context) {
-                return proof1;
+                proof1
             } else {
                 let proof2 = self.tactic2.action(data, context);
-                return DefaultProofNode::new_or(proof1, proof2);
+                DefaultProofNode::new_or(proof1, proof2)
             }
         } else {
             self.tactic2.action(data, context)
@@ -286,7 +286,7 @@ where
 {
     fn action(&mut self, data_in: &I, context: &C) -> DefaultProofNode {
         if let Some(iter) = self.enum_tactic.get_enumerator(data_in).iter(context) {
-            let mut proof = DefaultProofNode::new_all(self.enum_tactic.msg(&data_in));
+            let mut proof = DefaultProofNode::new_all(self.enum_tactic.msg(data_in));
             for d in iter {
                 let res = if !self.item_tactic.precondition(&d, context) {
                     false
@@ -303,9 +303,9 @@ where
                     break;
                 }
             }
-            return proof;
+            proof
         } else {
-            return self.else_tactic.action(data_in, context);
+            self.else_tactic.action(data_in, context)
         }
     }
 
@@ -355,7 +355,7 @@ where
     A: Tactic<O, C>,
 {
     fn action(&mut self, data_in: &I, context: &C) -> DefaultProofNode {
-        let mut proof = DefaultProofNode::new_all(self.enum_tactic.msg(&data_in));
+        let mut proof = DefaultProofNode::new_all(self.enum_tactic.msg(data_in));
 
         let enumerator = self.enum_tactic.get_enumerator(data_in);
 
@@ -415,7 +415,7 @@ where
     A: Tactic<O, C>,
 {
     fn action(&mut self, data_in: &I, context: &C) -> DefaultProofNode {
-        let mut proof = DefaultProofNode::new_any(self.enum_tactic.msg(&data_in));
+        let mut proof = DefaultProofNode::new_any(self.enum_tactic.msg(data_in));
 
         let enumerator = self.enum_tactic.get_enumerator(data_in);
         enumerator.iter(context).any(|d| {

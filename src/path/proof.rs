@@ -55,7 +55,7 @@ impl Display for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut path_comps = self.path_nodes();
         let all_edges = self.all_edges();
-        let mut outside = self.out_edges();
+        let outside = self.out_edges();
         let rem_edges = self.rem_edges();
         write!(
             f,
@@ -84,23 +84,23 @@ impl Instance {
         self.stack.pop().unwrap();
     }
 
-    pub fn inst_parts<'a>(&'a self) -> impl Iterator<Item = &'a InstPart> {
+    pub fn inst_parts(&self) -> impl Iterator<Item = &'_ InstPart> {
         self.stack.iter().flat_map(|ele| ele.as_inst_part())
     }
 
     #[allow(dead_code)]
-    fn nice_pairs<'a>(&'a self) -> impl Iterator<Item = &'a (Node, Node)> {
+    fn nice_pairs(&self) -> impl Iterator<Item = &'_ (Node, Node)> {
         self.inst_parts().flat_map(|part| part.nice_pairs.iter())
     }
 
-    pub fn out_edges<'a>(&'a self) -> Vec<Node> {
+    pub fn out_edges(&self) -> Vec<Node> {
         self.inst_parts()
             .flat_map(|part| part.out_edges.iter())
             .cloned()
             .collect_vec()
     }
 
-    pub fn npc<'a>(&'a self) -> NicePairConfig {
+    pub fn npc(&self) -> NicePairConfig {
         let tuples = self
             .inst_parts()
             .flat_map(|part| part.nice_pairs.iter())
@@ -110,11 +110,11 @@ impl Instance {
         NicePairConfig { nice_pairs: tuples }
     }
 
-    fn implied_edges<'a>(&'a self) -> impl Iterator<Item = &'a Edge> {
+    fn implied_edges(&self) -> impl Iterator<Item = &'_ Edge> {
         self.inst_parts().flat_map(|part| part.edges.iter())
     }
 
-    pub fn all_edges<'a>(&'a self) -> Vec<Edge> {
+    pub fn all_edges(&self) -> Vec<Edge> {
         let mut implied_edges = self.implied_edges().cloned().collect_vec();
         let nodes = self.path_nodes().collect_vec();
         for w in nodes.windows(2) {
@@ -129,7 +129,7 @@ impl Instance {
         implied_edges
     }
 
-    pub fn last_added_edges<'a>(&'a self) -> Vec<Edge> {
+    pub fn last_added_edges(&self) -> Vec<Edge> {
         let mut last_edges = vec![];
         for part in self.inst_parts() {
             if !part.edges.is_empty() {
@@ -146,7 +146,7 @@ impl Instance {
     }
 
     #[allow(dead_code)]
-    fn last_added_rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
+    fn last_added_rem_edges(&self) -> Vec<MatchingEdge> {
         let mut last_edges = vec![];
         for part in self.inst_parts() {
             if !part.edges.is_empty() {
@@ -156,10 +156,10 @@ impl Instance {
         last_edges
     }
 
-    pub fn rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
+    pub fn rem_edges(&self) -> Vec<MatchingEdge> {
         let mut rem_edges: Vec<MatchingEdge> = vec![];
         for part in self.inst_parts() {
-            if part.non_rem_edges.len() > 0 {
+            if !part.non_rem_edges.is_empty() {
                 for non_rem_id in &part.non_rem_edges {
                     if let Some((pos, _)) = rem_edges
                         .iter()
@@ -175,7 +175,7 @@ impl Instance {
         rem_edges
     }
 
-    pub fn pseudo_cycle<'a>(&'a self) -> Option<&'a PseudoCycle> {
+    pub fn pseudo_cycle(&self) -> Option<&PseudoCycle> {
         if let Some(StackElement::PseudoCycle(pc)) = self.stack.last() {
             Some(pc)
         } else {
@@ -183,7 +183,7 @@ impl Instance {
         }
     }
 
-    pub fn rearrangement<'a>(&'a self) -> Option<&'a Rearrangement> {
+    pub fn rearrangement(&self) -> Option<&Rearrangement> {
         if let Some(StackElement::Rearrangement(pc)) = self.stack.last() {
             Some(pc)
         } else {
@@ -208,11 +208,11 @@ impl Instance {
         }
     }
 
-    pub fn path_nodes<'a>(&'a self) -> impl Iterator<Item = &'a PathComp> {
+    pub fn path_nodes(&self) -> impl Iterator<Item = &'_ PathComp> {
         self.inst_parts().flat_map(|part| part.path_nodes.iter())
     }
 
-    pub fn connected_nodes<'a>(&'a self) -> impl Iterator<Item = &'a Node> {
+    pub fn connected_nodes(&self) -> impl Iterator<Item = &'_ Node> {
         self.inst_parts()
             .flat_map(|part| part.connected_nodes.iter())
     }
@@ -237,7 +237,7 @@ impl Quantor {
     fn prove(&self, stack: &mut Instance) -> PathProofNode {
         let mut enum_msg = String::new();
         let (cases, otherwise) = match self {
-            Quantor::All(e, _, sc) => (Some(e.get_iter(stack)), None),
+            Quantor::All(e, _, _sc) => (Some(e.get_iter(stack)), None),
             Quantor::Any(e, _) => (Some(e.get_iter(stack)), None),
             Quantor::AllOpt(e, _, otherwise) => {
                 if let Some((cases, msg)) = e.try_iter(stack) {
@@ -312,16 +312,16 @@ impl Enumerator {
     fn get_iter(&self, stack: &mut Instance) -> Vec<StackElement> {
         match self {
             Enumerator::PathNodes => path_node_enumerator(stack)
-                .map(|part| StackElement::Inst(part))
+                .map(StackElement::Inst)
                 .collect_vec(),
             Enumerator::NicePairs => nice_pairs_enumerator(stack)
-                .map(|part| StackElement::Inst(part))
+                .map(StackElement::Inst)
                 .collect_vec(),
             Enumerator::PseudoCycle => enumerate_pseudo_cycles(stack)
-                .map(|part| StackElement::PseudoCycle(part))
+                .map(StackElement::PseudoCycle)
                 .collect_vec(),
             Enumerator::Rearrangments => enumerate_rearrangements(stack)
-                .map(|part| StackElement::Rearrangement(part))
+                .map(StackElement::Rearrangement)
                 .collect_vec(),
         }
     }
@@ -346,7 +346,7 @@ impl OptEnumerator {
 
         if let Some((case_iter, msg)) = result {
             Some((
-                case_iter.map(|part| StackElement::Inst(part)).collect_vec(),
+                case_iter.map(StackElement::Inst).collect_vec(),
                 msg,
             ))
         } else {
@@ -641,9 +641,9 @@ pub fn prove_nice_path_progress(
         .into_iter()
         .flat_map(|comp| {
             if comp.is_c5() {
-                vec![PathNode::Unused(comp.clone()), PathNode::Used(comp.clone())]
+                vec![PathNode::Unused(comp.clone()), PathNode::Used(comp)]
             } else {
-                vec![PathNode::Unused(comp.clone())]
+                vec![PathNode::Unused(comp)]
             }
         })
         .collect_vec();
@@ -651,10 +651,10 @@ pub fn prove_nice_path_progress(
     let last_nodes = if last_comp.is_c5() {
         vec![
             PathNode::Unused(last_comp.clone()),
-            PathNode::Used(last_comp.clone()),
+            PathNode::Used(last_comp),
         ]
     } else {
-        vec![PathNode::Unused(last_comp.clone())]
+        vec![PathNode::Unused(last_comp)]
     };
 
     let proof_cases = last_nodes;

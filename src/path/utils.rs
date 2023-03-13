@@ -25,7 +25,7 @@ pub fn get_local_merge_graph(
     comp2: &Component,
     matching: &Vec<(Node, Node)>,
 ) -> Graph {
-    let mut graph = comp1.graph().clone();
+    let mut graph = comp1.graph();
     for (v1, v2, t) in comp2.graph().all_edges() {
         graph.add_edge(v1, v2, *t);
     }

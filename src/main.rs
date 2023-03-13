@@ -255,7 +255,7 @@ fn prove_path(path: Path) {
     };
 
     prove_nice_path_progress(
-        comps.clone(),
+        comps,
         last_comp,
         &inv,
         path.output_dir,

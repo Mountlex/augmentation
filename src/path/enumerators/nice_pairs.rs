@@ -28,21 +28,21 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
         let updated_nodes_with_edges = path_comp
             .comp
             .matching_nodes()
-            .into_iter()
+            .iter()
             .filter(|n| nodes_with_edges.contains(n))
             .cloned()
             .collect_vec();
         let path_comp_nodes = path_comp.comp.matching_nodes();
         let comp_conn_nodes = connected_nodes
             .iter()
-            .filter(|n| path_comp_nodes.contains(&n))
+            .filter(|n| path_comp_nodes.contains(n))
             .cloned()
             .cloned()
             .collect_vec();
 
         let npc = npc.clone();
 
-        cases = Box::new(cases.into_iter().flat_map(move |inst_part| {
+        cases = Box::new(cases.flat_map(move |inst_part| {
             let npc = npc.clone();
             let updated_nodes_with_edges = updated_nodes_with_edges.clone();
 
@@ -50,7 +50,7 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
                 if comp_conn_nodes != updated_nodes_with_edges {
                     // node is already zoomed, just update nice pairs of new incident edges
                     let iter = comp_npcs(
-                        &path_comp,
+                        path_comp,
                         &updated_nodes_with_edges,
                         &npc,
                         &comp_conn_nodes,
@@ -100,7 +100,7 @@ fn comp_npcs(
                 .iter()
                 .cloned()
                 .tuple_combinations::<(_, _)>()
-                .filter(|(v1, v2)| v1 != v2 || !black.contains(&v2))
+                .filter(|(v1, v2)| v1 != v2 || !black.contains(v2))
                 .collect_vec(),
         }],
         Component::ComplexPath(_, black) => vec![NicePairConfig {
@@ -108,7 +108,7 @@ fn comp_npcs(
                 .iter()
                 .cloned()
                 .tuple_combinations::<(_, _)>()
-                .filter(|(v1, v2)| v1 != v2 || !black.contains(&v2))
+                .filter(|(v1, v2)| v1 != v2 || !black.contains(v2))
                 .collect_vec(),
         }],
         _ => {
@@ -124,18 +124,14 @@ fn comp_npcs(
                     // adjacent vertices are always nice pairs!
                     npc.nice_pairs.append(&mut comp.edges()); // C3 in out contained here
 
-                    if comp.is_c3()
-                        || comp.is_c4()
-                        || (comp.is_c5() && !node.used && node.path_idx.is_prelast())
-                    {
-                        if node.in_node.is_some() && node.out_node.is_some() {
-                            npc.nice_pairs
-                                .push((node.in_node.unwrap(), node.out_node.unwrap()))
-                        }
+                    if (comp.is_c3()
+                        || comp.is_c4() || (comp.is_c5() && !node.used && node.path_idx.is_prelast())) && node.in_node.is_some() && node.out_node.is_some() {
+                        npc.nice_pairs
+                            .push((node.in_node.unwrap(), node.out_node.unwrap()))
                     }
                     npc
                 })
-                .filter(|npc| npc.is_consistent_with(&consistent_npc, &consistent_nodes))
+                .filter(|npc| npc.is_consistent_with(consistent_npc, consistent_nodes))
                 .collect_vec()
         }
     }

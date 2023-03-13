@@ -29,7 +29,7 @@ impl EnumeratorTactic<TreeCaseInstance, TreeCaseInstance, TreeContext> for CompE
     type Enumer<'a> = CasesEnumerator<'a>;
 
     fn msg(&self, _data_in: &TreeCaseInstance) -> String {
-        format!("Enumerate more components")
+        "Enumerate more components".to_string()
     }
 
     fn get_enumerator<'a>(&'a self, data: &'a TreeCaseInstance) -> Self::Enumer<'a> {

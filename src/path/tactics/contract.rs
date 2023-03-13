@@ -6,7 +6,7 @@ use crate::{
 };
 
 pub fn check_contractability(instance: &Instance) -> PathProofNode {
-    return check_for_comp(instance, Pidx::Last);
+    check_for_comp(instance, Pidx::Last)
 }
 
 fn check_for_comp(instance: &Instance, idx: Pidx) -> PathProofNode {
@@ -22,8 +22,7 @@ fn check_for_comp(instance: &Instance, idx: Pidx) -> PathProofNode {
         return PathProofNode::new_leaf(
             "Contractability check not applied: component is C3, Large or Complex".into(),
             false,
-        )
-        .into();
+        );
     }
 
     let nodes = comp.matching_nodes();
@@ -37,7 +36,7 @@ fn check_for_comp(instance: &Instance, idx: Pidx) -> PathProofNode {
         .cloned()
         .collect_vec();
     let free_nodes = nodes
-        .into_iter()
+        .iter()
         .filter(|n| !used_nodes.contains(n))
         .cloned()
         .collect_vec();
@@ -70,22 +69,20 @@ fn check_for_comp(instance: &Instance, idx: Pidx) -> PathProofNode {
         });
 
         if chord_implies_absent_np {
-            return PathProofNode::new_leaf(
+            PathProofNode::new_leaf(
                 format!(
                     "Component {} is contractable and chords imply absent nice pairs!",
                     comp
                 ),
                 true,
             )
-            .into();
         } else {
-            return PathProofNode::new_leaf(
+            PathProofNode::new_leaf(
                     format!("Component {} is contractable, but there might be inner chords which don't contradict nice pairs!", comp),
                     false,
-                ).into();
+                )
         }
     } else {
-        return PathProofNode::new_leaf(format!("Component {} is not contractable!", comp), false)
-            .into();
+        PathProofNode::new_leaf(format!("Component {} is not contractable!", comp), false)
     }
 }

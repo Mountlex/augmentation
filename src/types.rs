@@ -94,7 +94,7 @@ impl Edge {
 
     pub fn other(&self, n: &Node) -> Option<Node> {
         if n == &self.n1 {
-            return Some(self.n2);
+            Some(self.n2)
         } else if n == &self.n2 {
             return Some(self.n1);
         } else {

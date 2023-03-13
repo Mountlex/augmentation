@@ -61,7 +61,7 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
             vec![*n; self.size]
         } else {
             left.matching_nodes()
-                .into_iter()
+                .iter()
                 .filter(move |n| !left_matched.contains(n))
                 .cloned()
                 .collect()
@@ -72,7 +72,7 @@ impl<'a> Enumerator<TreeCaseInstance, TreeContext> for MatchingEnumerator<'a> {
         } else {
             right
                 .matching_nodes()
-                .into_iter()
+                .iter()
                 .filter(move |n| !right_matched.contains(n))
                 .cloned()
                 .collect_vec()

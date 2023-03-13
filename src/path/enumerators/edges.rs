@@ -20,7 +20,7 @@ pub fn edge_enumerator(
     let mut nodes_to_pidx: Vec<Option<Pidx>> = vec![None; old_path_len * 20];
     for path_comp in &path_comps {
         for node in path_comp.comp.matching_nodes() {
-            nodes_to_pidx[node.get_id() as usize] = Some(path_comp.path_idx.clone());
+            nodes_to_pidx[node.get_id() as usize] = Some(path_comp.path_idx);
         }
     }
 
@@ -34,7 +34,7 @@ pub fn edge_enumerator(
     if let Some(iter) = ensure_three_matching(last_nodes, other_nodes, instance) {
         return Some((
             to_inst_parts(iter, nodes_to_pidx, true, instance),
-            format!("3-Matching of last pathnode."),
+            "3-Matching of last pathnode.".to_string(),
         ));
     }
 
@@ -78,7 +78,7 @@ pub fn edge_enumerator(
     // Prio 4: Edges due to contractablility
     for path_comp in path_comps.iter().take(len - 1) {
         let idx = path_comp.path_idx;
-        if let Some(iter) = handle_contractable_components(&path_comp, instance) {
+        if let Some(iter) = handle_contractable_components(path_comp, instance) {
             let iter = to_inst_parts(iter, nodes_to_pidx, false, instance);
             return Some((iter, format!("Contractablility of {}", idx)));
         }
@@ -125,7 +125,7 @@ pub fn edge_enumerator(
                     vertices_sets.iter_mut().for_each(|set| set.push(n1));
                 } else if comp.comp.is_adjacent(&n1, &n2) {
                     vertices_sets.iter_mut().for_each(|set| {
-                        set.append(&mut comp.comp.nodes().into_iter().cloned().collect_vec())
+                        set.append(&mut comp.comp.nodes().iter().cloned().collect_vec())
                     });
                 } else {
                     let (p1, p2) = comp.comp.paths_between(&n1, &n2);
@@ -143,7 +143,7 @@ pub fn edge_enumerator(
             }
 
             for set in vertices_sets {
-                if let Some(good_verts) = is_contractible(&set, &instance) {
+                if let Some(good_verts) = is_contractible(&set, instance) {
                     let all_nodes = instance
                         .path_nodes()
                         .flat_map(|c| c.comp.matching_nodes())
@@ -153,7 +153,7 @@ pub fn edge_enumerator(
 
                     // println!("contractable set!: {:?}, good: {:?}", set, good_verts);
 
-                    let iter = edge_iterator(good_verts.clone(), all_nodes).unwrap();
+                    let iter = edge_iterator(good_verts, all_nodes).unwrap();
                     let iter = to_inst_parts(iter, nodes_to_pidx, false, instance).collect_vec();
                     //println!("iter: {}", iter.iter().join(", "));
                     return Some((
@@ -183,7 +183,7 @@ fn to_inst_parts(
             Hit::RemPath => {
                 part.rem_edges.push(MatchingEdge {
                     source: node,
-                    source_idx: nodes_to_pidx[node.get_id() as usize].unwrap().clone(),
+                    source_idx: nodes_to_pidx[node.get_id() as usize].unwrap(),
                     matching,
                     id: instance.matching_edge_id_counter.clone(),
                 });
@@ -195,9 +195,9 @@ fn to_inst_parts(
                 {
                     let edge = Edge::new(
                         node,
-                        nodes_to_pidx[node.get_id() as usize].unwrap().clone(),
+                        nodes_to_pidx[node.get_id() as usize].unwrap(),
                         hit_node,
-                        nodes_to_pidx[hit_node.get_id() as usize].unwrap().clone(),
+                        nodes_to_pidx[hit_node.get_id() as usize].unwrap(),
                     );
                     if !all_edges.contains(&edge) {
                         part.edges.push(edge);
@@ -206,9 +206,9 @@ fn to_inst_parts(
             }
         }
         if part.is_empty() {
-            return None;
+            None
         } else {
-            return Some(part);
+            Some(part)
         }
     }))
 }
@@ -247,7 +247,7 @@ fn handle_contractable_components(
         .cloned()
         .collect_vec();
     let free_nodes = nodes
-        .into_iter()
+        .iter()
         .filter(|n| !used_nodes.contains(n))
         .cloned()
         .collect_vec();
@@ -307,7 +307,6 @@ fn ensure_three_matching(
     let rem_edges_at_set = instance
         .rem_edges()
         .iter()
-        .into_iter()
         .map(|e| e.source)
         .filter(|n| set.contains(n))
         .collect_vec();
@@ -409,7 +408,7 @@ fn edge_iterator(
     set: Vec<Node>,
     complement: Vec<Node>,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
-    let mut hits = complement.into_iter().map(|n| Hit::Node(n)).collect_vec();
+    let mut hits = complement.into_iter().map(Hit::Node).collect_vec();
     hits.push(Hit::Outside);
     hits.push(Hit::RemPath);
 
@@ -417,5 +416,5 @@ fn edge_iterator(
         .into_iter()
         .flat_map(move |n1| hits.clone().into_iter().map(move |hit| (n1, hit)));
 
-    return Some(Box::new(iter));
+    Some(Box::new(iter))
 }

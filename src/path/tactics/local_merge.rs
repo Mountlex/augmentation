@@ -21,7 +21,7 @@ fn merge(
         return PathProofNode::new_leaf("Merge two complex components".into(), true);
     }
 
-    let total_comp_credit = context.inv.credits(&left_comp) + context.inv.credits(&right_comp);
+    let total_comp_credit = context.inv.credits(left_comp) + context.inv.credits(right_comp);
 
     if left_comp.is_complex() || right_comp.is_complex() {
         let (_, complex_comp) = if left_comp.is_complex() {
@@ -37,10 +37,10 @@ fn merge(
 
         for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
             let mut total_block_merge = total_comp_credit;
-            let other1 = other_comp.incident(&buy[0]).unwrap();
-            let other2 = other_comp.incident(&buy[1]).unwrap();
-            let complex1 = complex_comp.incident(&buy[0]).unwrap();
-            let complex2 = complex_comp.incident(&buy[1]).unwrap();
+            let other1 = other_comp.incident(buy[0]).unwrap();
+            let other2 = other_comp.incident(buy[1]).unwrap();
+            let complex1 = complex_comp.incident(buy[0]).unwrap();
+            let complex2 = complex_comp.incident(buy[1]).unwrap();
 
             if npc.is_nice_pair(other1, other2) {
                 total_block_merge += Credit::from_integer(1)
@@ -78,10 +78,10 @@ fn merge(
         }
     } else {
         for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
-            let l1 = left_comp.incident(&buy[0]).unwrap();
-            let l2 = left_comp.incident(&buy[1]).unwrap();
-            let r1 = right_comp.incident(&buy[0]).unwrap();
-            let r2 = right_comp.incident(&buy[1]).unwrap();
+            let l1 = left_comp.incident(buy[0]).unwrap();
+            let l2 = left_comp.incident(buy[1]).unwrap();
+            let r1 = right_comp.incident(buy[0]).unwrap();
+            let r2 = right_comp.incident(buy[1]).unwrap();
 
             let mut credits = total_comp_credit - Credit::from_integer(2);
 

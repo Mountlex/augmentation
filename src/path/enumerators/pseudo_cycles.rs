@@ -1,7 +1,7 @@
 use itertools::{iproduct, Itertools};
 
 use crate::{
-    path::{proof::Instance, CycleComp, MatchingEdge, PathComp, Pidx, PseudoCycle},
+    path::{proof::Instance, CycleComp, MatchingEdge, PathComp, PseudoCycle},
     types::Edge,
     Node,
 };
@@ -10,7 +10,7 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let all_edges = instance.all_edges();
     //let new_edges = instance.last_added_edges();
-    let mut all_rem_edges = instance.rem_edges().clone();
+    let mut all_rem_edges = instance.rem_edges();
     let last_comp = path_comps.last().unwrap();
     all_rem_edges.push(MatchingEdge {
         source: last_comp.in_node.unwrap(),
@@ -110,7 +110,7 @@ pub fn product_of_first(
 
 fn edges_between(
     edges: &[Edge],
-    new_edges: &[Edge],
+    _new_edges: &[Edge],
     rem_edges: &[MatchingEdge],
     i1: &CycleComp,
     i2: &CycleComp,
@@ -154,13 +154,13 @@ pub fn pseudo_cycles_of_length(
     let comps = if with_rem {
         indices
             .into_iter()
-            .map(|idx| CycleComp::PathComp(idx))
+            .map(CycleComp::PathComp)
             .chain(std::iter::once(CycleComp::Rem))
             .collect_vec()
     } else {
         indices
             .into_iter()
-            .map(|idx| CycleComp::PathComp(idx))
+            .map(CycleComp::PathComp)
             .collect_vec()
     };
 
@@ -206,7 +206,7 @@ pub fn pseudo_cycles_of_length(
                 assert_eq!(cycle_indices.len(), length);
 
                 let cycle = cycle_indices
-                    .into_iter()
+                    .iter()
                     .enumerate()
                     .map(|(i, cycle_comp)| {
                         let last_edge = if i == 0 { length - 1 } else { i - 1 };

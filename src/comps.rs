@@ -147,20 +147,20 @@ impl Component {
     pub fn paths_between(&self, v: &Node, u: &Node) -> (Vec<Node>, Vec<Node>) {
         let nodes = self.nodes().to_owned();
 
-        let mut path1 = vec![v.clone()];
+        let mut path1 = vec![*v];
         let mut iter = nodes.iter().cycle();
         while Some(v) != iter.next() {}
-        while let Some(node) = iter.next() {
+        for node in iter {
             path1.push(*node);
             if node == u {
                 break;
             }
         }
 
-        let mut path2 = vec![u.clone()];
+        let mut path2 = vec![*u];
         let mut iter = nodes.iter().cycle();
         while Some(u) != iter.next() {}
-        while let Some(node) = iter.next() {
+        for node in iter {
             path2.push(*node);
             if node == v {
                 break;
@@ -207,24 +207,22 @@ impl Component {
                         }
                 } else if b[3..].contains(u) && b[3..].contains(v) {
                     (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
+                } else if b[3..].contains(v) {
+                    (u.to_vertex().max(b[1].to_vertex()) - u.to_vertex().min(b[1].to_vertex())
+                        + v.to_vertex().max(b[1].to_vertex())
+                        - v.to_vertex().min(b[1].to_vertex())
+                        - 2
+                        + 1)
+                        * 2
+                        + 1
                 } else {
-                    if b[3..].contains(v) {
-                        (u.to_vertex().max(b[1].to_vertex()) - u.to_vertex().min(b[1].to_vertex())
-                            + v.to_vertex().max(b[1].to_vertex())
-                            - v.to_vertex().min(b[1].to_vertex())
-                            - 2
-                            + 1)
-                            * 2
-                            + 1
-                    } else {
-                        (v.to_vertex().max(b[1].to_vertex()) - v.to_vertex().min(b[1].to_vertex())
-                            + u.to_vertex().max(b[1].to_vertex())
-                            - u.to_vertex().min(b[1].to_vertex())
-                            - 2
-                            + 1)
-                            * 2
-                            + 1
-                    }
+                    (v.to_vertex().max(b[1].to_vertex()) - v.to_vertex().min(b[1].to_vertex())
+                        + u.to_vertex().max(b[1].to_vertex())
+                        - u.to_vertex().min(b[1].to_vertex())
+                        - 2
+                        + 1)
+                        * 2
+                        + 1
                 }
             }
             _ => panic!("Component is not complex!"),
@@ -297,14 +295,14 @@ impl Component {
 
     pub fn short_name(&self) -> String {
         match self {
-            Component::C7(_) => format!("C7"),
-            Component::C6(_) => format!("C6"),
-            Component::C5(_) => format!("C5"),
-            Component::C4(_) => format!("C4"),
-            Component::C3(_) => format!("C3"),
-            Component::Large(_) => format!("Large"),
-            Component::ComplexPath(_, _) => format!("Complex-Path"),
-            Component::ComplexTree(_, _) => format!("Complex-Tree"),
+            Component::C7(_) => "C7".to_string(),
+            Component::C6(_) => "C6".to_string(),
+            Component::C5(_) => "C5".to_string(),
+            Component::C4(_) => "C4".to_string(),
+            Component::C3(_) => "C3".to_string(),
+            Component::Large(_) => "Large".to_string(),
+            Component::ComplexPath(_, _) => "Complex-Path".to_string(),
+            Component::ComplexTree(_, _) => "Complex-Tree".to_string(),
         }
     }
 
@@ -344,8 +342,8 @@ impl Component {
             Component::C4(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
             Component::C3(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
             Component::Large(_) => false,
-            Component::ComplexPath(complex, _) => complex.graph.neighbors(*v1).contains(&v2),
-            Component::ComplexTree(complex, _) => complex.graph.neighbors(*v1).contains(&v2),
+            Component::ComplexPath(complex, _) => complex.graph.neighbors(*v1).contains(v2),
+            Component::ComplexTree(complex, _) => complex.graph.neighbors(*v1).contains(v2),
         }
     }
 
@@ -454,11 +452,11 @@ fn nodes_to_edges(nodes: &[Node]) -> Vec<(Node, Node)> {
 impl Display for Component {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Component::C7(nodes) => write!(f, "C7 [{}]", nodes.into_iter().join("-")),
-            Component::C6(nodes) => write!(f, "C6 [{}]", nodes.into_iter().join("-")),
-            Component::C5(nodes) => write!(f, "C5 [{}]", nodes.into_iter().join("-")),
-            Component::C4(nodes) => write!(f, "C4 [{}]", nodes.into_iter().join("-")),
-            Component::C3(nodes) => write!(f, "C3 [{}]", nodes.into_iter().join("-")),
+            Component::C7(nodes) => write!(f, "C7 [{}]", nodes.iter().join("-")),
+            Component::C6(nodes) => write!(f, "C6 [{}]", nodes.iter().join("-")),
+            Component::C5(nodes) => write!(f, "C5 [{}]", nodes.iter().join("-")),
+            Component::C4(nodes) => write!(f, "C4 [{}]", nodes.iter().join("-")),
+            Component::C3(nodes) => write!(f, "C3 [{}]", nodes.iter().join("-")),
             Component::Large(n) => write!(f, "Large [{}]", n),
             Component::ComplexPath(_, _) => write!(f, "Complex Path"),
             Component::ComplexTree(_, _) => write!(f, "Complex Tree"),
@@ -473,7 +471,7 @@ pub struct Complex {
     pub num_blocks: usize,
 }
 
-pub fn edges_of_type<'a>(graph: &'a Graph, typ: EdgeType) -> Vec<(Node, Node)> {
+pub fn edges_of_type(graph: &Graph, typ: EdgeType) -> Vec<(Node, Node)> {
     graph
         .all_edges()
         .filter(|(_, _, t)| **t == typ)
