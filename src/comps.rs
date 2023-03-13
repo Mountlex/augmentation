@@ -167,7 +167,6 @@ impl Component {
             }
         }
 
-
         (path1, path2)
     }
 

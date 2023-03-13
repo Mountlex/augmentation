@@ -2,7 +2,7 @@
 
 use std::{fmt::Display, fs::OpenOptions, path::PathBuf};
 
-use clap::{Parser, arg};
+use clap::{arg, Parser};
 
 pub use credit::*;
 use num_rational::Rational64;
@@ -148,11 +148,11 @@ struct Path {
 
 #[derive(clap::ValueEnum, Clone)]
 enum LastComp {
-   C3,
-   C4,
-   C5,
-   C6,
-   L
+    C3,
+    C4,
+    C5,
+    C6,
+    L,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -260,7 +260,11 @@ fn prove_path(path: Path) {
         &inv,
         path.output_dir,
         path.output_depth,
-        PathProofOptions { edge_depth: path.edge_depth, node_depth: path.node_depth, sc: path.sc },
+        PathProofOptions {
+            edge_depth: path.edge_depth,
+            node_depth: path.node_depth,
+            sc: path.sc,
+        },
         path.parallel,
     )
 }

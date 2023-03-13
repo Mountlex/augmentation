@@ -1,19 +1,21 @@
 use fxhash::FxHashMap;
 use itertools::Itertools;
 
-use crate::{Node, path::proof::Instance, types::Edge};
+use crate::{path::proof::Instance, types::Edge, Node};
 
-
-
-
-
-pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> Option<Vec<Node>> {
-
+pub fn is_contractible(vertices: &[Node], instance: &Instance) -> Option<Vec<Node>> {
     let outside_edges = instance.out_edges();
     let rem_edge = instance.rem_edges();
-    let edges = vec![instance.all_edges().clone(), instance.component_edges().collect_vec()].concat();
+    let edges = vec![
+        instance.all_edges().clone(),
+        instance.component_edges().collect_vec(),
+    ]
+    .concat();
 
-    let inner_edges = edges.iter().filter(|e| e.between_sets(&vertices, &vertices)).collect_vec();
+    let inner_edges = edges
+        .iter()
+        .filter(|e| e.between_sets(&vertices, &vertices))
+        .collect_vec();
     let mut labels = FxHashMap::<Node, u8>::default();
     let mut good_unused_edges = Vec::<&Edge>::new();
     let mut bad_unused_edges = Vec::<&Edge>::new();
@@ -37,10 +39,14 @@ pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> Option<Vec<No
         }
     }
 
-    let good_verts = labels.iter().filter(|(_, &label)| label > 0).map(|(n,_)| *n).collect_vec();
+    let good_verts = labels
+        .iter()
+        .filter(|(_, &label)| label > 0)
+        .map(|(n, _)| *n)
+        .collect_vec();
 
     for edge in inner_edges {
-        let (u,v) = edge.to_tuple();
+        let (u, v) = edge.to_tuple();
         if labels.get(&u) == Some(&0) || labels.get(&v) == Some(&0) {
             bad_unused_edges.push(edge);
         } else {
@@ -55,22 +61,24 @@ pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> Option<Vec<No
 
     // first buy good edges and update edges
     while let Some(edge) = good_unused_edges.pop() {
-        let (u,v) = edge.to_tuple();
+        let (u, v) = edge.to_tuple();
         decrease_label_if_possible(&mut labels, u);
         decrease_label_if_possible(&mut labels, v);
 
         lb += 1;
 
         // update good edges
-        good_unused_edges.drain_filter(|e| {
-            let (u,v) = e.to_tuple();
-            labels.get(&u) == Some(&0) || labels.get(&v) == Some(&0)
-        }).for_each(|e| bad_unused_edges.push(e));
+        good_unused_edges
+            .drain_filter(|e| {
+                let (u, v) = e.to_tuple();
+                labels.get(&u) == Some(&0) || labels.get(&v) == Some(&0)
+            })
+            .for_each(|e| bad_unused_edges.push(e));
     }
 
     // now all edges are bad. Buy remaining edges
     while let Some(edge) = bad_unused_edges.pop() {
-        let (u,v) = edge.to_tuple();
+        let (u, v) = edge.to_tuple();
         if labels.get(&u).unwrap() > &0 || labels.get(&v).unwrap() > &0 {
             decrease_label_if_possible(&mut labels, u);
             decrease_label_if_possible(&mut labels, v);
@@ -79,19 +87,17 @@ pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> Option<Vec<No
         }
     }
 
-    
     let alg = vertices.len();
     //println!("LB={}, ALG={}", lb, alg);
-   
-    if (alg as f64) / (lb as f64) <= 1.25 {
-        return Some(good_verts)
-    } else {
-        return None
-    }
 
+    if (alg as f64) / (lb as f64) <= 1.25 {
+        return Some(good_verts);
+    } else {
+        return None;
+    }
 }
 
-fn decrease_label_if_possible(labels: &mut FxHashMap::<Node, u8>, node: Node) {
+fn decrease_label_if_possible(labels: &mut FxHashMap<Node, u8>, node: Node) {
     let label = labels.get_mut(&node).unwrap();
     if *label > 0 {
         *label = *label - 1;

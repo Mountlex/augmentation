@@ -104,11 +104,16 @@ pub fn edge_enumerator(
         .cloned()
         .collect_vec();
     for i in 3..=3 {
-       // println!("Instance: {}", instance);
-        for pc in
-            pseudo_cycles_of_length(relevant_comps.clone(), all_edges.clone(), all_edges.clone(), vec![], i, false)
-        {
-          //  println!("{}", pc);
+        // println!("Instance: {}", instance);
+        for pc in pseudo_cycles_of_length(
+            relevant_comps.clone(),
+            all_edges.clone(),
+            all_edges.clone(),
+            vec![],
+            i,
+            false,
+        ) {
+            //  println!("{}", pc);
             let mut vertices_sets = vec![vec![]];
             for (n1, c, n2) in pc.cycle {
                 let idx = c.to_idx();
@@ -124,7 +129,7 @@ pub fn edge_enumerator(
                     });
                 } else {
                     let (p1, p2) = comp.comp.paths_between(&n1, &n2);
-                   // println!("set {:?}, p1 {:?}, p2 {:?}", vertices_sets, p1, p2);
+                    // println!("set {:?}, p1 {:?}, p2 {:?}", vertices_sets, p1, p2);
                     vertices_sets = vertices_sets
                         .into_iter()
                         .flat_map(|set| {
@@ -137,22 +142,24 @@ pub fn edge_enumerator(
                 }
             }
 
-            
-            for set in vertices_sets {              
+            for set in vertices_sets {
                 if let Some(good_verts) = is_contractible(&set, &instance) {
                     let all_nodes = instance
                         .path_nodes()
                         .flat_map(|c| c.comp.matching_nodes())
-                        .filter(|n| !set.contains(n) ) //|| good_verts.contains(n))
+                        .filter(|n| !set.contains(n)) //|| good_verts.contains(n))
                         .cloned()
                         .collect_vec();
-                    
-                   // println!("contractable set!: {:?}, good: {:?}", set, good_verts);
+
+                    // println!("contractable set!: {:?}, good: {:?}", set, good_verts);
 
                     let iter = edge_iterator(good_verts.clone(), all_nodes).unwrap();
                     let iter = to_inst_parts(iter, nodes_to_pidx, false, instance).collect_vec();
                     //println!("iter: {}", iter.iter().join(", "));
-                    return Some((Box::new(iter.into_iter()), format!("Contractablility of large set {:?}", set)));
+                    return Some((
+                        Box::new(iter.into_iter()),
+                        format!("Contractablility of large set {:?}", set),
+                    ));
                 }
             }
         }
@@ -170,7 +177,7 @@ fn to_inst_parts(
     let all_edges = instance.all_edges();
     Box::new(iter.flat_map(move |(node, hit)| {
         let mut part = InstPart::empty();
-    
+
         match hit {
             Hit::Outside => part.out_edges.push(node),
             Hit::RemPath => {
@@ -184,7 +191,7 @@ fn to_inst_parts(
             }
             Hit::Node(hit_node) => {
                 if nodes_to_pidx[node.get_id() as usize].unwrap()
-                    != nodes_to_pidx[hit_node.get_id() as usize].unwrap() 
+                    != nodes_to_pidx[hit_node.get_id() as usize].unwrap()
                 {
                     let edge = Edge::new(
                         node,
@@ -195,13 +202,13 @@ fn to_inst_parts(
                     if !all_edges.contains(&edge) {
                         part.edges.push(edge);
                     }
-                } 
+                }
             }
         }
         if part.is_empty() {
-            return None
+            return None;
         } else {
-            return Some(part)
+            return Some(part);
         }
     }))
 }
@@ -292,12 +299,14 @@ fn ensure_three_matching(
     instance: &Instance,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
     let outside_edges_at_set = instance
-        .out_edges().iter()
+        .out_edges()
+        .iter()
         .filter(|n| set.contains(n))
         .cloned()
         .collect_vec();
     let rem_edges_at_set = instance
-        .rem_edges().iter()
+        .rem_edges()
+        .iter()
         .into_iter()
         .map(|e| e.source)
         .filter(|n| set.contains(n))

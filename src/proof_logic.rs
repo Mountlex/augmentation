@@ -258,7 +258,6 @@ pub struct AllOpt<O, E, T, A> {
     _phantom_data: PhantomData<O>,
 }
 
-
 #[allow(dead_code)]
 pub fn all_opt<O, E, T, A>(enum_tactic: E, else_tactic: T, item_tactic: A) -> AllOpt<O, E, T, A> {
     AllOpt {

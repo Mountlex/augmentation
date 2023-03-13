@@ -1,8 +1,8 @@
 mod enumerators;
 mod proof;
 mod tactics;
-mod utils;
 mod util;
+mod utils;
 
 use core::panic;
 use std::{cmp::Ordering, fmt::Display};
@@ -44,15 +44,14 @@ impl InstPart {
         }
     }
 
-    pub fn is_empty(&self) -> bool {      
-        self.path_nodes.is_empty() &&
-        self.nice_pairs.is_empty() &&
-        self.edges.is_empty() &&
-        self.out_edges.is_empty() &&
-        self.rem_edges.is_empty() &&
-        self.non_rem_edges.is_empty() &&
-        self.connected_nodes.is_empty() 
-        
+    pub fn is_empty(&self) -> bool {
+        self.path_nodes.is_empty()
+            && self.nice_pairs.is_empty()
+            && self.edges.is_empty()
+            && self.out_edges.is_empty()
+            && self.rem_edges.is_empty()
+            && self.non_rem_edges.is_empty()
+            && self.connected_nodes.is_empty()
     }
 
     pub fn new_path_comp(path_comp: PathComp) -> InstPart {
@@ -143,8 +142,6 @@ impl Display for InstanceProfile {
         write!(f, "{}", self.comp_types.iter().join(" -- "))
     }
 }
-
-
 
 #[derive(Clone, Debug)]
 pub enum PathNode {
