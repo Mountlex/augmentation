@@ -7,10 +7,10 @@ use crate::{
 };
 
 pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart> + '_> {
-    let all_edges = &instance.edges;
-    let rem_edges = &instance.rem_edges;
-    let out_edges = &instance.outside_edges;
-    let npc = &instance.npc;
+    let all_edges = instance.all_edges();
+    let rem_edges = instance.rem_edges();
+    let out_edges = instance.out_edges();
+    let npc = instance.npc();
     let connected_nodes = instance.connected_nodes().collect_vec();
 
     let nodes_with_edges = all_edges

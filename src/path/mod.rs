@@ -144,31 +144,7 @@ impl Display for InstanceProfile {
     }
 }
 
-impl Instance {
-    pub fn get_profile(&self, success: bool) -> InstanceProfile {
-        let comps = self.path_nodes().map(|n| n.comp.comp_type()).collect_vec();
-        InstanceProfile {
-            comp_types: comps,
-            success,
-        }
-    }
 
-    fn path_nodes<'a>(&'a self) -> impl Iterator<Item = &'a PathComp> {
-        self.inst_parts().flat_map(|part| part.path_nodes.iter())
-    }
-
-
-
-    fn connected_nodes<'a>(&'a self) -> impl Iterator<Item = &'a Node> {
-        self.inst_parts()
-            .flat_map(|part| part.connected_nodes.iter())
-    }
-
-   
-
-    
-
-}
 
 #[derive(Clone, Debug)]
 pub enum PathNode {

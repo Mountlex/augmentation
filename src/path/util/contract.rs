@@ -9,9 +9,9 @@ use crate::{Node, path::proof::Instance, types::Edge};
 
 pub fn is_contractible(vertices: &[Node],  instance: &Instance) -> Option<Vec<Node>> {
 
-    let outside_edges = &instance.outside_edges;
-    let rem_edge = &instance.rem_edges;
-    let edges = vec![instance.edges.clone(), instance.component_edges().collect_vec()].concat();
+    let outside_edges = instance.out_edges();
+    let rem_edge = instance.rem_edges();
+    let edges = vec![instance.all_edges().clone(), instance.component_edges().collect_vec()].concat();
 
     let inner_edges = edges.iter().filter(|e| e.between_sets(&vertices, &vertices)).collect_vec();
     let mut labels = FxHashMap::<Node, u8>::default();

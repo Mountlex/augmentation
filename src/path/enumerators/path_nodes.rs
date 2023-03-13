@@ -12,8 +12,8 @@ use crate::{
 pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart> + '_> {
     let path_comps = instance.path_nodes().collect_vec();
     let old_path_len = path_comps.len();
-    let all_edges = &instance.edges;
-    let rem_edges = &instance.rem_edges;
+    let all_edges = instance.all_edges();
+    let rem_edges = instance.rem_edges();
 
     let iter = instance.context.comps.iter().flat_map(move |node| {
         let comp = node.get_comp().clone();

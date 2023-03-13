@@ -22,7 +22,7 @@ use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
 use super::{
     InstPart, InstanceContext, MatchingEdge, MatchingEdgeId, NicePairConfig, PathNode, PseudoCycle,
-    Rearrangement,
+    Rearrangement, InstanceProfile,
 };
 
 #[derive(Clone, Debug)]
@@ -62,7 +62,7 @@ impl Display for Instance {
             "Instance: [{}][{}][{}][{}]",
             path_comps.join(", "),
             all_edges.iter().join(","),
-            outside.join(","),
+            outside.iter().join(","),
             rem_edges.iter().join(",")
         )
     }
@@ -73,17 +73,17 @@ pub struct Instance {
     stack: Vec<StackElement>,
     pub context: InstanceContext,
     pub matching_edge_id_counter: MatchingEdgeId,
-    pub edges: Vec<Edge>,
-    pub rem_edges: Vec<MatchingEdge>,
-    pub outside_edges: Vec<Node>,
-    pub npc: NicePairConfig,
+    edges: Option<Vec<Edge>>,
+    rem_edges: Option<Vec<MatchingEdge>>,
+    outside_edges: Option<Vec<Node>>,
+    npc: Option<NicePairConfig>,
 }
 
 impl Instance {
     fn push(&mut self, ele: StackElement) {
         if let Some(part) = ele.as_inst_part() {
-            self.stack.push(ele.clone());
-            self.update_instance(part)
+            self.check_validy(&part);
+            self.stack.push(ele);
         } else {
             self.stack.push(ele);
         }
@@ -92,25 +92,25 @@ impl Instance {
     fn pop(&mut self) {
         let ele = self.stack.pop().unwrap();
         if let Some(part) = ele.as_inst_part() {
-            self.update_instance(part)
+            self.check_validy(&part);
         }
     }
 
-    fn update_instance(&mut self, part: &InstPart) {
+    fn check_validy(&mut self, part: &InstPart) {
         if !part.edges.is_empty() || !part.path_nodes.is_empty() {
-            self.edges = self.all_edges();
+            self.edges = None
         }
 
         if !part.out_edges.is_empty() {
-            self.outside_edges = self.out_edges().cloned().collect();
+            self.outside_edges = None
         }
 
         if !part.rem_edges.is_empty() || !part.non_rem_edges.is_empty() {
-            self.rem_edges = self.rem_edges();
+            self.rem_edges = None;
         }
 
         if !part.nice_pairs.is_empty() {
-            self.npc = self.npc()
+            self.npc = None
         }
     }
 
@@ -123,37 +123,52 @@ impl Instance {
         self.inst_parts().flat_map(|part| part.nice_pairs.iter())
     }
 
-    fn out_edges<'a>(&'a self) -> impl Iterator<Item = &'a Node> {
-        self.inst_parts().flat_map(|part| part.out_edges.iter())
+    pub fn out_edges<'a>(&'a self) -> &'a Vec<Node> {
+        if let Some(out) = &self.outside_edges {
+            return out;
+        } else {
+            self.outside_edges = Some(self.inst_parts().flat_map(|part| part.out_edges.iter()).cloned().collect_vec());
+            return self.outside_edges.as_ref().unwrap();
+        }
     }
 
-    fn npc<'a>(&'a self) -> NicePairConfig {
-        let tuples = self
+    pub fn npc<'a>(&'a self) -> &'a NicePairConfig {
+        if let Some(np) = &self.npc {
+            return np;
+        } else {
+            let tuples = self
             .inst_parts()
             .flat_map(|part| part.nice_pairs.iter())
             .unique()
             .cloned()
             .collect_vec();
-        NicePairConfig { nice_pairs: tuples }
+            self.npc = Some(NicePairConfig { nice_pairs: tuples });
+            return self.npc.as_ref().unwrap()
+        }
     }
 
     fn implied_edges<'a>(&'a self) -> impl Iterator<Item = &'a Edge> {
         self.inst_parts().flat_map(|part| part.edges.iter())
     }
 
-    fn all_edges<'a>(&'a self) -> Vec<Edge> {
-        let mut implied_edges = self.implied_edges().cloned().collect_vec();
-        let nodes = self.path_nodes().collect_vec();
-        for w in nodes.windows(2) {
-            implied_edges.push(Edge::new(
-                w[0].in_node.unwrap(),
-                w[0].path_idx,
-                w[1].out_node.unwrap(),
-                w[1].path_idx,
-            ));
+    pub fn all_edges<'a>(&'a self) -> &Vec<Edge> {
+        if let Some(edges) = &self.edges {
+            return edges;
+        } else {
+            let mut implied_edges = self.implied_edges().cloned().collect_vec();
+            let nodes = self.path_nodes().collect_vec();
+            for w in nodes.windows(2) {
+                implied_edges.push(Edge::new(
+                    w[0].in_node.unwrap(),
+                    w[0].path_idx,
+                    w[1].out_node.unwrap(),
+                    w[1].path_idx,
+                ));
+            }
+            
+            self.edges = Some(implied_edges);
+            return self.edges.as_ref().unwrap();
         }
-
-        implied_edges
     }
 
     pub fn last_added_edges<'a>(&'a self) -> Vec<Edge> {
@@ -183,14 +198,17 @@ impl Instance {
         last_edges
     }
 
-    fn rem_edges<'a>(&'a self) -> Vec<MatchingEdge> {
-        let mut rem_edges: Vec<MatchingEdge> = vec![];
-        for part in self.inst_parts() {
+    pub fn rem_edges<'a>(&'a self) -> &'a Vec<MatchingEdge> {
+        if let Some(rem_edges) = &self.rem_edges {
+            return rem_edges;
+        } else {
+            let mut rem_edges: Vec<MatchingEdge> = vec![];
+            for part in self.inst_parts() {
             if part.non_rem_edges.len() > 0 {
                 for non_rem_id in &part.non_rem_edges {
                     if let Some((pos, _)) = rem_edges
-                        .iter()
-                        .find_position(|edge| &edge.id == non_rem_id)
+                    .iter()
+                    .find_position(|edge| &edge.id == non_rem_id)
                     {
                         rem_edges.swap_remove(pos);
                     }
@@ -198,8 +216,10 @@ impl Instance {
             }
             rem_edges.append(&mut part.rem_edges.iter().cloned().collect_vec());
         }
-
-        rem_edges
+        
+        self.rem_edges = Some(rem_edges);
+        return self.rem_edges.as_ref().unwrap();
+        }
     }
 
     pub fn pseudo_cycle<'a>(&'a self) -> Option<&'a PseudoCycle> {
@@ -226,6 +246,30 @@ impl Instance {
                 .map(|(u, v)| Edge::new(u, c.path_idx, v, c.path_idx))
         })
     }
+
+    pub fn get_profile(&self, success: bool) -> InstanceProfile {
+        let comps = self.path_nodes().map(|n| n.comp.comp_type()).collect_vec();
+        InstanceProfile {
+            comp_types: comps,
+            success,
+        }
+    }
+
+    pub fn path_nodes<'a>(&'a self) -> impl Iterator<Item = &'a PathComp> {
+        self.inst_parts().flat_map(|part| part.path_nodes.iter())
+    }
+
+
+
+    pub fn connected_nodes<'a>(&'a self) -> impl Iterator<Item = &'a Node> {
+        self.inst_parts()
+            .flat_map(|part| part.connected_nodes.iter())
+    }
+
+   
+
+    
+
 }
 
 #[derive(Debug, Clone)]
@@ -380,7 +424,7 @@ enum Tactic {
 }
 
 impl Tactic {
-    fn prove(&self, stack: &Instance) -> PathProofNode {
+    fn prove(&self, stack: &mut Instance) -> PathProofNode {
         let proof = match self {
             Tactic::LongerPath => check_longer_nice_path(stack),
             Tactic::CycleMerge => check_cycle_merge(stack),
@@ -461,7 +505,7 @@ impl Tactic {
             Tactic::TacticsExhausted => PathProofNode::new_leaf("Tactics exhausted!".into(), false),
             Tactic::Print => {
                 let all_edges = stack.all_edges();
-                let outside = stack.out_edges().collect_vec();
+                let outside = stack.out_edges();
                 let path_comps = stack.path_nodes().collect_vec();
                 let rem_edges = stack.rem_edges();
 
@@ -730,10 +774,10 @@ fn prove_last_node(
             comps: nodes,
         },
         matching_edge_id_counter: MatchingEdgeId(0),
-        edges: vec![],
-        rem_edges: vec![],
-        outside_edges: vec![],
-        npc: NicePairConfig::empty(),
+        edges: None,
+        rem_edges: None,
+        outside_edges: None,
+        npc: None,
     };
     instance.push(StackElement::Inst(InstPart::new_path_comp(path_comp)));
 

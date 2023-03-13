@@ -4,10 +4,10 @@ use crate::{
 };
 
 pub fn check_pendant_node(instance: &Instance) -> PathProofNode {
-    let all_edges = &instance.edges;
-    let outside = &instance.outside_edges;
+    let all_edges = instance.all_edges();
+    let outside = instance.out_edges();
     let mut path_comps = instance.path_nodes();
-    let rem_edges = &instance.rem_edges;
+    let rem_edges = instance.rem_edges();
 
     let last_comp_nodes = &path_comps.next().unwrap().comp.matching_nodes();
 

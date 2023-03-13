@@ -12,7 +12,7 @@ use crate::{
 pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
     let pc = instance.pseudo_cycle().unwrap();
     let path_comps = instance.path_nodes().collect_vec();
-    let npc = &instance.npc;
+    let npc = instance.npc();
 
     let mut cycle_value = pc.value(&path_comps, &npc, &instance.context.inv);
 
