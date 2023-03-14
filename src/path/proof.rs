@@ -129,6 +129,7 @@ impl Instance {
         implied_edges
     }
 
+    #[allow(dead_code)]
     pub fn last_added_edges(&self) -> Vec<Edge> {
         let mut last_edges = vec![];
         for part in self.inst_parts() {
@@ -361,7 +362,6 @@ enum Tactic {
     Contractable,
     Pendant,
     ManualCheck,
-    FiniteInstance,
     TacticsExhausted,
     Print,
 }
@@ -375,7 +375,6 @@ impl Tactic {
             Tactic::Rearrangable => check_path_rearrangement(stack),
             Tactic::Contractable => check_contractability(stack),
             Tactic::Pendant => check_pendant_node(stack),
-            Tactic::FiniteInstance => todo!(),
             Tactic::ManualCheck => {
                 let nodes = stack.path_nodes().collect_vec();
                 // let outside = &stack.outside_edges;
