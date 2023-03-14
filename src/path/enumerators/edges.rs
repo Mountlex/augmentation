@@ -84,17 +84,6 @@ pub fn edge_enumerator(
         }
     }
 
-    // let nodes = instance.path_nodes().collect_vec();
-    //             if !(nodes.len() >= 3
-    //                 && nodes[0].comp.is_c3()
-    //                 && nodes[1].comp.is_c3()
-    //                 && nodes[2].comp.is_c4()) || !(nodes.len() >= 3
-    //                 && nodes[0].comp.is_c4()
-    //                 && nodes[1].comp.is_c3()
-    //                 && nodes[2].comp.is_c3()) {
-    //                     return None;
-    //                 }
-
     // Prio 5: Larger contractable comps
     let all_edges = instance.all_edges();
     let relevant_comps = path_comps
@@ -144,16 +133,18 @@ pub fn edge_enumerator(
 
             for set in vertices_sets {
                 if let Some(good_verts) = is_contractible(&set, instance) {
+                    // G[set] is contractible
                     let all_nodes = instance
                         .path_nodes()
                         .flat_map(|c| c.comp.matching_nodes())
-                        .filter(|n| !set.contains(n)) //|| good_verts.contains(n))
+                        .filter(|n| !set.contains(n) || good_verts.contains(n))
                         .cloned()
                         .collect_vec();
 
-                    // println!("contractable set!: {:?}, good: {:?}", set, good_verts);
-
+                    // We now enumerate all edges which potentially resolve the contractability. Those are between the good vertices and
+                    // (all vertices / bad vertices) (including good vertices)
                     let iter = edge_iterator(good_verts, all_nodes).unwrap();
+
                     let iter = to_inst_parts(iter, nodes_to_pidx, false, instance).collect_vec();
                     //println!("iter: {}", iter.iter().join(", "));
                     return Some((
