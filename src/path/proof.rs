@@ -257,7 +257,7 @@ impl Quantor {
             };
 
             for instance in cases {
-                let item_msg = String::new(); //format!("{} {}", instance, enum_msg);
+                let item_msg = format!("{} {}", instance, enum_msg);
                 stack.push(instance);
                 let mut proof_item = self.formula().prove(stack);
                 proof_item = PathProofNode::new_info(item_msg, proof_item);
