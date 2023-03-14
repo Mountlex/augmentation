@@ -104,7 +104,7 @@ pub fn product_of_first(
 
         Box::new(iproduct!(edges0).map(|e1| vec![e1]))
     } else {
-        panic!("Length {} not supported!", length)
+        panic!("Pseudo Cycle Enumeration: length {} not supported!", length)
     }
 }
 

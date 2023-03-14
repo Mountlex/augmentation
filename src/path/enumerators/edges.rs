@@ -163,7 +163,7 @@ fn to_inst_parts(
     iter: Box<dyn Iterator<Item = (Node, Hit)>>,
     nodes_to_pidx: Vec<Option<Pidx>>,
     matching: bool,
-    instance: &Instance,
+    instance: &mut Instance,
 ) -> Box<dyn Iterator<Item = InstPart> + '_> {
     let all_edges = instance.all_edges();
     Box::new(iter.flat_map(move |(node, hit)| {
@@ -178,7 +178,7 @@ fn to_inst_parts(
                     matching,
                     id: instance.matching_edge_id_counter.clone(),
                 });
-                //instance.matching_edge_id_counter.inc();
+                instance.matching_edge_id_counter.inc();
             }
             Hit::Node(hit_node) => {
                 if nodes_to_pidx[node.get_id() as usize].unwrap()

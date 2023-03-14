@@ -324,7 +324,7 @@ pub struct MatchingEdge {
 
 impl Display for MatchingEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-REM", self.source)
+        write!(f, "{}-REM(id={})", self.source, self.id)
     }
 }
 

@@ -59,7 +59,7 @@ impl Display for Instance {
         let rem_edges = self.rem_edges();
         write!(
             f,
-            "Instance: [{}][{}][{}][{}]",
+            "Instance: [{}] E=[{}] O=[{}] R=[{}]",
             path_comps.join(", "),
             all_edges.iter().join(","),
             outside.iter().join(","),
@@ -345,10 +345,7 @@ impl OptEnumerator {
         };
 
         if let Some((case_iter, msg)) = result {
-            Some((
-                case_iter.map(StackElement::Inst).collect_vec(),
-                msg,
-            ))
+            Some((case_iter.map(StackElement::Inst).collect_vec(), msg))
         } else {
             None
         }
@@ -692,39 +689,38 @@ fn prove_last_node(
     output_depth: usize,
     options: PathProofOptions,
 ) {
-    // let mut context = PathContext {
-    //     credit_inv: credit_inv.clone(),
-    // };
-
-    // let mut proof_tactic = inductive_proof(nodes.clone(), sc);
-
-    // let mut proof = proof_tactic.action(
-    //     &PathEnumeratorInput::new(last_node.clone(), nodes),
-    //     &mut context,
-    // );
-    //proof_tactic.print_stats();
     let comp = last_node.get_comp().clone();
 
-    let path_comp = PathComp {
-        in_node: Some(comp.fixed_node().unwrap()),
-        out_node: None,
-        comp,
-        used: last_node.is_used(),
-        path_idx: Pidx::Last,
+    let mut proof = PathProofNode::new_all(format!("Proof of in_nodes of {}", comp.short_name()));
+    let in_nodes = if comp.fixed_node().is_some() {
+        vec![comp.fixed_node().unwrap()]
+    } else {
+        comp.matching_nodes().to_vec()
     };
 
-    let mut instance = Instance {
-        stack: vec![],
-        context: InstanceContext {
-            inv: credit_inv.clone(),
-            comps: nodes,
-        },
-        matching_edge_id_counter: MatchingEdgeId(0),
-    };
-    instance.push(StackElement::Inst(InstPart::new_path_comp(path_comp)));
+    for in_node in in_nodes {
+        let path_comp = PathComp {
+            in_node: Some(in_node),
+            out_node: None,
+            comp: comp.clone(),
+            used: last_node.is_used(),
+            path_idx: Pidx::Last,
+        };
+        let mut instance = Instance {
+            stack: vec![],
+            context: InstanceContext {
+                inv: credit_inv.clone(),
+                comps: nodes.clone(),
+            },
+            matching_edge_id_counter: MatchingEdgeId(0),
+        };
+        instance.push(StackElement::Inst(InstPart::new_path_comp(path_comp)));
 
-    let expr = inductive_proof(options, options.node_depth);
-    let mut proof = expr.prove(&mut instance);
+        let expr = inductive_proof(options, options.node_depth);
+        let in_node_proof = expr.prove(&mut instance);
+        proof.add_child(in_node_proof);
+    }
+
     let outcome = proof.eval();
 
     print_path_statistics(&proof);

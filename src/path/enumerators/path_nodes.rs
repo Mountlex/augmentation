@@ -15,6 +15,7 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
     let all_edges = instance.all_edges();
     let rem_edges = instance.rem_edges();
 
+    // for all component types...
     let iter = instance.context.comps.iter().flat_map(move |node| {
         let comp = node.get_comp().clone();
         let num_used_labels = path_comps
@@ -61,12 +62,14 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
         let comp_map = comp.clone();
         let node_map = node;
 
+        // for all in_nodes of the new component
         let iter: Box<dyn Iterator<Item = PathComp>> =
             Box::new(in_nodes.into_iter().flat_map(move |in_node| {
                 let comp_filter = comp_filter.clone();
                 let comp_map = comp_map.clone();
                 let node_map = node_map.clone();
 
+                // for all valid out_nodes of the new component
                 let iter: Box<dyn Iterator<Item = PathComp>> = Box::new(
                     // case where we not consider the last node --> we need an out node
                     out_nodes
@@ -96,10 +99,10 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                 rem_edges_copy
                     .into_iter()
                     .powerset()
-                    .flat_map(move |hits_node| {
+                    .flat_map(move |rem_edges_hit_new_node| {
                         let comp = comp.clone();
 
-                        // hits_node is the set of edges which now should hit node_idx
+                        // rem_edges_hit_new_node is the set of edges which now should hit node_idx
                         let mut iter: Box<dyn Iterator<Item = InstPart>> =
                             Box::new(vec![InstPart::new_path_comp(path_comp.clone())].into_iter());
                         for i in 0..old_path_len {
@@ -107,19 +110,21 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                             let comp = comp.clone();
 
                             // all matching edges between source_idx and node_idx
-                            let matching_edges = hits_node
+                            let matching_edges = rem_edges_hit_new_node
                                 .clone()
                                 .into_iter()
                                 .filter(|e| e.source_idx == source_idx)
                                 .collect_vec();
 
+                            // previous rem_edges which will be now realized are converted to non_rem_edges, so we collect those ids
                             let non_rem_edges =
-                                hits_node.iter().map(|e| e.id.clone()).collect_vec();
+                                rem_edges_hit_new_node.iter().map(|e| e.id.clone()).collect_vec();
 
                             iter = Box::new(iter.flat_map(move |inst_part| {
                                 let matching_edges = matching_edges.clone();
                                 let non_rem_edges = non_rem_edges.clone();
 
+                                // TODO respect matching property here
                                 comp.matching_permutations(matching_edges.len())
                                     .into_iter()
                                     .filter(move |matched| {
