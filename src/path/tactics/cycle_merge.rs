@@ -21,7 +21,7 @@ pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
         crate::path::CycleComp::Rem => false,
     }) {
         // 2c due to gainful bridge covering. We convert the resulting complex to a large
-        cycle_value += Credit::from_integer(2) * instance.context.inv.c
+        cycle_value += Credit::from_integer(1) * instance.context.inv.c
     }
 
     if cycle_value >= Credit::from_integer(2) {

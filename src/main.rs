@@ -228,8 +228,8 @@ fn prove_path(path: Path) {
     let comps = if inv.c < Credit::new(2, 7) {
         vec![
             large(),
-            //complex_tree(),
-            //complex_path(),
+            complex_tree(),
+            complex_path(),
             c3(),
             c4(),
             c5(),
