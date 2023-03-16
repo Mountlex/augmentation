@@ -15,7 +15,6 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     all_rem_edges.push(MatchingEdge {
         source: last_comp.in_node.unwrap(),
         source_idx: last_comp.path_idx,
-        id: instance.matching_edge_id_counter.clone(),
         matching: true,
     });
 

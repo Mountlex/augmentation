@@ -1,4 +1,5 @@
 use std::fmt::{Display, Write};
+use std::ops::RangeBounds;
 use std::path::PathBuf;
 
 use itertools::Itertools;
@@ -84,6 +85,14 @@ impl Instance {
         self.stack.pop().unwrap();
     }
 
+    pub fn top_mut(&mut self) -> Option<&mut InstPart> {
+        self.stack.last_mut().and_then(|last| match last {
+            StackElement::Inst(part) => Some(part),
+            StackElement::PseudoCycle(_) => None,
+            StackElement::Rearrangement(_) => None,
+        })
+    }
+
     pub fn inst_parts(&self) -> impl Iterator<Item = &'_ InstPart> {
         self.stack.iter().flat_map(|ele| ele.as_inst_part())
     }
@@ -112,6 +121,14 @@ impl Instance {
 
     fn implied_edges(&self) -> impl Iterator<Item = &'_ Edge> {
         self.inst_parts().flat_map(|part| part.edges.iter())
+    }
+
+    pub fn good_edges(&self) -> Vec<&Edge> {
+        self.inst_parts().flat_map(|part| part.good_edges.iter()).collect_vec()
+    }
+
+    pub fn good_out(&self) -> Vec<&Node> {
+        self.inst_parts().flat_map(|part| part.good_out.iter()).collect_vec()
     }
 
     pub fn all_edges(&self) -> Vec<Edge> {
@@ -161,10 +178,10 @@ impl Instance {
         let mut rem_edges: Vec<MatchingEdge> = vec![];
         for part in self.inst_parts() {
             if !part.non_rem_edges.is_empty() {
-                for non_rem_id in &part.non_rem_edges {
+                for non_rem in &part.non_rem_edges {
                     if let Some((pos, _)) = rem_edges
                         .iter()
-                        .find_position(|edge| &edge.id == non_rem_id)
+                        .find_position(|edge| &edge.source == non_rem)
                     {
                         rem_edges.swap_remove(pos);
                     }
@@ -377,24 +394,21 @@ impl Tactic {
             Tactic::Pendant => check_pendant_node(stack),
             Tactic::ManualCheck => {
                 let nodes = stack.path_nodes().collect_vec();
-                // let outside = &stack.outside_edges;
-                // let rem_edges = &stack.rem_edges;
-                // let edges = &stack.edges;
-                // let npc = &stack.npc;
-
-                //    if nodes.len() >= 2
-                //     && nodes[0].comp.is_c3()
-                //     && nodes[1].comp.is_c6()
-                // {
-                //     return PathProofNode::new_leaf("Manual proof for C3-C6-C5.".into(), true);
-                // }
 
                 if nodes.len() >= 3
                     && nodes[0].comp.is_c3()
                     && nodes[1].comp.is_c3()
                     && nodes[2].comp.is_c4()
                 {
-                    return PathProofNode::new_leaf("Manual proof for C3-C3-C4.".into(), true);
+                    let all_edges = stack.all_edges();
+
+                    let p2_in = nodes[2].in_node.unwrap();
+                    let p2_conns = nodes[2].comp.nodes().iter().filter(|n| nodes[2].comp.is_adjacent(n, &p2_in)).cloned().collect_vec();
+
+                    if all_edges.iter().filter(|e| e.path_incident(0.into()) && e.nodes_incident(&p2_conns)).count() > 1 && all_edges.iter().filter(|e| e.path_incident(1.into()) && e.nodes_incident(&p2_conns)).count() > 1 {
+                        return PathProofNode::new_leaf("Manual proof for C3-C3-C4.".into(), true);
+                    }
+
                 }
 
                 // if nodes.len() >= 3 && nodes[0].comp.is_c3() && nodes[1].comp.is_c6() {
@@ -613,6 +627,15 @@ fn progress() -> Expression {
             ),
         ),
     )
+}
+
+pub fn check_progress(instance: &mut Instance, part: InstPart) -> bool {
+    instance.push(StackElement::Inst(part));
+    let mut proof = progress().prove(instance);
+    proof.eval();
+    let outcome = proof.outcome();
+    instance.pop();
+    outcome.success()
 }
 
 #[derive(Clone, Copy)]
