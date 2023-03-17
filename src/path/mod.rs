@@ -26,7 +26,7 @@ pub struct InstPart {
     pub nice_pairs: Vec<(Node, Node)>,
     pub edges: Vec<Edge>,
     pub out_edges: Vec<Node>,
-    pub rem_edges: Vec<MatchingEdge>,
+    pub rem_edges: Vec<HalfAbstractEdge>,
     pub non_rem_edges: Vec<Node>,
     pub connected_nodes: Vec<Node>,
     pub good_edges: Vec<Edge>,
@@ -60,12 +60,7 @@ impl InstPart {
             && self.good_out.is_empty()
     }
 
-    pub fn from_edge(edge: Edge) -> InstPart {
-        let mut part = Self::empty();
-        part.edges.push(edge);
-        part
-    }
-
+   
     pub fn new_path_comp(path_comp: PathComp) -> InstPart {
         InstPart {
             path_nodes: vec![path_comp],
@@ -312,30 +307,15 @@ impl Display for PathComp {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MatchingEdgeId(pub u128);
 
-impl MatchingEdgeId {
-    #[allow(dead_code)]
-    pub fn inc(&mut self) {
-        self.0 += 1;
-    }
-}
-
-impl Display for MatchingEdgeId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "NonRem({})", self.0)
-    }
-}
 
 #[derive(Clone, Debug)]
-pub struct MatchingEdge {
+pub struct HalfAbstractEdge {
     source: Node,
     source_idx: Pidx,
-    matching: bool,
 }
 
-impl Display for MatchingEdge {
+impl Display for HalfAbstractEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}-REM", self.source)
     }

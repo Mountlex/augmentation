@@ -1,5 +1,4 @@
 use std::fmt::{Display, Write};
-use std::ops::RangeBounds;
 use std::path::PathBuf;
 
 use itertools::Itertools;
@@ -22,7 +21,7 @@ use super::tactics::local_merge::check_local_merge;
 use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
 use super::{
-    InstPart, InstanceContext, InstanceProfile, MatchingEdge, MatchingEdgeId, NicePairConfig,
+    InstPart, InstanceContext, InstanceProfile, HalfAbstractEdge,  NicePairConfig,
     PathNode, PseudoCycle, Rearrangement,
 };
 
@@ -73,7 +72,6 @@ impl Display for Instance {
 pub struct Instance {
     stack: Vec<StackElement>,
     pub context: InstanceContext,
-    pub matching_edge_id_counter: MatchingEdgeId,
 }
 
 impl Instance {
@@ -124,11 +122,15 @@ impl Instance {
     }
 
     pub fn good_edges(&self) -> Vec<&Edge> {
-        self.inst_parts().flat_map(|part| part.good_edges.iter()).collect_vec()
+        self.inst_parts()
+            .flat_map(|part| part.good_edges.iter())
+            .collect_vec()
     }
 
     pub fn good_out(&self) -> Vec<&Node> {
-        self.inst_parts().flat_map(|part| part.good_out.iter()).collect_vec()
+        self.inst_parts()
+            .flat_map(|part| part.good_out.iter())
+            .collect_vec()
     }
 
     pub fn all_edges(&self) -> Vec<Edge> {
@@ -146,36 +148,18 @@ impl Instance {
         implied_edges
     }
 
-    #[allow(dead_code)]
-    pub fn last_added_edges(&self) -> Vec<Edge> {
-        let mut last_edges = vec![];
-        for part in self.inst_parts() {
-            if !part.edges.is_empty() {
-                last_edges = part.edges.clone();
+    pub fn last_single_edge(&self) -> Option<Edge> {
+        self.inst_parts().last().and_then(|part| {
+            if part.edges.len() == 1 {
+                part.edges.first().cloned()
+            } else {
+                None
             }
-            if !part.path_nodes.is_empty() {
-                last_edges = vec![];
-            }
-            if !part.rem_edges.is_empty() {
-                last_edges = vec![];
-            }
-        }
-        last_edges
+        })
     }
 
-    #[allow(dead_code)]
-    fn last_added_rem_edges(&self) -> Vec<MatchingEdge> {
-        let mut last_edges = vec![];
-        for part in self.inst_parts() {
-            if !part.edges.is_empty() {
-                last_edges = part.rem_edges.clone();
-            }
-        }
-        last_edges
-    }
-
-    pub fn rem_edges(&self) -> Vec<MatchingEdge> {
-        let mut rem_edges: Vec<MatchingEdge> = vec![];
+    pub fn rem_edges(&self) -> Vec<HalfAbstractEdge> {
+        let mut rem_edges: Vec<HalfAbstractEdge> = vec![];
         for part in self.inst_parts() {
             if !part.non_rem_edges.is_empty() {
                 for non_rem in &part.non_rem_edges {
@@ -403,12 +387,27 @@ impl Tactic {
                     let all_edges = stack.all_edges();
 
                     let p2_in = nodes[2].in_node.unwrap();
-                    let p2_conns = nodes[2].comp.nodes().iter().filter(|n| nodes[2].comp.is_adjacent(n, &p2_in)).cloned().collect_vec();
+                    let p2_conns = nodes[2]
+                        .comp
+                        .nodes()
+                        .iter()
+                        .filter(|n| nodes[2].comp.is_adjacent(n, &p2_in))
+                        .cloned()
+                        .collect_vec();
 
-                    if all_edges.iter().filter(|e| e.path_incident(0.into()) && e.nodes_incident(&p2_conns)).count() > 1 && all_edges.iter().filter(|e| e.path_incident(1.into()) && e.nodes_incident(&p2_conns)).count() > 1 {
+                    if all_edges
+                        .iter()
+                        .filter(|e| e.path_incident(0.into()) && e.nodes_incident(&p2_conns))
+                        .count()
+                        > 1
+                        && all_edges
+                            .iter()
+                            .filter(|e| e.path_incident(1.into()) && e.nodes_incident(&p2_conns))
+                            .count()
+                            > 1
+                    {
                         return PathProofNode::new_leaf("Manual proof for C3-C3-C4.".into(), true);
                     }
-
                 }
 
                 // if nodes.len() >= 3 && nodes[0].comp.is_c3() && nodes[1].comp.is_c6() {
@@ -734,7 +733,6 @@ fn prove_last_node(
                 inv: credit_inv.clone(),
                 comps: nodes.clone(),
             },
-            matching_edge_id_counter: MatchingEdgeId(0),
         };
         instance.push(StackElement::Inst(InstPart::new_path_comp(path_comp)));
 

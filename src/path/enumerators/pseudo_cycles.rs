@@ -1,7 +1,7 @@
 use itertools::{iproduct, Itertools};
 
 use crate::{
-    path::{proof::Instance, CycleComp, MatchingEdge, PathComp, PseudoCycle},
+    path::{proof::Instance, CycleComp, HalfAbstractEdge, PathComp, PseudoCycle},
     types::Edge,
     Node,
 };
@@ -9,13 +9,12 @@ use crate::{
 pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle> + '_> {
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let all_edges = instance.all_edges();
-    //let new_edges = instance.last_added_edges();
+    let last_single_edge = instance.last_single_edge();
     let mut all_rem_edges = instance.rem_edges();
     let last_comp = path_comps.last().unwrap();
-    all_rem_edges.push(MatchingEdge {
+    all_rem_edges.push(HalfAbstractEdge {
         source: last_comp.in_node.unwrap(),
         source_idx: last_comp.path_idx,
-        matching: true,
     });
 
     if path_comps.len() < 2 {
@@ -26,7 +25,7 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     for i in 3..=(path_comps.len() + 1) {
         let fixed_edge_iter = pseudo_cycles_of_length(
             path_comps.clone(),
-            vec![], //new_edges.clone(),
+            last_single_edge,
             all_edges.clone(),
             all_rem_edges.clone(),
             i,
@@ -109,22 +108,23 @@ pub fn product_of_first(
 
 fn edges_between(
     edges: &[Edge],
-    _new_edges: &[Edge],
-    rem_edges: &[MatchingEdge],
+    last_single_edge: Option<Edge>,
+    rem_edges: &[HalfAbstractEdge],
     i1: &CycleComp,
     i2: &CycleComp,
 ) -> Vec<(Node, Node)> {
     match (i1, i2) {
         (CycleComp::PathComp(idx1), CycleComp::PathComp(idx2)) => {
-            //   if new_edges.len() == 1 && new_edges[0].between_path_nodes(*idx1, *idx2) {
-            //          vec![new_edges[0].nodes_between_path_nodes(*idx1, *idx2)]
-            //   } else {
-            edges
+            if let Some(edge) = last_single_edge {
+                if edge.between_path_nodes(*idx1, *idx2) {
+                    return vec![edge.nodes_between_path_nodes(*idx1, *idx2)];
+                }
+            }
+            return edges
                 .iter()
                 .filter(|e| e.between_path_nodes(*idx1, *idx2))
                 .map(|e| e.nodes_between_path_nodes(*idx1, *idx2))
-                .collect_vec()
-            //    }
+                .collect_vec();
         }
         (CycleComp::PathComp(idx), CycleComp::Rem) => rem_edges
             .iter()
@@ -142,9 +142,9 @@ fn edges_between(
 
 pub fn pseudo_cycles_of_length(
     path_comps: Vec<PathComp>,
-    new_edges: Vec<Edge>,
+    last_single_edge: Option<Edge>,
     all_edges: Vec<Edge>,
-    all_rem_edges: Vec<MatchingEdge>,
+    all_rem_edges: Vec<HalfAbstractEdge>,
     length: usize,
     with_rem: bool,
 ) -> impl Iterator<Item = PseudoCycle> {
@@ -157,10 +157,7 @@ pub fn pseudo_cycles_of_length(
             .chain(std::iter::once(CycleComp::Rem))
             .collect_vec()
     } else {
-        indices
-            .into_iter()
-            .map(CycleComp::PathComp)
-            .collect_vec()
+        indices.into_iter().map(CycleComp::PathComp).collect_vec()
     };
 
     comps
@@ -173,29 +170,16 @@ pub fn pseudo_cycles_of_length(
             let cons_edges = vec![perm.clone(), vec![first]]
                 .concat()
                 .windows(2)
-                .map(|e| edges_between(&all_edges, &new_edges, &all_rem_edges, &e[0], &e[1]))
+                .map(|e| {
+                    edges_between(
+                        &all_edges,
+                        last_single_edge.clone(),
+                        &all_rem_edges,
+                        &e[0],
+                        &e[1],
+                    )
+                })
                 .collect_vec();
-
-            // if path_comps.len() == 5
-            //     && path_comps[0].comp.is_c3()
-            //     && path_comps[1].comp.is_c3()
-            //     && path_comps[2].comp.is_c4()
-            //     && path_comps[3].comp.is_large()
-            //     && path_comps[4].comp.is_large()
-            //     && perm.len() == 4
-            //     && all_edges.len() == 8
-            //     && all_rem_edges.len() == 1
-            //     && perm
-            //         == vec![
-            //             CycleComp::PathComp(0.into()),
-            //             CycleComp::PathComp(1.into()),
-            //             CycleComp::PathComp(2.into()),
-            //             CycleComp::PathComp(3.into()),
-            //         ]
-            // {
-            //     println!("perm {:?}", perm);
-            //     println!("cons_edges {:?}", cons_edges);
-            // }
 
             assert_eq!(length, cons_edges.len());
 

@@ -2,8 +2,10 @@ use itertools::Itertools;
 
 use crate::{
     path::{
-        proof::{Instance, check_progress}, util::contract::is_contractible, utils::hamiltonian_paths, InstPart,
-        MatchingEdge, PathComp, Pidx,
+        proof::{check_progress, Instance},
+        util::contract::is_contractible,
+        utils::hamiltonian_paths,
+        HalfAbstractEdge, InstPart, PathComp, Pidx,
     },
     types::Edge,
     Node,
@@ -14,7 +16,6 @@ use super::pseudo_cycles::pseudo_cycles_of_length;
 pub fn edge_enumerator(
     instance: &mut Instance,
 ) -> Option<(Box<dyn Iterator<Item = InstPart> + '_>, String)> {
-
     let res = enumerate_parts(instance);
     if res.is_none() {
         return None;
@@ -23,10 +24,9 @@ pub fn edge_enumerator(
     let (iter, name) = res.unwrap();
     let cases = iter.collect_vec();
     let iter = compute_good_edges(instance, Box::new(cases.into_iter()));
-    
+
     Some((iter, name))
 }
-
 
 fn enumerate_parts(
     instance: &Instance,
@@ -50,7 +50,7 @@ fn enumerate_parts(
         .collect_vec();
     if let Some(iter) = ensure_three_matching(last_nodes, other_nodes, instance) {
         return Some((
-            to_cases(iter, nodes_to_pidx, true, instance),
+            to_cases(iter, nodes_to_pidx, instance),
             "3-Matching of last pathnode.".to_string(),
         ));
     }
@@ -69,7 +69,7 @@ fn enumerate_parts(
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
         if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance) {
-            let iter = to_cases(iter, nodes_to_pidx, true, instance);
+            let iter = to_cases(iter, nodes_to_pidx, instance);
             return Some((iter, format!("3-Matching of {}", idx)));
         }
     }
@@ -87,7 +87,7 @@ fn enumerate_parts(
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
         if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance) {
-            let iter = to_cases(iter, nodes_to_pidx, true, instance);
+            let iter = to_cases(iter, nodes_to_pidx, instance);
             return Some((iter, format!("3-Matching of {} first pathnodes", s)));
         }
     }
@@ -96,7 +96,7 @@ fn enumerate_parts(
     for path_comp in path_comps.iter().take(len - 1) {
         let idx = path_comp.path_idx;
         if let Some(iter) = handle_contractable_components(path_comp, instance) {
-            let iter = to_cases(iter, nodes_to_pidx, false, instance);
+            let iter = to_cases(iter, nodes_to_pidx, instance);
             return Some((iter, format!("Contractablility of {}", idx)));
         }
     }
@@ -113,7 +113,7 @@ fn enumerate_parts(
         // println!("Instance: {}", instance);
         for pc in pseudo_cycles_of_length(
             relevant_comps.clone(),
-            all_edges.clone(),
+            None,
             all_edges.clone(),
             vec![],
             i,
@@ -162,7 +162,7 @@ fn enumerate_parts(
                     // (all vertices / bad vertices) (including good vertices)
                     let iter = edge_iterator(good_verts, all_nodes).unwrap();
 
-                    let iter = to_cases(iter, nodes_to_pidx, false, instance).collect_vec();
+                    let iter = to_cases(iter, nodes_to_pidx, instance).collect_vec();
                     //println!("iter: {}", iter.iter().join(", "));
                     return Some((
                         Box::new(iter.into_iter()),
@@ -176,37 +176,35 @@ fn enumerate_parts(
     None
 }
 
+fn compute_good_edges(
+    instance: &mut Instance,
+    iter: Box<dyn Iterator<Item = InstPart>>,
+) -> Box<dyn Iterator<Item = InstPart> + '_> {
+    let mut good_edges = vec![];
+    let mut good_out = vec![];
 
-
-
-fn compute_good_edges(instance: &mut Instance, iter: Box<dyn Iterator<Item = InstPart>>) -> Box<dyn Iterator<Item = InstPart> + '_> {
-        let mut good_edges = vec![];
-        let mut good_out = vec![];
-
-        let mut rem_parts = vec![];
-        let parts = iter.collect_vec();
-        for mut part in parts {
-            if check_progress(instance, part.clone()) {
-                good_edges.append(&mut part.edges);
-                good_out.append(&mut part.out_edges);
-            } else {
-                rem_parts.push(part);
-            }
+    let mut rem_parts = vec![];
+    let parts = iter.collect_vec();
+    for mut part in parts {
+        if check_progress(instance, part.clone()) {
+            good_edges.append(&mut part.edges);
+            good_out.append(&mut part.out_edges);
+        } else {
+            rem_parts.push(part);
         }
+    }
 
-        if let Some(top) = instance.top_mut() {
-            top.good_edges.append(&mut good_edges);
-            top.good_out.append(&mut good_out);
-        }
+    if let Some(top) = instance.top_mut() {
+        top.good_edges.append(&mut good_edges);
+        top.good_out.append(&mut good_out);
+    }
 
-        return Box::new(rem_parts.into_iter());
-}   
-
+    return Box::new(rem_parts.into_iter());
+}
 
 fn to_cases(
     iter: Box<dyn Iterator<Item = (Node, Hit)>>,
     nodes_to_pidx: Vec<Option<Pidx>>,
-    matching: bool,
     instance: &Instance,
 ) -> Box<dyn Iterator<Item = InstPart> + '_> {
     let all_edges = instance.all_edges();
@@ -220,10 +218,9 @@ fn to_cases(
         match hit {
             Hit::Outside => part.out_edges.push(node),
             Hit::RemPath => {
-                part.rem_edges.push(MatchingEdge {
+                part.rem_edges.push(HalfAbstractEdge {
                     source: node,
                     source_idx: nodes_to_pidx[node.get_id() as usize].unwrap(),
-                    matching,
                 });
             }
             Hit::Node(hit_node) => {

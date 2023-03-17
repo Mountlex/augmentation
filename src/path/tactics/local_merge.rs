@@ -108,16 +108,20 @@ fn merge(
 
 pub fn check_local_merge(instance: &Instance) -> PathProofNode {
     let all_edges = instance.all_edges();
-    //let new_edges = instance.last_added_edges();
+    let last_added_edge = instance.last_single_edge();
     let all_comps = instance.path_nodes().cloned().collect_vec();
     let npc = instance.npc();
 
     let res = all_comps
         .iter()
         .tuple_combinations::<(_, _)>()
-        // .filter(|(left, right)| {
-        //     new_edges.len() != 1 || (new_edges[0].between_path_nodes(left.path_idx, right.path_idx))
-        // })
+        .filter(|(left, right)| {
+            if let Some(edge) = last_added_edge {
+                edge.between_path_nodes(left.path_idx, right.path_idx)
+            } else {
+                true
+            }
+        })
         .find_map(|(left, right)| {
             let edges_between = all_edges
                 .iter()
