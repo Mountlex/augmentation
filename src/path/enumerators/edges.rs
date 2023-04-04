@@ -92,6 +92,27 @@ fn enumerate_parts(
         }
     }
 
+    // Prio 3.5: 4-matching
+    for s in 2..=len - 1 {
+        let comp_nodes = path_comps
+            .iter()
+            .take(s)
+            .flat_map(|c| c.comp.matching_nodes().to_vec())
+            .collect_vec();
+        let other_nodes = path_comps
+            .iter()
+            .filter(|p| p.path_idx.raw() >= s)
+            .flat_map(|p| p.comp.matching_nodes().to_vec())
+            .collect_vec();
+        if comp_nodes.len() >= 10 {
+            if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4) {
+                let iter = to_cases(iter, nodes_to_pidx, instance);
+                return Some((iter, format!("4-Matching of {} first pathnodes", s)));
+            }
+        }
+    }
+
+
     // Prio 4: Edges due to contractablility
     for path_comp in path_comps.iter().take(len - 1) {
         let idx = path_comp.path_idx;
@@ -288,6 +309,8 @@ fn handle_contractable_components(
             outside.contains(n)
                 || rem_edges.iter().any(|e| e.source == **n)
                 || all_edges.iter().any(|e| e.node_incident(n))
+                || path_comp.in_node == Some(**n)
+                || path_comp.out_node == Some(**n)
         })
         .cloned()
         .collect_vec();
@@ -342,6 +365,16 @@ fn ensure_three_matching(
     set: Vec<Node>,
     compl: Vec<Node>,
     instance: &Instance,
+) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
+    ensure_k_matching(set, compl, instance, 3)
+}
+
+
+fn ensure_k_matching(
+    set: Vec<Node>,
+    compl: Vec<Node>,
+    instance: &Instance,
+    k: u8
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
     let outside_edges_at_set = instance
         .out_edges()
@@ -413,7 +446,7 @@ fn ensure_three_matching(
         + num_edges_between_comp
         + num_edges_comp_at_set_non_comp_compl
         + num_min_matching_between_non_comp
-        < 3
+        < k as usize
     {
         let free_complement = compl
             .into_iter()

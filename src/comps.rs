@@ -332,6 +332,19 @@ impl Component {
         }
     }
 
+    pub fn num_vertices(&self) -> usize {
+        match self {
+            Component::C7(_) => 7,
+            Component::C6(_) => 6,
+            Component::C5(_) => 5,
+            Component::C4(_) => 4,
+            Component::C3(_) => 3,
+            Component::Large(_) => 8,
+            Component::ComplexPath(_, _) => 10,
+            Component::ComplexTree(_, _) => 10,
+        }
+    }
+
     pub fn is_adjacent(&self, v1: &Node, v2: &Node) -> bool {
         //assert!(self.graph().contains_node(v1));
         //assert!(self.graph().contains_node(v2));
@@ -394,16 +407,17 @@ impl Component {
         }
     }
 
+    /// TODO this know computes combinations without replacement!
     pub fn subsets_of_size(&self, size: usize) -> Vec<Vec<Node>> {
         match self {
             Component::Large(n) => vec![vec![*n; size]],
-            Component::ComplexTree(_, nodes) => nodes.iter().cloned().combinations_with_replacement(size).collect(),
-            Component::ComplexPath(_, nodes) => nodes.iter().cloned().combinations_with_replacement(size).collect(),
+            Component::ComplexTree(_, nodes) => nodes.iter().cloned().combinations(size).collect(),
+            Component::ComplexPath(_, nodes) => nodes.iter().cloned().combinations(size).collect(),
             _ => self
                 .nodes()
                 .to_vec()
                 .into_iter()
-                .combinations_with_replacement(size)
+                .combinations(size)
                 .collect(),
         }
     }

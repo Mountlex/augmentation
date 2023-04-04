@@ -20,8 +20,14 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
         .chain(out_edges.iter().cloned())
         .collect_vec();
 
+
+    
+
     let mut cases: Box<dyn Iterator<Item = InstPart>> =
         Box::new(vec![InstPart::empty()].into_iter());
+
+    
+
     let path_comps = instance.path_nodes().collect_vec();
 
     for path_comp in path_comps {
@@ -113,6 +119,18 @@ fn comp_npcs(
         }],
         _ => {
             // cycle case
+
+
+            let mut npc = NicePairConfig { nice_pairs: comp.edges() };
+            if (comp.is_c3()
+            || comp.is_c4() || (comp.is_c5() && !node.used && node.path_idx.is_prelast())) && node.in_node.is_some() && node.out_node.is_some() {
+                npc.nice_pairs
+                    .push((node.in_node.unwrap(), node.out_node.unwrap()))
+            }
+            return  vec![npc];
+
+            // TODO add all nice pairs
+
             nodes
                 .iter()
                 .cloned()

@@ -20,7 +20,7 @@ fn check_for_comp(instance: &Instance, idx: Pidx) -> PathProofNode {
 
     if comp.is_complex() || comp.is_large() || comp.is_c3() || comp.is_c4() {
         return PathProofNode::new_leaf(
-            "Contractability check not applied: component is C3, Large or Complex".into(),
+            "Contractability check not applied: component is C3, C4 , Large or Complex".into(),
             false,
         );
     }
@@ -32,6 +32,8 @@ fn check_for_comp(instance: &Instance, idx: Pidx) -> PathProofNode {
             outside.contains(n)
                 || rem_edges.iter().any(|e| e.source == **n)
                 || all_edges.iter().any(|e| e.node_incident(n))
+                || path_comps[idx.raw()].in_node == Some(**n)
+                || path_comps[idx.raw()].out_node == Some(**n)
         })
         .cloned()
         .collect_vec();
