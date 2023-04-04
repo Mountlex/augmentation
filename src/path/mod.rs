@@ -11,6 +11,7 @@ use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 pub use proof::PathProofOptions;
 
+use crate::Credit;
 use crate::proof_tree::ProofNode;
 use crate::{CreditInv, Node};
 
@@ -196,6 +197,7 @@ impl Display for Rearrangement {
 #[derive(Clone, Debug)]
 pub struct PseudoCycle {
     pub cycle: Vec<(Node, CycleComp, Node)>,
+    pub total_edge_cost: Credit,
 }
 
 impl PseudoCycle {

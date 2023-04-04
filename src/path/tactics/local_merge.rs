@@ -36,6 +36,10 @@ fn merge(
         };
 
         for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
+            
+            let buy_cost: Credit = buy.iter().map(|e| e.cost).sum();
+            assert_eq!(buy_cost, Credit::from(2));
+            
             let mut total_block_merge = total_comp_credit;
             let other1 = other_comp.incident(buy[0]).unwrap();
             let other2 = other_comp.incident(buy[1]).unwrap();
@@ -50,7 +54,7 @@ fn merge(
 
             total_block_merge += context.inv.complex_black(gained_complex_deg as i64);
 
-            if total_block_merge >= Credit::from_integer(3) {
+            if total_block_merge - buy_cost >= Credit::from_integer(1) {
                 // we have to pay for block credit and two edges
                 return PathProofNode::new_leaf_success(
                     "Local merge to complex".into(),
@@ -78,12 +82,14 @@ fn merge(
         }
     } else {
         for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
+            let buy_cost: Credit = buy.iter().map(|e| e.cost).sum();
+            assert_eq!(buy_cost, Credit::from(2));
             let l1 = left_comp.incident(buy[0]).unwrap();
             let l2 = left_comp.incident(buy[1]).unwrap();
             let r1 = right_comp.incident(buy[0]).unwrap();
             let r2 = right_comp.incident(buy[1]).unwrap();
 
-            let mut credits = total_comp_credit - Credit::from_integer(2);
+            let mut credits = total_comp_credit - buy_cost;
 
             if npc.is_nice_pair(l1, l2) {
                 credits += Credit::from_integer(1)

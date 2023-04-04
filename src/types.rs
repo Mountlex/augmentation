@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{path::Pidx, Node};
+use crate::{path::Pidx, Node, Credit};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Edge {
@@ -8,6 +8,7 @@ pub struct Edge {
     pub n2: Node,
     pub path_index_n1: Pidx,
     pub path_index_n2: Pidx,
+    pub cost: Credit,
 }
 
 impl PartialEq for Edge {
@@ -23,6 +24,7 @@ impl Edge {
             n2,
             path_index_n1: Pidx::Last,
             path_index_n2: Pidx::Last,
+            cost: Credit::from(1)
         }
     }
 
@@ -32,8 +34,19 @@ impl Edge {
             n2,
             path_index_n1: p1,
             path_index_n2: p2,
+            cost: Credit::from(1)
         }
     }
+
+    // pub fn with_value(n1: Node, p1: Pidx, n2: Node, p2: Pidx, value: Credit) -> Self {
+    //     Self {
+    //         n1,
+    //         n2,
+    //         path_index_n1: p1,
+    //         path_index_n2: p2,
+    //         cost: value
+    //     }
+    // }
 
     pub fn path_distance(&self) -> usize {
         self.path_index_n1.dist(&self.path_index_n2)

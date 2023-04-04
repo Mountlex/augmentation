@@ -3,7 +3,7 @@ use itertools::{iproduct, Itertools};
 use crate::{
     path::{proof::Instance, CycleComp, HalfAbstractEdge, PathComp, PseudoCycle},
     types::Edge,
-    Node,
+    Node, Credit,
 };
 
 pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle> + '_> {
@@ -36,10 +36,10 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     iter
 }
 
-pub fn product_of_first(
-    mut edges: Vec<Vec<(Node, Node)>>,
+pub fn product_of_first<T: Clone + Copy + 'static>(
+    mut edges: Vec<Vec<T>>,
     length: usize,
-) -> Box<dyn Iterator<Item = Vec<(Node, Node)>>> {
+) -> Box<dyn Iterator<Item = Vec<T>>> {
     assert_eq!(length, edges.len());
     if length == 7 {
         let edges0 = edges.remove(0);
@@ -112,29 +112,29 @@ fn edges_between(
     rem_edges: &[HalfAbstractEdge],
     i1: &CycleComp,
     i2: &CycleComp,
-) -> Vec<(Node, Node)> {
+) -> Vec<((Node, Node), Credit)> {
     match (i1, i2) {
         (CycleComp::PathComp(idx1), CycleComp::PathComp(idx2)) => {
             if let Some(edge) = last_single_edge {
                 if edge.between_path_nodes(*idx1, *idx2) {
-                    return vec![edge.nodes_between_path_nodes(*idx1, *idx2)];
+                    return vec![(edge.nodes_between_path_nodes(*idx1, *idx2), edge.cost)];
                 }
             }
             return edges
                 .iter()
                 .filter(|e| e.between_path_nodes(*idx1, *idx2))
-                .map(|e| e.nodes_between_path_nodes(*idx1, *idx2))
+                .map(|e| (e.nodes_between_path_nodes(*idx1, *idx2), e.cost))
                 .collect_vec();
         }
         (CycleComp::PathComp(idx), CycleComp::Rem) => rem_edges
             .iter()
             .filter(|e| e.source_idx == *idx)
-            .map(|e| (e.source, Node::Rem))
+            .map(|e| ((e.source, Node::Rem), Credit::from(1)))
             .collect_vec(),
         (CycleComp::Rem, CycleComp::PathComp(idx)) => rem_edges
             .iter()
             .filter(|e| e.source_idx == *idx)
-            .map(|e| (Node::Rem, e.source))
+            .map(|e| ((Node::Rem, e.source), Credit::from(1)))
             .collect_vec(),
         (CycleComp::Rem, CycleComp::Rem) => panic!(),
     }
@@ -183,8 +183,10 @@ pub fn pseudo_cycles_of_length(
 
             assert_eq!(length, cons_edges.len());
 
-            product_of_first(cons_edges, length).map(move |e| {
+            product_of_first(cons_edges, length).map(move |edges| {
                 let cycle_indices = &perm;
+
+                let total_edge_cost = edges.iter().map(|(_, c)| c).sum();
 
                 assert_eq!(cycle_indices.len(), length);
 
@@ -193,12 +195,12 @@ pub fn pseudo_cycles_of_length(
                     .enumerate()
                     .map(|(i, cycle_comp)| {
                         let last_edge = if i == 0 { length - 1 } else { i - 1 };
-                        (e[last_edge].1, cycle_comp.clone(), e[i].0)
+                        (edges[last_edge].0.1, cycle_comp.clone(), edges[i].0.0)
                     })
                     .collect_vec();
 
                 // cycle nodes:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in:3.out -- 0.in]
-                PseudoCycle { cycle }
+                PseudoCycle { cycle, total_edge_cost }
             })
         })
 }
