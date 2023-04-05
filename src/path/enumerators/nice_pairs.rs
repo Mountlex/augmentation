@@ -6,12 +6,12 @@ use crate::{
     Node,
 };
 
-pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart> + '_> {
+pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart>> {
     let all_edges = instance.all_edges();
     let rem_edges = instance.rem_edges();
     let out_edges = instance.out_edges();
     let npc = instance.npc();
-    let connected_nodes = instance.connected_nodes().collect_vec();
+    let connected_nodes = instance.connected_nodes().cloned().collect_vec();
 
     let nodes_with_edges = all_edges
         .iter()
@@ -28,7 +28,7 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
 
     
 
-    let path_comps = instance.path_nodes().collect_vec();
+    let path_comps = instance.path_nodes().cloned().collect_vec();
 
     for path_comp in path_comps {
         let updated_nodes_with_edges = path_comp
@@ -43,7 +43,6 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
             .iter()
             .filter(|n| path_comp_nodes.contains(n))
             .cloned()
-            .cloned()
             .collect_vec();
 
         let npc = npc.clone();
@@ -56,7 +55,7 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
                 if comp_conn_nodes != updated_nodes_with_edges {
                     // node is already zoomed, just update nice pairs of new incident edges
                     let iter = comp_npcs(
-                        path_comp,
+                        &path_comp,
                         &updated_nodes_with_edges,
                         &npc,
                         &comp_conn_nodes,

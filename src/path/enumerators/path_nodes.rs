@@ -9,14 +9,15 @@ use crate::{
 };
 
 // TODO READ
-pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart> + '_> {
-    let path_comps = instance.path_nodes().collect_vec();
+pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart>> {
+    let path_comps = instance.path_nodes().cloned().collect_vec();
     let old_path_len = path_comps.len();
     let all_edges = instance.all_edges();
     let rem_edges = instance.rem_edges();
+    let comps = instance.context.comps.iter().cloned().collect_vec();
 
     // for all component types...
-    let iter = instance.context.comps.iter().flat_map(move |node| {
+    let iter = comps.into_iter().flat_map(move |node| {
         let comp = node.get_comp().clone();
         let num_used_labels = path_comps
             .iter()

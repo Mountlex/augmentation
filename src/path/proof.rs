@@ -248,6 +248,7 @@ impl Quantor {
                 } else {
                     (None, Some(otherwise))
                 }
+                //(None, Some(otherwise))
             }
         };
 
@@ -258,9 +259,9 @@ impl Quantor {
                 Quantor::Any(e, _) => PathProofNode::new_any(e.msg().to_string()),
             };
 
-            for instance in cases {
-                let item_msg = format!("{} {}", instance, enum_msg);
-                stack.push(instance);
+            for case in cases {
+                let item_msg = format!("{} {}", case, enum_msg);
+                stack.push(case);
                 let mut proof_item = self.formula().prove(stack);
                 proof_item = PathProofNode::new_info(item_msg, proof_item);
                 let outcome = proof_item.eval();
@@ -311,20 +312,20 @@ impl Enumerator {
         }
     }
 
-    fn get_iter(&self, stack: &mut Instance) -> Vec<StackElement> {
+    fn get_iter(&self, stack: &Instance) -> Box<dyn Iterator<Item = StackElement>> {
         match self {
-            Enumerator::PathNodes => path_node_enumerator(stack)
-                .map(StackElement::Inst)
-                .collect_vec(),
-            Enumerator::NicePairs => nice_pairs_enumerator(stack)
-                .map(StackElement::Inst)
-                .collect_vec(),
-            Enumerator::PseudoCycle => enumerate_pseudo_cycles(stack)
-                .map(StackElement::PseudoCycle)
-                .collect_vec(),
-            Enumerator::Rearrangments => enumerate_rearrangements(stack)
-                .map(StackElement::Rearrangement)
-                .collect_vec(),
+            Enumerator::PathNodes => Box::new(path_node_enumerator(stack)
+                .map(StackElement::Inst)),
+                //.collect_vec(),
+            Enumerator::NicePairs => Box::new(nice_pairs_enumerator(stack)
+                .map(StackElement::Inst)),
+                //.collect_vec(),
+            Enumerator::PseudoCycle => Box::new(enumerate_pseudo_cycles(stack)
+                .map(StackElement::PseudoCycle)),
+                //.collect_vec(),
+            Enumerator::Rearrangments => Box::new(enumerate_rearrangements(stack)
+                .map(StackElement::Rearrangement)),
+                //.collect_vec(),
         }
     }
 }
@@ -341,13 +342,13 @@ impl OptEnumerator {
         }
     }
 
-    fn try_iter(&self, stack: &mut Instance) -> Option<(Vec<StackElement>, String)> {
+    fn try_iter(&self, stack: &mut Instance) -> Option<(Box<dyn Iterator<Item = StackElement>>, String)> {
         let result = match self {
             OptEnumerator::Edges => edge_enumerator(stack),
         };
 
         if let Some((case_iter, msg)) = result {
-            Some((case_iter.map(StackElement::Inst).collect_vec(), msg))
+            Some((Box::new(case_iter.map(StackElement::Inst)), msg))
         } else {
             None
         }

@@ -6,12 +6,12 @@ use crate::{
     Node, Credit,
 };
 
-pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle> + '_> {
+pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle>> {
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let all_edges = instance.all_edges();
     let last_single_edge = instance.last_single_edge();
     let mut all_rem_edges = instance.rem_edges();
-    let last_comp = path_comps.last().unwrap();
+    let last_comp = path_comps.last().cloned().unwrap();
     all_rem_edges.push(HalfAbstractEdge {
         source: last_comp.in_node.unwrap(),
         source_idx: last_comp.path_idx,

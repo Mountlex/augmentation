@@ -15,12 +15,15 @@ use super::pseudo_cycles::pseudo_cycles_of_length;
 
 pub fn edge_enumerator(
     instance: &mut Instance,
-) -> Option<(Box<dyn Iterator<Item = InstPart> + '_>, String)> {
+) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
     let res = enumerate_parts(instance);
+
+    return res;
+
     if res.is_none() {
         return None;
     }
-
+    // TODO
     let (iter, name) = res.unwrap();
     let cases = iter.collect_vec();
     let iter = compute_good_edges(instance, Box::new(cases.into_iter()));
@@ -30,8 +33,8 @@ pub fn edge_enumerator(
 
 fn enumerate_parts(
     instance: &Instance,
-) -> Option<(Box<dyn Iterator<Item = InstPart> + '_>, String)> {
-    let path_comps = instance.path_nodes().collect_vec();
+) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
+    let path_comps = instance.path_nodes().cloned().collect_vec();
     let old_path_len = path_comps.len();
 
     let mut nodes_to_pidx: Vec<Option<Pidx>> = vec![None; old_path_len * 20];
@@ -56,7 +59,6 @@ fn enumerate_parts(
     }
 
     // Prio 2: Single 3-matchings
-
     let len = path_comps.len();
     //let mut path_comps = path_comps.into_iter().take(len - 1).collect_vec();
     //path_comps.sort_by_key(|p| p.comp.matching_nodes().len());
@@ -127,7 +129,6 @@ fn enumerate_parts(
     let relevant_comps = path_comps
         .iter()
         .filter(|c| c.comp.is_c3() || c.comp.is_c4() || c.comp.is_c5() || c.comp.is_c6())
-        .cloned()
         .cloned()
         .collect_vec();
     for i in 3..=3 {
@@ -227,7 +228,7 @@ fn to_cases(
     iter: Box<dyn Iterator<Item = (Node, Hit)>>,
     nodes_to_pidx: Vec<Option<Pidx>>,
     instance: &Instance,
-) -> Box<dyn Iterator<Item = InstPart> + '_> {
+) -> Box<dyn Iterator<Item = InstPart>> {
     let all_edges = instance.all_edges();
 
     let good_edges = instance.good_edges().into_iter().cloned().collect_vec();
