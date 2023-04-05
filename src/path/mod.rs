@@ -309,6 +309,11 @@ impl Display for PathComp {
     }
 }
 
+impl PartialEq for PathComp {
+    fn eq(&self, other: &Self) -> bool {
+        self.path_idx == other.path_idx
+    }
+}
 
 
 #[derive(Clone, Debug)]

@@ -38,15 +38,15 @@ impl Edge {
         }
     }
 
-    // pub fn with_value(n1: Node, p1: Pidx, n2: Node, p2: Pidx, value: Credit) -> Self {
-    //     Self {
-    //         n1,
-    //         n2,
-    //         path_index_n1: p1,
-    //         path_index_n2: p2,
-    //         cost: value
-    //     }
-    // }
+    pub fn with_cost(n1: Node, p1: Pidx, n2: Node, p2: Pidx, cost: Credit) -> Self {
+        Self {
+            n1,
+            n2,
+            path_index_n1: p1,
+            path_index_n2: p2,
+            cost
+        }
+    }
 
     pub fn path_distance(&self) -> usize {
         self.path_index_n1.dist(&self.path_index_n2)

@@ -38,9 +38,8 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
 
 pub fn product_of_first<T: Clone + Copy + 'static>(
     mut edges: Vec<Vec<T>>,
-    length: usize,
 ) -> Box<dyn Iterator<Item = Vec<T>>> {
-    assert_eq!(length, edges.len());
+    let length = edges.len();
     if length == 7 {
         let edges0 = edges.remove(0);
         let edges1 = edges.remove(0);
@@ -106,7 +105,7 @@ pub fn product_of_first<T: Clone + Copy + 'static>(
     }
 }
 
-fn edges_between(
+pub fn edges_between(
     edges: &[Edge],
     last_single_edge: Option<Edge>,
     rem_edges: &[HalfAbstractEdge],
@@ -183,7 +182,7 @@ pub fn pseudo_cycles_of_length(
 
             assert_eq!(length, cons_edges.len());
 
-            product_of_first(cons_edges, length).map(move |edges| {
+            product_of_first(cons_edges).map(move |edges| {
                 let cycle_indices = &perm;
 
                 let total_edge_cost = edges.iter().map(|(_, c)| c).sum();

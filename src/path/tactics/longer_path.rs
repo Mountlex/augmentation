@@ -80,7 +80,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
             })
             .collect_vec();
 
-        let nice_paths = product_of_first(cons_edges, path_len - 1).collect_vec();
+        let nice_paths = product_of_first(cons_edges).collect_vec();
         for nice_path in nice_paths {
             if valid_in_out_npc(
                 &last_comp.comp,
