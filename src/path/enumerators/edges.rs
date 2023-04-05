@@ -18,12 +18,10 @@ pub fn edge_enumerator(
 ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
     let res = enumerate_parts(instance);
 
-    return res;
-
     if res.is_none() {
         return None;
     }
-    // TODO
+
     let (iter, name) = res.unwrap();
     let cases = iter.collect_vec();
     let iter = compute_good_edges(instance, Box::new(cases.into_iter()));
@@ -201,7 +199,7 @@ fn enumerate_parts(
 fn compute_good_edges(
     instance: &mut Instance,
     iter: Box<dyn Iterator<Item = InstPart>>,
-) -> Box<dyn Iterator<Item = InstPart> + '_> {
+) -> Box<dyn Iterator<Item = InstPart>> {
     let mut good_edges = vec![];
     let mut good_out = vec![];
 
