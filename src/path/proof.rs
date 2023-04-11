@@ -4,219 +4,127 @@ use std::path::PathBuf;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
+use crate::path::instance::{PathNode, InstanceContext};
 use crate::path::{PathComp, Pidx};
 use crate::types::Edge;
 use crate::Node;
 use crate::{comps::Component, path::PathProofNode, CreditInv};
 
+use super::HalfAbstractEdge;
 use super::enumerators::edges::edge_enumerator;
 use super::enumerators::nice_pairs::nice_pairs_enumerator;
 use super::enumerators::path_nodes::path_node_enumerator;
 use super::enumerators::pseudo_cycles::enumerate_pseudo_cycles;
 use super::enumerators::rearrangements::enumerate_rearrangements;
+use super::instance::{Instance, StackElement};
 use super::tactics::contract::check_contractability;
 use super::tactics::cycle_merge::check_cycle_merge;
 use super::tactics::cycle_rearrange::check_path_rearrangement;
 use super::tactics::local_merge::check_local_merge;
 use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
-use super::{
-    InstPart, InstanceContext, InstanceProfile, HalfAbstractEdge,  NicePairConfig,
-    PathNode, PseudoCycle, Rearrangement,
-};
+
+
+
 
 #[derive(Clone, Debug)]
-enum StackElement {
-    Inst(InstPart),
-    PseudoCycle(PseudoCycle),
-    Rearrangement(Rearrangement),
+pub struct InstPart {
+    pub path_nodes: Vec<PathComp>,
+    pub nice_pairs: Vec<(Node, Node)>,
+    pub edges: Vec<Edge>,
+    pub out_edges: Vec<Node>,
+    pub rem_edges: Vec<HalfAbstractEdge>,
+    pub non_rem_edges: Vec<Node>,
+    pub connected_nodes: Vec<Node>,
+    pub good_edges: Vec<Edge>,
+    pub good_out: Vec<Node>,
 }
 
-impl StackElement {
-    fn as_inst_part(&self) -> Option<&InstPart> {
-        match self {
-            StackElement::Inst(inst) => Some(inst),
-            _ => None,
+impl InstPart {
+    pub fn empty() -> InstPart {
+        InstPart {
+            path_nodes: vec![],
+            nice_pairs: vec![],
+            edges: vec![],
+            out_edges: vec![],
+            rem_edges: vec![],
+            non_rem_edges: vec![],
+            connected_nodes: vec![],
+            good_edges: vec![],
+            good_out: vec![],
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.path_nodes.is_empty()
+            && self.nice_pairs.is_empty()
+            && self.edges.is_empty()
+            && self.out_edges.is_empty()
+            && self.rem_edges.is_empty()
+            && self.non_rem_edges.is_empty()
+            && self.connected_nodes.is_empty()
+            && self.good_edges.is_empty()
+            && self.good_out.is_empty()
+    }
+
+   
+    pub fn new_path_comp(path_comp: PathComp) -> InstPart {
+        InstPart {
+            path_nodes: vec![path_comp],
+            nice_pairs: vec![],
+            edges: vec![],
+            out_edges: vec![],
+            rem_edges: vec![],
+            non_rem_edges: vec![],
+            connected_nodes: vec![],
+            good_edges: vec![],
+            good_out: vec![],
         }
     }
 }
 
-impl Display for StackElement {
+impl Display for InstPart {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StackElement::Inst(part) => write!(f, "{}", part),
-            StackElement::PseudoCycle(part) => write!(f, "{}", part),
-            StackElement::Rearrangement(part) => write!(f, "{}", part),
+        write!(f, "Inst [")?;
+        if !self.path_nodes.is_empty() {
+            write!(f, "PathComps: ")?;
+            write!(f, "{}", self.path_nodes.iter().join(", "))?;
+            write!(f, ", ")?;
         }
-    }
-}
-
-impl Display for Instance {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut path_comps = self.path_nodes();
-        let all_edges = self.all_edges();
-        let outside = self.out_edges();
-        let rem_edges = self.rem_edges();
-        write!(
-            f,
-            "Instance: [{}] E=[{}] O=[{}] R=[{}]",
-            path_comps.join(", "),
-            all_edges.iter().join(","),
-            outside.iter().join(","),
-            rem_edges.iter().join(",")
-        )
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct Instance {
-    stack: Vec<StackElement>,
-    pub context: InstanceContext,
-}
-
-impl Instance {
-    fn push(&mut self, ele: StackElement) {
-        self.stack.push(ele);
-    }
-
-    fn pop(&mut self) {
-        self.stack.pop().unwrap();
-    }
-
-    pub fn top_mut(&mut self) -> Option<&mut InstPart> {
-        self.stack.last_mut().and_then(|last| match last {
-            StackElement::Inst(part) => Some(part),
-            StackElement::PseudoCycle(_) => None,
-            StackElement::Rearrangement(_) => None,
-        })
-    }
-
-    pub fn inst_parts(&self) -> impl Iterator<Item = &'_ InstPart> {
-        self.stack.iter().flat_map(|ele| ele.as_inst_part())
-    }
-
-    #[allow(dead_code)]
-    fn nice_pairs(&self) -> impl Iterator<Item = &'_ (Node, Node)> {
-        self.inst_parts().flat_map(|part| part.nice_pairs.iter())
-    }
-
-    pub fn out_edges(&self) -> Vec<Node> {
-        self.inst_parts()
-            .flat_map(|part| part.out_edges.iter())
-            .cloned()
-            .collect_vec()
-    }
-
-    pub fn npc(&self) -> NicePairConfig {
-        let tuples = self
-            .inst_parts()
-            .flat_map(|part| part.nice_pairs.iter())
-            .unique()
-            .cloned()
-            .collect_vec();
-        NicePairConfig { nice_pairs: tuples }
-    }
-
-    fn implied_edges(&self) -> impl Iterator<Item = &'_ Edge> {
-        self.inst_parts().flat_map(|part| part.edges.iter())
-    }
-
-    pub fn good_edges(&self) -> Vec<&Edge> {
-        self.inst_parts()
-            .flat_map(|part| part.good_edges.iter())
-            .collect_vec()
-    }
-
-    pub fn good_out(&self) -> Vec<&Node> {
-        self.inst_parts()
-            .flat_map(|part| part.good_out.iter())
-            .collect_vec()
-    }
-
-    pub fn all_edges(&self) -> Vec<Edge> {
-        let mut implied_edges = self.implied_edges().cloned().collect_vec();
-        let nodes = self.path_nodes().collect_vec();
-        for w in nodes.windows(2) {
-            implied_edges.push(Edge::new(
-                w[0].in_node.unwrap(),
-                w[0].path_idx,
-                w[1].out_node.unwrap(),
-                w[1].path_idx,
-            ));
+        if !self.edges.is_empty() {
+            write!(f, "Edges: ")?;
+            write!(f, "{}", self.edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.nice_pairs.is_empty() {
+            write!(f, "NicePairs: ")?;
+            write!(
+                f,
+                "{:?}",
+                self.nice_pairs
+                    .iter()
+                    .map(|n| format!("{:?}", n))
+                    .join(", ")
+            )?;
+            write!(f, ", ")?;
+        }
+        if !self.out_edges.is_empty() {
+            write!(f, "Outside: ")?;
+            write!(f, "{}", self.out_edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.rem_edges.is_empty() {
+            write!(f, "Rem: ")?;
+            write!(f, "{}", self.rem_edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.non_rem_edges.is_empty() {
+            write!(f, "Non-Rem-Ids: ")?;
+            write!(f, "{}", self.non_rem_edges.iter().join(", "))?;
+            write!(f, ", ")?;
         }
 
-        implied_edges
-    }
-
-    pub fn last_single_edge(&self) -> Option<Edge> {
-        self.inst_parts().last().and_then(|part| {
-            if part.edges.len() == 1 {
-                part.edges.first().cloned()
-            } else {
-                None
-            }
-        })
-    }
-
-    pub fn rem_edges(&self) -> Vec<HalfAbstractEdge> {
-        let mut rem_edges: Vec<HalfAbstractEdge> = vec![];
-        for part in self.inst_parts() {
-            if !part.non_rem_edges.is_empty() {
-                for non_rem in &part.non_rem_edges {
-                    if let Some((pos, _)) = rem_edges
-                        .iter()
-                        .find_position(|edge| &edge.source == non_rem)
-                    {
-                        rem_edges.swap_remove(pos);
-                    }
-                }
-            }
-            rem_edges.append(&mut part.rem_edges.iter().cloned().collect_vec());
-        }
-
-        rem_edges
-    }
-
-    pub fn pseudo_cycle(&self) -> Option<&PseudoCycle> {
-        if let Some(StackElement::PseudoCycle(pc)) = self.stack.last() {
-            Some(pc)
-        } else {
-            None
-        }
-    }
-
-    pub fn rearrangement(&self) -> Option<&Rearrangement> {
-        if let Some(StackElement::Rearrangement(pc)) = self.stack.last() {
-            Some(pc)
-        } else {
-            None
-        }
-    }
-
-    pub fn component_edges(&self) -> impl Iterator<Item = Edge> + '_ {
-        self.path_nodes().flat_map(|c| {
-            c.comp
-                .edges()
-                .into_iter()
-                .map(|(u, v)| Edge::new(u, c.path_idx, v, c.path_idx))
-        })
-    }
-
-    pub fn get_profile(&self, success: bool) -> InstanceProfile {
-        let comps = self.path_nodes().map(|n| n.comp.comp_type()).collect_vec();
-        InstanceProfile {
-            comp_types: comps,
-            success,
-        }
-    }
-
-    pub fn path_nodes(&self) -> impl Iterator<Item = &'_ PathComp> {
-        self.inst_parts().flat_map(|part| part.path_nodes.iter())
-    }
-
-    pub fn connected_nodes(&self) -> impl Iterator<Item = &'_ Node> {
-        self.inst_parts()
-            .flat_map(|part| part.connected_nodes.iter())
+        write!(f, "]")
     }
 }
 

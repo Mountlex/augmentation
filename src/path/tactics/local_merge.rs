@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::{
     path::PathProofNode,
-    path::{proof::Instance, InstanceContext, NicePairConfig, PathComp},
+    path::{instance::{Instance, InstanceContext}, NicePairConfig, PathComp},
     types::Edge,
     Credit,
 };

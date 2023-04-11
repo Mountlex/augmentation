@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::{
     path::PathProofNode,
-    path::{proof::Instance, utils::hamiltonian_paths, Pidx},
+    path::{instance::Instance, utils::hamiltonian_paths, Pidx},
 };
 
 pub fn check_contractability(instance: &Instance) -> PathProofNode {

@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::{
     path::PathProofNode,
-    path::{enumerators::pseudo_cycles::product_of_first, proof::Instance, Pidx},
+    path::{enumerators::pseudo_cycles::product_of_first, instance::Instance, Pidx},
     Node,
 };
 

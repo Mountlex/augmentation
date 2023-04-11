@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::{
     comps::Component,
     path::PathProofNode,
-    path::{proof::Instance, NicePairConfig, PathComp, Pidx},
+    path::{instance::Instance, NicePairConfig, PathComp, Pidx},
     Node,
 };
 

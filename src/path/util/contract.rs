@@ -1,7 +1,7 @@
 use fxhash::FxHashMap;
 use itertools::Itertools;
 
-use crate::{path::proof::Instance, types::Edge, Node};
+use crate::{path::instance::Instance, types::Edge, Node};
 
 pub fn is_contractible(vertices: &[Node], instance: &Instance) -> Option<Vec<Node>> {
     let outside_edges = instance.out_edges();

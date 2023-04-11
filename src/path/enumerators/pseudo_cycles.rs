@@ -1,7 +1,7 @@
 use itertools::{iproduct, Itertools};
 
 use crate::{
-    path::{proof::Instance, CycleComp, HalfAbstractEdge, PathComp, PseudoCycle},
+    path::{instance::{Instance, PseudoCycle, CycleComp}, HalfAbstractEdge, PathComp, },
     types::Edge,
     Node, Credit,
 };

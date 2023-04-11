@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::{
     comps::Component,
-    path::{proof::Instance, InstPart, PathComp, PathNode, Pidx},
+    path::{instance::{Instance, PathNode}, proof::InstPart, PathComp, Pidx},
     types::Edge,
     util::relabels_nodes_sequentially,
     Node,

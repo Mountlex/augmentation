@@ -1,6 +1,6 @@
 use crate::{
     path::PathProofNode,
-    path::{proof::Instance, Pidx},
+    path::{instance::Instance, Pidx},
 };
 
 pub fn check_pendant_node(instance: &Instance) -> PathProofNode {

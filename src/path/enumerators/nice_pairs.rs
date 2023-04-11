@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::{
     comps::Component,
-    path::{proof::Instance, InstPart, NicePairConfig, PathComp},
+    path::{instance::Instance, proof::InstPart, NicePairConfig, PathComp},
     Node,
 };
 

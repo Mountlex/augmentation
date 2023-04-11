@@ -4,7 +4,7 @@ use crate::{
     comps::CompType,
     path::PathProofNode,
     path::{
-        proof::Instance, utils::complex_cycle_value_base, NicePairConfig, PathComp, PseudoCycle,
+        instance::{Instance, CycleComp, PseudoCycle}, utils::complex_cycle_value_base, NicePairConfig, PathComp, 
     },
     Credit, CreditInv, Node,
 };
@@ -17,8 +17,8 @@ pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
     let mut cycle_value = pc.value(&path_comps, &npc, &instance.context.inv);
 
     let complex = pc.cycle.iter().any(|(_, comp, _)| match comp {
-        crate::path::CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
-        crate::path::CycleComp::Rem => false,
+        CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
+        CycleComp::Rem => false,
     });
     if complex {
         // 2c due to gainful bridge covering. We convert the resulting complex to a large
@@ -69,8 +69,8 @@ impl PseudoCycle {
             .enumerate()
             .rev()
             .find(|(_, n)| match n.1 {
-                crate::path::CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
-                crate::path::CycleComp::Rem => false,
+                CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
+                CycleComp::Rem => false,
             })
             .map(|(i, _)| i);
 
@@ -81,11 +81,11 @@ impl PseudoCycle {
                 let lower_complex = first_complex.is_some() && first_complex.unwrap() > j;
 
                 match comp {
-                    crate::path::CycleComp::PathComp(idx) => {
+                    CycleComp::PathComp(idx) => {
                         let comp = path_comps[idx.raw()];
                         value(comp, in_node, out_node, npc, credit_inv, lower_complex)
                     }
-                    crate::path::CycleComp::Rem => {
+                    CycleComp::Rem => {
                         credit_inv.two_ec_credit(3) // non shortcutable triangle
                     }
                 }

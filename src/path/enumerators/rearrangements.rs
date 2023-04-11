@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{proof::Instance, CycleComp, Rearrangement},
+    path::instance::{Instance, CycleComp, Rearrangement},
     Node,
 };
 
