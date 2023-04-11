@@ -194,6 +194,75 @@ impl<T: Clone> ProofNode<T> {
         }
     }
 
+    pub fn eval_and_prune(&mut self) -> Outcome {
+        match self {
+            ProofNode::Leaf(node) => node.outcome,
+            ProofNode::Info(node) => {
+                if let Some(s) = node.outcome {
+                    return s;
+                }
+                node.outcome = Some(node.child.eval());
+                node.outcome.unwrap()
+                
+            }
+            ProofNode::All(node) => {
+                if let Some(s) = node.outcome {
+                    return s;
+                }
+                node.outcome = Some(Outcome::True);
+                for c in &mut node.childs {
+                    match c.eval() {
+                        Outcome::False => node.outcome = Some(Outcome::False),
+                        Outcome::Tight if node.outcome == Some(Outcome::True) => {
+                            node.outcome = Some(Outcome::Tight)
+                        }
+                        _ => {}
+                    }
+                }
+                let outcome = node.outcome.unwrap();
+                if outcome.success() {
+                    node.childs.clear();
+                }
+                outcome
+            }
+            ProofNode::Any(node) => {
+                if let Some(s) = node.outcome {
+                    return s;
+                }
+                node.outcome = Some(Outcome::False);
+                for c in &mut node.childs {
+                    match c.eval() {
+                        Outcome::Tight => node.outcome = Some(Outcome::Tight),
+                        Outcome::True if node.outcome == Some(Outcome::False) => {
+                            node.outcome = Some(Outcome::True)
+                        }
+                        _ => {}
+                    }
+                }
+                let outcome = node.outcome.unwrap();
+                if outcome.success() {
+                    node.childs.clear();
+                }
+                outcome
+            }
+            ProofNode::Or(node) => {
+                if let Some(s) = node.outcome {
+                    return s;
+                }
+                let r1 = node.child1.eval();
+                let r2 = node.child2.eval();
+
+                node.outcome = match (r1, r2) {
+                    (Outcome::Tight, _) | (_, Outcome::Tight) => Some(Outcome::Tight),
+                    (Outcome::True, _) | (_, Outcome::True) => Some(Outcome::True),
+                    _ => Some(Outcome::False),
+                };
+
+                node.outcome.unwrap()
+            }
+        }
+    }
+
     pub fn eval(&mut self) -> Outcome {
         match self {
             ProofNode::Leaf(node) => node.outcome,

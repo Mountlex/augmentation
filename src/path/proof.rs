@@ -142,7 +142,7 @@ impl Quantor {
 
     fn prove(&self, stack: &mut Instance) -> PathProofNode {
         let mut enum_msg = String::new();
-        let (cases, otherwise) = match self {
+        let (case_iterator, otherwise) = match self {
             Quantor::All(e, _, _sc) => (Some(e.get_iter(stack)), None),
             Quantor::Any(e, _) => (Some(e.get_iter(stack)), None),
             Quantor::AllOpt(e, _, otherwise) => {
@@ -156,14 +156,14 @@ impl Quantor {
             }
         };
 
-        if let Some(cases) = cases {
+        if let Some(case_iterator) = case_iterator {
             let mut proof = match self {
                 Quantor::All(e, _, _) => PathProofNode::new_all(e.msg().to_string()),
                 Quantor::AllOpt(e, _, _) => PathProofNode::new_all(e.msg().to_string()),
                 Quantor::Any(e, _) => PathProofNode::new_any(e.msg().to_string()),
             };
 
-            for case in cases {
+            for case in case_iterator {
                 let item_msg = format!("{} {}", case, enum_msg);
                 stack.push(case);
                 let mut proof_item = self.formula().prove(stack);
@@ -189,7 +189,7 @@ impl Quantor {
                 }
             }
 
-            proof.eval();
+            proof.eval_and_prune();
 
             proof
         } else {

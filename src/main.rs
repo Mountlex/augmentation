@@ -319,7 +319,7 @@ fn setup_logging(_verbose: bool) -> Result<(), fern::InitError> {
         .chain(std::io::stdout());
 
     base_config
-        .chain(stdout_config)
+        //.chain(stdout_config)
         .chain(file_config)
         .apply()?;
 

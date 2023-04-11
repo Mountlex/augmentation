@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::path::{instance::Instance, proof::InstPart};
 use crate::{
     path::{
-        enumerators::pseudo_cycles::{edges_between, product_of_first},
+        enumerators::pseudo_cycles::product_of_first,
         proof::check_progress,
         tactics::cycle_rearrange::{check_fixed_extension_feasible, valid_in_out_npc},
         util::contract::is_contractible,
@@ -21,7 +21,7 @@ pub fn edge_enumerator(
 ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
     let res = enumerate_parts(instance);
 
-    return res;
+    //return res;
 
     if res.is_none() {
         return None;
@@ -34,14 +34,14 @@ pub fn edge_enumerator(
     Some((iter, name))
 }
 
-struct InstanceInfo {
-    path_comps: Vec<PathComp>,
-    old_path_len: usize,
-    outside_edges: Vec<Node>,
-    all_edges: Vec<Edge>,
-    npc: NicePairConfig,
-    nodes_to_pidx: Vec<Option<Pidx>>,
-}
+// struct InstanceInfo {
+//     path_comps: Vec<PathComp>,
+//     old_path_len: usize,
+//     outside_edges: Vec<Node>,
+//     all_edges: Vec<Edge>,
+//     npc: NicePairConfig,
+//     nodes_to_pidx: Vec<Option<Pidx>>,
+// }
 
 fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
     let path_comps = instance.path_nodes().cloned().collect_vec();
@@ -131,6 +131,15 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                 let iter = to_cases(iter, nodes_to_pidx, instance);
                 return Some((iter, format!("4-Matching of {} first pathnodes", s)));
             }
+        }
+    }
+
+    // Prio 4: Edges due to contractablility
+    for path_comp in path_comps.iter().take(len - 1) {
+        let idx = path_comp.path_idx;
+        if let Some(iter) = handle_contractable_components(path_comp, instance) {
+            let iter = to_cases(iter, nodes_to_pidx, instance);
+            return Some((iter, format!("Contractablility of {}", idx)));
         }
     }
 
@@ -253,15 +262,6 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
     //         }
     //     }
     // }
-
-    // Prio 4: Edges due to contractablility
-    for path_comp in path_comps.iter().take(len - 1) {
-        let idx = path_comp.path_idx;
-        if let Some(iter) = handle_contractable_components(path_comp, instance) {
-            let iter = to_cases(iter, nodes_to_pidx, instance);
-            return Some((iter, format!("Contractablility of {}", idx)));
-        }
-    }
 
     // Prio 5: Larger contractable comps
     let all_edges = instance.all_edges();

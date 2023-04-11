@@ -59,7 +59,6 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
 
     let last_comp = all_comps.first().unwrap();
     let last_comp_nodes = last_comp.comp.matching_nodes();
-    let path_len = all_comps.len();
 
     for outside_hit in all_outside.iter().filter(|n| last_comp_nodes.contains(n)) {
         let cons_edges = all_comps

@@ -5,7 +5,6 @@ mod tactics;
 mod util;
 mod utils;
 
-use core::panic;
 use std::{cmp::Ordering, fmt::Display};
 
 use itertools::Itertools;
@@ -13,10 +12,9 @@ pub use proof::prove_nice_path_progress;
 pub use proof::PathProofOptions;
 
 use crate::proof_tree::ProofNode;
-use crate::Credit;
-use crate::{CreditInv, Node};
+use crate::Node;
 
-use crate::{comps::*, types::Edge};
+use crate::comps::*;
 
 use self::instance::InstanceProfile;
 

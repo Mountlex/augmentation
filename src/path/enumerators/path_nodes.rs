@@ -14,6 +14,10 @@ use crate::{
 
 // TODO READ
 pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart>> {
+
+    let profile = instance.get_profile(true);
+    log::info!("Currently extending: {}", profile);
+
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let old_path_len = path_comps.len();
     let all_edges = instance.all_edges();
