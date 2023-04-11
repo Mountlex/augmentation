@@ -2,11 +2,13 @@ use std::fmt::Display;
 
 use itertools::Itertools;
 
-use crate::{Node, types::Edge, comps::{Component, CompType}, Credit, CreditInv};
+use crate::{
+    comps::{CompType, Component},
+    types::Edge,
+    Credit, CreditInv, Node,
+};
 
-use super::{proof::InstPart, NicePairConfig, HalfAbstractEdge, PathComp, Pidx};
-
-
+use super::{proof::InstPart, HalfAbstractEdge, NicePairConfig, PathComp, Pidx};
 
 #[derive(Clone, Debug)]
 pub struct Instance {
@@ -203,7 +205,6 @@ impl Display for Instance {
     }
 }
 
-
 #[derive(Clone, Debug)]
 pub enum PathNode {
     Used(Component),
@@ -310,7 +311,6 @@ impl Display for CycleComp {
         }
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct InstanceContext {

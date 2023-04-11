@@ -120,15 +120,13 @@ impl Tactic<TreeCaseInstance, TreeContext> for DirectMerge {
                     true,
                 )
             }
-            MergeResult::Impossible => {
-                DefaultProofNode::new_leaf(
-                    format!(
-                        "Direct merge impossible [available credits: {}]",
-                        total_component_credits
-                    ),
-                    false,
-                )
-            }
+            MergeResult::Impossible => DefaultProofNode::new_leaf(
+                format!(
+                    "Direct merge impossible [available credits: {}]",
+                    total_component_credits
+                ),
+                false,
+            ),
         }
     }
 }
@@ -177,7 +175,9 @@ where
             let check_graph = EdgeFiltered::from_fn(graph, |(v1, v2, t)| {
                 if t == &EdgeType::Sellable && sell.contains(&Edge::from_tuple(v1, v2)) {
                     false
-                } else { !(t == &EdgeType::Buyable && !buy.contains(&Edge::from_tuple(v1, v2))) }
+                } else {
+                    !(t == &EdgeType::Buyable && !buy.contains(&Edge::from_tuple(v1, v2)))
+                }
             });
 
             //println!("sell {}", sell.iter().join(","));

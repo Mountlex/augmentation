@@ -4,13 +4,12 @@ use std::path::PathBuf;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
-use crate::path::instance::{PathNode, InstanceContext};
+use crate::path::instance::{InstanceContext, PathNode};
 use crate::path::{PathComp, Pidx};
 use crate::types::Edge;
 use crate::Node;
 use crate::{comps::Component, path::PathProofNode, CreditInv};
 
-use super::HalfAbstractEdge;
 use super::enumerators::edges::edge_enumerator;
 use super::enumerators::nice_pairs::nice_pairs_enumerator;
 use super::enumerators::path_nodes::path_node_enumerator;
@@ -23,9 +22,7 @@ use super::tactics::cycle_rearrange::check_path_rearrangement;
 use super::tactics::local_merge::check_local_merge;
 use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
-
-
-
+use super::HalfAbstractEdge;
 
 #[derive(Clone, Debug)]
 pub struct InstPart {
@@ -67,7 +64,6 @@ impl InstPart {
             && self.good_out.is_empty()
     }
 
-   
     pub fn new_path_comp(path_comp: PathComp) -> InstPart {
         InstPart {
             path_nodes: vec![path_comp],
@@ -222,18 +218,18 @@ impl Enumerator {
 
     fn get_iter(&self, stack: &Instance) -> Box<dyn Iterator<Item = StackElement>> {
         match self {
-            Enumerator::PathNodes => Box::new(path_node_enumerator(stack)
-                .map(StackElement::Inst)),
-                //.collect_vec(),
-            Enumerator::NicePairs => Box::new(nice_pairs_enumerator(stack)
-                .map(StackElement::Inst)),
-                //.collect_vec(),
-            Enumerator::PseudoCycle => Box::new(enumerate_pseudo_cycles(stack)
-                .map(StackElement::PseudoCycle)),
-                //.collect_vec(),
-            Enumerator::Rearrangments => Box::new(enumerate_rearrangements(stack)
-                .map(StackElement::Rearrangement)),
-                //.collect_vec(),
+            Enumerator::PathNodes => Box::new(path_node_enumerator(stack).map(StackElement::Inst)),
+            //.collect_vec(),
+            Enumerator::NicePairs => Box::new(nice_pairs_enumerator(stack).map(StackElement::Inst)),
+            //.collect_vec(),
+            Enumerator::PseudoCycle => {
+                Box::new(enumerate_pseudo_cycles(stack).map(StackElement::PseudoCycle))
+            }
+            //.collect_vec(),
+            Enumerator::Rearrangments => {
+                Box::new(enumerate_rearrangements(stack).map(StackElement::Rearrangement))
+            }
+            //.collect_vec(),
         }
     }
 }
@@ -250,7 +246,10 @@ impl OptEnumerator {
         }
     }
 
-    fn try_iter(&self, stack: &mut Instance) -> Option<(Box<dyn Iterator<Item = StackElement>>, String)> {
+    fn try_iter(
+        &self,
+        stack: &mut Instance,
+    ) -> Option<(Box<dyn Iterator<Item = StackElement>>, String)> {
         let result = match self {
             OptEnumerator::Edges => edge_enumerator(stack),
         };

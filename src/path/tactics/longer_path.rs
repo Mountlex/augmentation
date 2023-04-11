@@ -48,8 +48,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
                         true,
                     );
                 } else {
-                    msg.write_str("Extension is not feasible.")
-                        .unwrap();
+                    msg.write_str("Extension is not feasible.").unwrap();
                 }
             } else {
                 msg.write_str(&format!("Rearr: {} is not valid out.", outside_hit))

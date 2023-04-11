@@ -1,9 +1,9 @@
 mod enumerators;
+mod instance;
 mod proof;
 mod tactics;
 mod util;
 mod utils;
-mod instance;
 
 use core::panic;
 use std::{cmp::Ordering, fmt::Display};
@@ -12,19 +12,15 @@ use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 pub use proof::PathProofOptions;
 
-use crate::Credit;
 use crate::proof_tree::ProofNode;
+use crate::Credit;
 use crate::{CreditInv, Node};
 
 use crate::{comps::*, types::Edge};
 
 use self::instance::InstanceProfile;
 
-
-
 pub type PathProofNode = ProofNode<InstanceProfile>;
-
-
 
 #[derive(Clone, Debug)]
 pub struct PathComp {
@@ -80,7 +76,6 @@ impl PartialEq for PathComp {
         self.path_idx == other.path_idx
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct HalfAbstractEdge {

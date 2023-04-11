@@ -4,7 +4,9 @@ use crate::{
     comps::CompType,
     path::PathProofNode,
     path::{
-        instance::{Instance, CycleComp, PseudoCycle}, utils::complex_cycle_value_base, NicePairConfig, PathComp, 
+        instance::{CycleComp, Instance, PseudoCycle},
+        utils::complex_cycle_value_base,
+        NicePairConfig, PathComp,
     },
     Credit, CreditInv, Node,
 };
@@ -27,7 +29,10 @@ pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
 
     if complex && cycle_value >= Credit::from_integer(1) {
         PathProofNode::new_leaf(
-            format!("Merged pseudo cycle with to a block with value {}!", cycle_value),
+            format!(
+                "Merged pseudo cycle with to a block with value {}!",
+                cycle_value
+            ),
             true,
         )
     } else if cycle_value >= Credit::from_integer(2) {
@@ -56,7 +61,7 @@ impl PseudoCycle {
     ) -> Credit {
         self.total_component_value(path_comps, npc, credit_inv) - self.total_edge_cost
     }
-    
+
     fn total_component_value(
         &self,
         path_comps: &Vec<&PathComp>,
@@ -109,18 +114,18 @@ fn value(
             if nice_pair {
                 credit_inv.credits(&comp.comp) + Credit::from_integer(1) // shortcut!
             } else {
-                credit_inv.credits(&comp.comp) 
+                credit_inv.credits(&comp.comp)
             }
         }
         CompType::Cycle(_) if comp.used => {
             assert!(comp.comp.is_c5());
             if in_node != out_node {
-                credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5) 
+                credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5)
             } else {
-                credit_inv.credits(&comp.comp) 
+                credit_inv.credits(&comp.comp)
             }
         }
-        CompType::Large => credit_inv.credits(&comp.comp), 
+        CompType::Large => credit_inv.credits(&comp.comp),
         CompType::Complex => {
             let complex = if lower_complex {
                 credit_inv.complex_comp()
@@ -129,10 +134,10 @@ fn value(
             };
             if nice_pair {
                 complex
-                    + complex_cycle_value_base(credit_inv, &comp.comp.graph(), *in_node, *out_node) 
+                    + complex_cycle_value_base(credit_inv, &comp.comp.graph(), *in_node, *out_node)
             } else {
                 complex
-                    + complex_cycle_value_base(credit_inv, &comp.comp.graph(), *in_node, *out_node) 
+                    + complex_cycle_value_base(credit_inv, &comp.comp.graph(), *in_node, *out_node)
             }
         }
         _ => panic!(),

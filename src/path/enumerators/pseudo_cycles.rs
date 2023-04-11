@@ -1,9 +1,12 @@
 use itertools::{iproduct, Itertools};
 
 use crate::{
-    path::{instance::{Instance, PseudoCycle, CycleComp}, HalfAbstractEdge, PathComp, },
+    path::{
+        instance::{CycleComp, Instance, PseudoCycle},
+        HalfAbstractEdge, PathComp,
+    },
     types::Edge,
-    Node, Credit,
+    Credit, Node,
 };
 
 pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle>> {
@@ -194,12 +197,15 @@ pub fn pseudo_cycles_of_length(
                     .enumerate()
                     .map(|(i, cycle_comp)| {
                         let last_edge = if i == 0 { length - 1 } else { i - 1 };
-                        (edges[last_edge].0.1, cycle_comp.clone(), edges[i].0.0)
+                        (edges[last_edge].0 .1, cycle_comp.clone(), edges[i].0 .0)
                     })
                     .collect_vec();
 
                 // cycle nodes:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in:3.out -- 0.in]
-                PseudoCycle { cycle, total_edge_cost }
+                PseudoCycle {
+                    cycle,
+                    total_edge_cost,
+                }
             })
         })
 }

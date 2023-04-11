@@ -2,7 +2,10 @@ use itertools::Itertools;
 
 use crate::{
     path::PathProofNode,
-    path::{instance::{Instance, InstanceContext}, NicePairConfig, PathComp},
+    path::{
+        instance::{Instance, InstanceContext},
+        NicePairConfig, PathComp,
+    },
     types::Edge,
     Credit,
 };
@@ -36,10 +39,9 @@ fn merge(
         };
 
         for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
-            
             let buy_cost: Credit = buy.iter().map(|e| e.cost).sum();
             //assert_eq!(buy_cost, Credit::from(2));
-            
+
             let mut total_block_merge = total_comp_credit;
             let other1 = other_comp.incident(buy[0]).unwrap();
             let other2 = other_comp.incident(buy[1]).unwrap();

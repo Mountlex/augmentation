@@ -124,7 +124,7 @@ pub fn check_fixed_extension_feasible(
             );
         }
     }
-    
+
     let (_, hit, hit_out) = extension.first().unwrap();
     let hit_comp = &path_comps[hit.raw()];
     let valid_in_out = valid_in_out_npc(
@@ -153,7 +153,7 @@ pub fn valid_in_out_npc(
     prelast: bool,
     used: bool,
 ) -> bool {
-    if c.is_c3() || c.is_c4()  {
+    if c.is_c3() || c.is_c4() {
         npc.is_nice_pair(new_in, new_out)
     } else if c.is_c5() && prelast && used {
         new_in != new_out

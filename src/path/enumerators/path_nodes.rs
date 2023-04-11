@@ -2,7 +2,11 @@ use itertools::Itertools;
 
 use crate::{
     comps::Component,
-    path::{instance::{Instance, PathNode}, proof::InstPart, PathComp, Pidx},
+    path::{
+        instance::{Instance, PathNode},
+        proof::InstPart,
+        PathComp, Pidx,
+    },
     types::Edge,
     util::relabels_nodes_sequentially,
     Node,
@@ -118,8 +122,10 @@ pub fn path_node_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                                 .collect_vec();
 
                             // previous rem_edges which will be now realized are converted to non_rem_edges, so we collect those ids
-                            let non_rem_edges =
-                                rem_edges_hit_new_node.iter().map(|e| e.source).collect_vec();
+                            let non_rem_edges = rem_edges_hit_new_node
+                                .iter()
+                                .map(|e| e.source)
+                                .collect_vec();
 
                             iter = Box::new(iter.flat_map(move |inst_part| {
                                 let matching_edges = matching_edges.clone();
@@ -173,7 +179,7 @@ fn prevalid_in_out(c: &Component, new_in: Node, new_out: Node, prelast: bool) ->
     if c.is_c3() || c.is_c4() || (c.is_c5() && prelast) {
         new_in != new_out
     } else if c.is_complex() {
-        new_in != new_out || new_in.is_comp() 
+        new_in != new_out || new_in.is_comp()
     } else {
         true
     }
