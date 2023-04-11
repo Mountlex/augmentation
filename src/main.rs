@@ -152,6 +152,7 @@ enum LastComp {
     C4,
     C5,
     C6,
+    C7,
     L,
     CT,
     CP,
@@ -227,14 +228,14 @@ fn prove_path(path: Path) {
 
     let comps = if inv.c < Credit::new(2, 7) {
         vec![
+            c6(),
+            c7(),
             large(),
             complex_tree(),
             complex_path(),
-            c3(),
-            c4(),
             c5(),
-            c6(),
-            c7(),
+            c4(),
+            c3(),
         ]
     } else {
         vec![
@@ -253,6 +254,7 @@ fn prove_path(path: Path) {
         LastComp::C4 => c4(),
         LastComp::C5 => c5(),
         LastComp::C6 => c6(),
+        LastComp::C7 => c7(),
         LastComp::L => large(),
         LastComp::CP => complex_path(),
         LastComp::CT => complex_tree(),

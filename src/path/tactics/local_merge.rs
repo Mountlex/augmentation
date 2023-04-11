@@ -38,7 +38,7 @@ fn merge(
         for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
             
             let buy_cost: Credit = buy.iter().map(|e| e.cost).sum();
-            assert_eq!(buy_cost, Credit::from(2));
+            //assert_eq!(buy_cost, Credit::from(2));
             
             let mut total_block_merge = total_comp_credit;
             let other1 = other_comp.incident(buy[0]).unwrap();

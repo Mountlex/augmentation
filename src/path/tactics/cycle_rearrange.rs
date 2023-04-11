@@ -96,6 +96,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
     }
 }
 
+// Pidx here means the original pidx
 pub fn check_fixed_extension_feasible(
     extension: &[(Option<Node>, Pidx, Option<Node>)],
     path_comps: &Vec<PathComp>,
@@ -123,9 +124,10 @@ pub fn check_fixed_extension_feasible(
             );
         }
     }
+    
     let (_, hit, hit_out) = extension.first().unwrap();
     let hit_comp = &path_comps[hit.raw()];
-    valid_in_out_npc(
+    let valid_in_out = valid_in_out_npc(
         &hit_comp.comp,
         npc,
         hit_comp.in_node.unwrap(),
@@ -133,6 +135,12 @@ pub fn check_fixed_extension_feasible(
         extension.len() == 2 && prelast_is_prelast,
         hit_comp.used,
     );
+    if !valid_in_out {
+        return PathProofNode::new_leaf(
+            "New path does not fulfill nice path properties at rightmost vertex!".to_string(),
+            false,
+        );
+    }
 
     PathProofNode::new_leaf("Feasible path".into(), true)
 }

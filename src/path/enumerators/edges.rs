@@ -86,10 +86,15 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         }
     }
 
-    
+
+        
+ 
+
 
     // Prio 3.5.1: Gainful outside edges
     for outside in outside_edges {
+
+       
         let out_pidx = nodes_to_pidx[outside.get_id() as usize].unwrap();
 
         for subpath in path_comps
@@ -97,6 +102,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
             .permutations(path_comps.len() - 1)
             .filter(|p| p[0].path_idx == out_pidx && p.last() == path_comps.last().as_ref())
         {
+           
             // subpath = [out_idx -- ... -- rightmost enumerated comp]
 
             let length = subpath.len();
@@ -118,6 +124,8 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
 
             let nice_paths = product_of_first(cons_edges).collect_vec();
             for nice_path in nice_paths {
+
+  
                 if valid_in_out_npc(
                     &first.comp,
                     &npc,
@@ -126,18 +134,27 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                     false,
                     first.used,
                 ) {
-                    if nice_path.len() > 1 {
+        
+
+                    if nice_path.len() > 0 {
+                        // HERE IS SOMETHING WRONG. Also check other things
                         let mut extension: Vec<(Option<Node>, Pidx, Option<Node>)> = vec![];
-                        extension.push((Some(nice_path.first().unwrap().1), Pidx::Last, None));
+                        extension.push((Some(nice_path.first().unwrap().0), subpath[0].path_idx, None));
                         for (i, w) in nice_path.windows(2).enumerate() {
-                            extension.push((Some(w[1].0), Pidx::from(i + 1), Some(w[0].1)));
+                            extension.push((Some(w[1].0), subpath[i+1].path_idx, Some(w[0].1)));
                         }
+                        extension.push((None, subpath[extension.len()].path_idx, Some(nice_path.last().unwrap().1)));
                         extension.reverse();
 
+                        
                         let mut feasible =
                             check_fixed_extension_feasible(&extension, &path_comps, &npc, false);
                         feasible.eval();
                         if feasible.success() {
+                            // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
+                            //     println!("feasible extension {:?}", extension);
+                            //     //panic!();
+                            // }
                             // we have gainful edges
                             let old_last = path_comps.first().unwrap();
                             let gain = match old_last.comp.comp_type() {
@@ -154,7 +171,10 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                                 .cloned()
                                 .collect_vec();
 
-                            // TODO care if there are already edges iwth 
+                                // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
+                                //     println!("all_other_nodes {:?}", all_other_nodes);
+                                //     //panic!();
+                                // }
                       
                             let iter = edge_iterator(vec![outside], all_other_nodes,false, true).unwrap();
 
@@ -173,6 +193,33 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
     }
 
 
+  // Prio 3.5: 4-matching
+  for s in 2..=len - 1 {
+    let comp_nodes = path_comps
+        .iter()
+        .take(s)
+        .flat_map(|c| c.comp.matching_nodes().to_vec())
+        .collect_vec();
+
+    let size: usize = path_comps
+        .iter()
+        .take(s)
+        .map(|comp| comp.comp.num_vertices())
+        .sum();
+        
+    let other_nodes = path_comps
+        .iter()
+        .filter(|p| p.path_idx.raw() >= s)
+        .flat_map(|p| p.comp.matching_nodes().to_vec())
+        .collect_vec();
+    if size >= 10 {
+        if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4) {
+            let iter = to_cases(iter, nodes_to_pidx, instance);
+            return Some((iter, format!("4-Matching of {} first pathnodes", s)));
+        }
+    }
+}
+ 
     // Prio 3: Larger comps
     for s in 2..=len - 1 {
         let comp_nodes = path_comps
@@ -193,25 +240,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
 
     
 
-    // Prio 3.5: 4-matching
-    for s in 2..=len - 1 {
-        let comp_nodes = path_comps
-            .iter()
-            .take(s)
-            .flat_map(|c| c.comp.matching_nodes().to_vec())
-            .collect_vec();
-        let other_nodes = path_comps
-            .iter()
-            .filter(|p| p.path_idx.raw() >= s)
-            .flat_map(|p| p.comp.matching_nodes().to_vec())
-            .collect_vec();
-        if comp_nodes.len() >= 10 {
-            if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4) {
-                let iter = to_cases(iter, nodes_to_pidx, instance);
-                return Some((iter, format!("4-Matching of {} first pathnodes", s)));
-            }
-        }
-    }
+
 
 
     // Prio 4: Edges due to contractablility

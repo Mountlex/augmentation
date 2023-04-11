@@ -340,8 +340,8 @@ impl Component {
             Component::C4(_) => 4,
             Component::C3(_) => 3,
             Component::Large(_) => 8,
-            Component::ComplexPath(_, _) => 10,
-            Component::ComplexTree(_, _) => 10,
+            Component::ComplexPath(_, _) => 12,
+            Component::ComplexTree(_, _) => 12,
         }
     }
 
