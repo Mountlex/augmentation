@@ -10,7 +10,10 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
     let all_edges = instance.all_edges();
     let rem_edges = instance.rem_edges();
     let out_edges = instance.out_edges();
-    let npc = instance.npc();
+
+
+    let old_npc = instance.npc();
+
     let connected_nodes = instance.connected_nodes().cloned().collect_vec();
 
     let nodes_with_edges = all_edges
@@ -40,10 +43,10 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
             .cloned()
             .collect_vec();
 
-        let npc = npc.clone();
+        let old_npc = old_npc.clone();
 
         cases = Box::new(cases.flat_map(move |inst_part| {
-            let npc = npc.clone();
+            let old_npc = old_npc.clone();
             let updated_nodes_with_edges = updated_nodes_with_edges.clone();
 
             let iter: Box<dyn Iterator<Item = InstPart>> =
@@ -52,11 +55,12 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
                     let iter = comp_npcs(
                         &path_comp,
                         &updated_nodes_with_edges,
-                        &npc,
+                        &old_npc,
                         &comp_conn_nodes,
                     )
                     .into_iter()
                     .map(move |mut npc| {
+                      
                         let mut inst_part_clone = inst_part.clone();
 
                         inst_part_clone.nice_pairs.append(&mut npc.nice_pairs);
@@ -78,6 +82,12 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
             iter
         }));
     }
+
+    let cases = Box::new(cases.into_iter().map(move |mut part| {
+        let nice_pairs = vec![old_npc.nice_pairs.clone(), part.nice_pairs.clone()].concat();
+        part.nice_pairs = nice_pairs.into_iter().unique().collect_vec();
+        part
+    }));
 
     Box::new(cases)
 }
@@ -130,30 +140,30 @@ fn comp_npcs(
 
             // TODO add all nice pairs
 
-            nodes
-                .iter()
-                .cloned()
-                .tuple_combinations::<(_, _)>()
-                .filter(|(u, v)| !comp.is_adjacent(u, v))
-                .powerset()
-                .map(|config| NicePairConfig { nice_pairs: config })
-                .map(|mut npc| {
-                    // adjacent vertices are always nice pairs!
-                    npc.nice_pairs.append(&mut comp.edges()); // C3 in out contained here
+            // nodes
+            //     .iter()
+            //     .cloned()
+            //     .tuple_combinations::<(_, _)>()
+            //     .filter(|(u, v)| !comp.is_adjacent(u, v))
+            //     .powerset()
+            //     .map(|config| NicePairConfig { nice_pairs: config })
+            //     .map(|mut npc| {
+            //         // adjacent vertices are always nice pairs!
+            //         npc.nice_pairs.append(&mut comp.edges()); // C3 in out contained here
 
-                    if (comp.is_c3()
-                        || comp.is_c4()
-                        || (comp.is_c5() && !node.used && node.path_idx.is_prelast()))
-                        && node.in_node.is_some()
-                        && node.out_node.is_some()
-                    {
-                        npc.nice_pairs
-                            .push((node.in_node.unwrap(), node.out_node.unwrap()))
-                    }
-                    npc
-                })
-                .filter(|npc| npc.is_consistent_with(consistent_npc, consistent_nodes))
-                .collect_vec()
+            //         if (comp.is_c3()
+            //             || comp.is_c4()
+            //             || (comp.is_c5() && !node.used && node.path_idx.is_prelast()))
+            //             && node.in_node.is_some()
+            //             && node.out_node.is_some()
+            //         {
+            //             npc.nice_pairs
+            //                 .push((node.in_node.unwrap(), node.out_node.unwrap()))
+            //         }
+            //         npc
+            //     })
+            //     .filter(|npc| npc.is_consistent_with(consistent_npc, consistent_nodes))
+            //     .collect_vec()
         }
     }
 }

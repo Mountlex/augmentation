@@ -50,13 +50,17 @@ impl Instance {
     }
 
     pub fn npc(&self) -> NicePairConfig {
-        let tuples = self
+        if let Some(part) = self
             .inst_parts()
-            .flat_map(|part| part.nice_pairs.iter())
-            .unique()
-            .cloned()
-            .collect_vec();
-        NicePairConfig { nice_pairs: tuples }
+            .filter(|part| !part.nice_pairs.is_empty())
+            .last()
+        {
+            NicePairConfig {
+                nice_pairs: part.nice_pairs.clone(),
+            }
+        } else {
+            NicePairConfig::empty()
+        }
     }
 
     fn implied_edges(&self) -> impl Iterator<Item = &'_ Edge> {
@@ -78,9 +82,17 @@ impl Instance {
     pub fn all_edges(&self) -> Vec<Edge> {
         let mut implied_edges = self.implied_edges().cloned().collect_vec();
 
-        let cheap_edges = implied_edges.iter().filter(|e| e.cost < Credit::from(1)).cloned().collect_vec();
+        let cheap_edges = implied_edges
+            .iter()
+            .filter(|e| e.cost < Credit::from(1))
+            .cloned()
+            .collect_vec();
         if !cheap_edges.is_empty() {
-            implied_edges.drain_filter(|e| cheap_edges.iter().any(|e2| e.cost > e2.cost && e2.node_incident(&e.n1) && e2.node_incident(&e.n2)));
+            implied_edges.drain_filter(|e| {
+                cheap_edges.iter().any(|e2| {
+                    e.cost > e2.cost && e2.node_incident(&e.n1) && e2.node_incident(&e.n2)
+                })
+            });
         }
 
         let nodes = self.path_nodes().collect_vec();
@@ -102,7 +114,7 @@ impl Instance {
         let parts = self.inst_parts().collect_vec();
 
         let mut lookback = 1;
-        
+
         while lookback <= parts.len() {
             if parts[parts.len() - lookback].edges.len() == 1 {
                 return parts[parts.len() - lookback].edges.first().cloned();
@@ -114,7 +126,7 @@ impl Instance {
                 break;
             } else if parts[parts.len() - lookback].rem_edges.len() > 0 {
                 break;
-            } 
+            }
             lookback += 1;
         }
 
