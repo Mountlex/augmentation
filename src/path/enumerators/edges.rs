@@ -143,125 +143,125 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         }
     }
 
-    // // Prio 3.5.1: Gainful outside edges
-    // for outside in outside_edges {
-    //     let out_pidx = nodes_to_pidx[outside.get_id() as usize].unwrap();
+    // Prio 3.5.1: Gainful outside edges
+    for outside in outside_edges {
+        let out_pidx = nodes_to_pidx[outside.get_id() as usize].unwrap();
 
-    //     for subpath in path_comps
-    //         .iter()
-    //         .permutations(path_comps.len() - 1)
-    //         .filter(|p| p[0].path_idx == out_pidx && p.last() == path_comps.last().as_ref())
-    //     {
-    //         // subpath = [out_idx -- ... -- rightmost enumerated comp]
+        for subpath in path_comps
+            .iter()
+            .permutations(path_comps.len() - 1)
+            .filter(|p| p[0].path_idx == out_pidx && p.last() == path_comps.last().as_ref())
+        {
+            // subpath = [out_idx -- ... -- rightmost enumerated comp]
 
-    //         let length = subpath.len();
-    //         let first = subpath[0].clone();
-    //         let cons_edges = subpath
-    //             .windows(2)
-    //             .map(|e| {
-    //                 let idx1 = e[0].path_idx;
-    //                 let idx2 = e[1].path_idx;
-    //                 all_edges
-    //                     .iter()
-    //                     .filter(|e| e.between_path_nodes(idx1, idx2))
-    //                     .map(|e| e.nodes_between_path_nodes(idx1, idx2))
-    //                     .collect_vec()
-    //             })
-    //             .collect_vec();
+            let length = subpath.len();
+            let first = subpath[0].clone();
+            let cons_edges = subpath
+                .windows(2)
+                .map(|e| {
+                    let idx1 = e[0].path_idx;
+                    let idx2 = e[1].path_idx;
+                    all_edges
+                        .iter()
+                        .filter(|e| e.between_path_nodes(idx1, idx2))
+                        .map(|e| e.nodes_between_path_nodes(idx1, idx2))
+                        .collect_vec()
+                })
+                .collect_vec();
 
-    //         assert_eq!(length, cons_edges.len() + 1);
+            assert_eq!(length, cons_edges.len() + 1);
 
-    //         let nice_paths = product_of_first(cons_edges).collect_vec();
-    //         for nice_path in nice_paths {
-    //             if valid_in_out_npc(
-    //                 &first.comp,
-    //                 &npc,
-    //                 nice_path.first().unwrap().0,
-    //                 outside,
-    //                 false,
-    //                 first.used,
-    //             ) {
-    //                 if nice_path.len() > 0 {
-    //                     // HERE IS SOMETHING WRONG. Also check other things
-    //                     let mut extension: Vec<(Option<Node>, Pidx, Option<Node>)> = vec![];
-    //                     extension.push((
-    //                         Some(nice_path.first().unwrap().0),
-    //                         subpath[0].path_idx,
-    //                         None,
-    //                     ));
-    //                     for (i, w) in nice_path.windows(2).enumerate() {
-    //                         extension.push((Some(w[1].0), subpath[i + 1].path_idx, Some(w[0].1)));
-    //                     }
-    //                     extension.push((
-    //                         None,
-    //                         subpath[extension.len()].path_idx,
-    //                         Some(nice_path.last().unwrap().1),
-    //                     ));
-    //                     extension.reverse();
+            let nice_paths = product_of_first(cons_edges).collect_vec();
+            for nice_path in nice_paths {
+                if valid_in_out_npc(
+                    &first.comp,
+                    &npc,
+                    nice_path.first().unwrap().0,
+                    outside,
+                    false,
+                    first.used,
+                ) {
+                    if nice_path.len() > 0 {
+                        // HERE IS SOMETHING WRONG. Also check other things
+                        let mut extension: Vec<(Option<Node>, Pidx, Option<Node>)> = vec![];
+                        extension.push((
+                            Some(nice_path.first().unwrap().0),
+                            subpath[0].path_idx,
+                            None,
+                        ));
+                        for (i, w) in nice_path.windows(2).enumerate() {
+                            extension.push((Some(w[1].0), subpath[i + 1].path_idx, Some(w[0].1)));
+                        }
+                        extension.push((
+                            None,
+                            subpath[extension.len()].path_idx,
+                            Some(nice_path.last().unwrap().1),
+                        ));
+                        extension.reverse();
 
-    //                     let mut feasible =
-    //                         check_fixed_extension_feasible(&extension, &path_comps, &npc, false);
-    //                     feasible.eval();
-    //                     if feasible.success() {
-    //                         // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
-    //                         //     println!("feasible extension {:?}", extension);
-    //                         //     //panic!();
-    //                         // }
-    //                         // we have gainful edges
-    //                         let old_last = path_comps.first().unwrap();
-    //                         let gain = match old_last.comp.comp_type() {
-    //                             crate::comps::CompType::Cycle(n) if n <= 5 => {
-    //                                 instance.context.inv.two_ec_credit(3)
-    //                             }
-    //                             crate::comps::CompType::Cycle(_) => {
-    //                                 instance.context.inv.two_ec_credit(6) - Credit::from(1)
-    //                             }
-    //                             crate::comps::CompType::Large => {
-    //                                 instance.context.inv.two_ec_credit(6) - Credit::from(1)
-    //                             }
-    //                             crate::comps::CompType::Complex => {
-    //                                 instance.context.inv.two_ec_credit(6) - Credit::from(1)
-    //                             }
-    //                         };
+                        let mut feasible =
+                            check_fixed_extension_feasible(&extension, &path_comps, &npc, false);
+                        feasible.eval();
+                        if feasible.success() {
+                            // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
+                            //     println!("feasible extension {:?}", extension);
+                            //     //panic!();
+                            // }
+                            // we have gainful edges
+                            let old_last = path_comps.first().unwrap();
+                            let gain = match old_last.comp.comp_type() {
+                                crate::comps::CompType::Cycle(n) if n <= 5 => {
+                                    instance.context.inv.two_ec_credit(3)
+                                }
+                                crate::comps::CompType::Cycle(_) => {
+                                    instance.context.inv.two_ec_credit(6) - Credit::from(1)
+                                }
+                                crate::comps::CompType::Large => {
+                                    instance.context.inv.two_ec_credit(6) - Credit::from(1)
+                                }
+                                crate::comps::CompType::Complex => {
+                                    instance.context.inv.two_ec_credit(6) - Credit::from(1)
+                                }
+                            };
 
-    //                         let all_other_nodes = path_comps
-    //                             .iter()
-    //                             .filter(|comp| comp.path_idx != out_pidx)
-    //                             .flat_map(|c| c.comp.matching_nodes())
-    //                             .filter(|n| {
-    //                                 !all_edges.iter().any(|e| {
-    //                                     e.node_incident(n)
-    //                                         && e.node_incident(&outside)
-    //                                         && e.cost <= Credit::from(1) - gain
-    //                                 })
-    //                             })
-    //                             .cloned()
-    //                             .collect_vec();
+                            let all_other_nodes = path_comps
+                                .iter()
+                                .filter(|comp| comp.path_idx != out_pidx)
+                                .flat_map(|c| c.comp.matching_nodes())
+                                .filter(|n| {
+                                    !all_edges.iter().any(|e| {
+                                        e.node_incident(n)
+                                            && e.node_incident(&outside)
+                                            && e.cost <= Credit::from(1) - gain
+                                    })
+                                })
+                                .cloned()
+                                .collect_vec();
 
-    //                         // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
-    //                         //     println!("all_other_nodes {:?}", all_other_nodes);
-    //                         //     //panic!();
-    //                         // }
+                            // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
+                            //     println!("all_other_nodes {:?}", all_other_nodes);
+                            //     //panic!();
+                            // }
 
-    //                         let iter =
-    //                             edge_iterator(vec![outside], all_other_nodes, false, true).unwrap();
+                            let iter =
+                                edge_iterator(vec![outside], all_other_nodes, false, true).unwrap();
 
-    //                         let iter = to_cases_with_edge_cost(
-    //                             iter,
-    //                             nodes_to_pidx,
-    //                             instance,
-    //                             Credit::from(1) - gain,
-    //                         );
-    //                         return Some((
-    //                             Box::new(iter),
-    //                             format!("Gainful edge at node {}", outside),
-    //                         ));
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+                            let iter = to_cases_with_edge_cost(
+                                iter,
+                                nodes_to_pidx,
+                                instance,
+                                Credit::from(1) - gain,
+                            );
+                            return Some((
+                                Box::new(iter),
+                                format!("Gainful edge at node {}", outside),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Prio 5: Larger contractable comps
     let all_edges = instance.all_edges();

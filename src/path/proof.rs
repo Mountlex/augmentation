@@ -688,6 +688,8 @@ fn prove_last_node(
                 "❌ Disproved case {}: {}",
                 profile, case
             );
+            let buf = proof_to_string(&proof, output_depth, &credit_inv);
+            log::info!("{}", buf);
         };
 
         proof
@@ -717,6 +719,11 @@ fn prove_last_node(
     println!();
     println!();
 
+    let buf = proof_to_string(&total_proof, output_depth, &credit_inv);
+    std::fs::write(filename, buf).expect("Unable to write file");
+}
+
+fn proof_to_string(proof: &PathProofNode, output_depth: usize, credit_inv: &CreditInv) -> String {
     let mut buf = String::new();
     writeln!(
         &mut buf,
@@ -724,10 +731,10 @@ fn prove_last_node(
         credit_inv
     )
     .expect("Unable to write file");
-    total_proof
+    proof
         .print_tree(&mut buf, output_depth)
         .expect("Unable to format tree");
-    std::fs::write(filename, buf).expect("Unable to write file");
+    return buf;
 }
 
 fn print_path_statistics(proof: &PathProofNode) {
