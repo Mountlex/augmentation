@@ -12,7 +12,7 @@ use crate::{comps::Component, path::PathProofNode, CreditInv};
 
 use super::enumerators::edges::edge_enumerator;
 use super::enumerators::nice_pairs::nice_pairs_enumerator;
-use super::enumerators::path_nodes::path_node_enumerator;
+use super::enumerators::path_nodes::{path_comp_enumerator, path_extension_enumerator};
 use super::enumerators::pseudo_cycles::enumerate_pseudo_cycles;
 use super::enumerators::rearrangements::enumerate_rearrangements;
 use super::instance::{Instance, StackElement};
@@ -218,7 +218,9 @@ impl Enumerator {
 
     fn get_iter(&self, stack: &Instance) -> Box<dyn Iterator<Item = StackElement>> {
         match self {
-            Enumerator::PathNodes => Box::new(path_node_enumerator(stack).map(StackElement::Inst)),
+            Enumerator::PathNodes => {
+                Box::new(path_extension_enumerator(stack).map(StackElement::Inst))
+            }
             //.collect_vec(),
             Enumerator::NicePairs => Box::new(nice_pairs_enumerator(stack).map(StackElement::Inst)),
             //.collect_vec(),
@@ -228,8 +230,7 @@ impl Enumerator {
             //.collect_vec(),
             Enumerator::Rearrangments => {
                 Box::new(enumerate_rearrangements(stack).map(StackElement::Rearrangement))
-            }
-            //.collect_vec(),
+            } //.collect_vec(),
         }
     }
 }
@@ -549,6 +550,7 @@ pub fn check_progress(instance: &mut Instance, part: InstPart) -> bool {
 pub struct PathProofOptions {
     pub edge_depth: u8,
     pub node_depth: u8,
+    pub initial_depth: u8,
     pub sc: bool,
 }
 
@@ -585,8 +587,8 @@ pub fn prove_nice_path_progress(
 
     let proof_cases = last_nodes;
 
-    if parallel {
-        proof_cases.into_par_iter().for_each(|last_node| {
+
+    proof_cases.into_iter().for_each(|last_node| {
             prove_last_node(
                 nodes.clone(),
                 last_node,
@@ -594,20 +596,66 @@ pub fn prove_nice_path_progress(
                 &output_dir,
                 output_depth,
                 options,
+                true,
             )
         })
+    
+}
+
+fn compute_initial_cases(
+    nodes: Vec<PathNode>,
+    last_node: PathNode,
+    mut depth: u8,
+    credit_inv: CreditInv,
+) -> Vec<Instance> {
+    let comp = last_node.get_comp().clone();
+
+    let in_nodes = if comp.fixed_node().is_some() {
+        vec![comp.fixed_node().unwrap()]
     } else {
-        proof_cases.into_iter().for_each(|last_node| {
-            prove_last_node(
-                nodes.clone(),
-                last_node,
-                credit_inv.clone(),
-                &output_dir,
-                output_depth,
-                options,
-            )
-        })
+        comp.matching_nodes().to_vec()
     };
+
+    let mut cases = in_nodes
+        .into_iter()
+        .map(|in_node| {
+            let path_comp = PathComp {
+                in_node: Some(in_node),
+                out_node: None,
+                comp: comp.clone(),
+                used: last_node.is_used(),
+                path_idx: Pidx::Last,
+            };
+            let mut instance = Instance {
+                stack: vec![],
+                context: InstanceContext {
+                    inv: credit_inv.clone(),
+                    comps: nodes.clone(),
+                },
+            };
+            instance.push(StackElement::Inst(InstPart::new_path_comp(path_comp)));
+
+            instance
+        })
+        .collect_vec();
+
+    while depth > 1 {
+        cases = cases
+            .into_iter()
+            .flat_map(|instance| {
+                let parts = path_comp_enumerator(&instance).collect_vec();
+                parts.into_iter().map(move |part| {
+                    let mut instance = instance.clone();
+                    instance.push(StackElement::Inst(part));
+                    instance
+                })
+            })
+            .collect_vec();
+
+        depth -= 1;
+    }
+
+    cases
 }
 
 fn prove_last_node(
@@ -617,41 +665,41 @@ fn prove_last_node(
     output_dir: &PathBuf,
     output_depth: usize,
     options: PathProofOptions,
+    parallel: bool,
 ) {
-    let comp = last_node.get_comp().clone();
 
-    let mut proof = PathProofNode::new_all(format!("Proof of in_nodes of {}", comp.short_name()));
-    let in_nodes = if comp.fixed_node().is_some() {
-        vec![comp.fixed_node().unwrap()]
-    } else {
-        comp.matching_nodes().to_vec()
-    };
+    let cases = compute_initial_cases(nodes, last_node.clone(), options.initial_depth, credit_inv.clone());
+    println!("{} cases to check!", cases.len());
 
-    for in_node in in_nodes {
-        let path_comp = PathComp {
-            in_node: Some(in_node),
-            out_node: None,
-            comp: comp.clone(),
-            used: last_node.is_used(),
-            path_idx: Pidx::Last,
-        };
-        let mut instance = Instance {
-            stack: vec![],
-            context: InstanceContext {
-                inv: credit_inv.clone(),
-                comps: nodes.clone(),
-            },
-        };
-        instance.push(StackElement::Inst(InstPart::new_path_comp(path_comp)));
+    let mut total_proof = PathProofNode::new_all(format!("Full proof"));
 
+    let proofs: Vec<PathProofNode> = cases.into_par_iter().map(|mut case| {
         let expr = inductive_proof(options, options.node_depth);
-        let in_node_proof = expr.prove(&mut instance);
-        proof.add_child(in_node_proof);
+        let mut proof = expr.prove(&mut case);
+        let outcome = proof.eval();
+        let profile = case.get_profile(outcome.success());
+        if outcome.success() {
+            println!(
+                "✔️ Proved case {}: {}",
+                profile, case
+            );
+        } else {
+            println!(
+                "❌ Disproved case {}: {}",
+                profile, case
+            );
+        };
+
+        proof
+    }).collect();
+    
+    for p in proofs {
+        total_proof.add_child(p);
     }
 
-    let outcome = proof.eval();
-
-    print_path_statistics(&proof);
+    total_proof.eval();
+    let outcome = total_proof.outcome();
+    //print_path_statistics(&total_proof);
     let filename = if outcome.success() {
         println!(
             "✔️ Proved nice path progress ending in {}",
@@ -676,7 +724,7 @@ fn prove_last_node(
         credit_inv
     )
     .expect("Unable to write file");
-    proof
+    total_proof
         .print_tree(&mut buf, output_depth)
         .expect("Unable to format tree");
     std::fs::write(filename, buf).expect("Unable to write file");

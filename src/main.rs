@@ -144,6 +144,9 @@ struct Path {
 
     #[clap(short = 'e', long = "edge_depth", default_value = "5")]
     edge_depth: u8,
+
+    #[clap(short = 'i', long = "initial_depth", default_value = "1")]
+    initial_depth: u8,
 }
 
 #[derive(clap::ValueEnum, Clone)]
@@ -269,6 +272,7 @@ fn prove_path(path: Path) {
         PathProofOptions {
             edge_depth: path.edge_depth,
             node_depth: path.node_depth,
+            initial_depth: path.initial_depth,
             sc: path.sc,
         },
         path.parallel,
