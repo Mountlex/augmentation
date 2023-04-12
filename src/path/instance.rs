@@ -77,6 +77,12 @@ impl Instance {
 
     pub fn all_edges(&self) -> Vec<Edge> {
         let mut implied_edges = self.implied_edges().cloned().collect_vec();
+
+        let cheap_edges = implied_edges.iter().filter(|e| e.cost < Credit::from(1)).cloned().collect_vec();
+        if !cheap_edges.is_empty() {
+            implied_edges.drain_filter(|e| cheap_edges.iter().any(|e2| e.cost > e2.cost && e2.node_incident(&e.n1) && e2.node_incident(&e.n2)));
+        }
+
         let nodes = self.path_nodes().collect_vec();
         for w in nodes.windows(2) {
             implied_edges.push(Edge::new(
@@ -91,13 +97,28 @@ impl Instance {
     }
 
     pub fn last_single_edge(&self) -> Option<Edge> {
-        self.inst_parts().last().and_then(|part| {
-            if part.edges.len() == 1 {
-                part.edges.first().cloned()
-            } else {
-                None
-            }
-        })
+        //sh run2_7.sh  25,08s user 0,19s system 146% cpu 17,255 total
+        //return None;
+        let parts = self.inst_parts().collect_vec();
+
+        let mut lookback = 1;
+        
+        while lookback <= parts.len() {
+            if parts[parts.len() - lookback].edges.len() == 1 {
+                return parts[parts.len() - lookback].edges.first().cloned();
+            } else if parts[parts.len() - lookback].edges.len() > 1 {
+                break;
+            } else if parts[parts.len() - lookback].path_nodes.len() > 0 {
+                break;
+            } else if parts[parts.len() - lookback].out_edges.len() > 0 {
+                break;
+            } else if parts[parts.len() - lookback].rem_edges.len() > 0 {
+                break;
+            } 
+            lookback += 1;
+        }
+
+        return None;
     }
 
     pub fn rem_edges(&self) -> Vec<HalfAbstractEdge> {
