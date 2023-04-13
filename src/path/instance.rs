@@ -110,7 +110,7 @@ impl Instance {
 
     pub fn last_single_edge(&self) -> Option<Edge> {
         //sh run2_7.sh  25,08s user 0,19s system 146% cpu 17,255 total
-        //return None;
+        return None;
         let parts = self.inst_parts().collect_vec();
 
         let mut lookback = 1;

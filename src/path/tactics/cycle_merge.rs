@@ -8,15 +8,16 @@ use crate::{
         utils::complex_cycle_value_base,
         NicePairConfig, PathComp,
     },
-    Credit, CreditInv, Node,
+    Credit, CreditInv, Node, types::Edge,
 };
 
 pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
     let pc = instance.pseudo_cycle().unwrap();
+    let all_edges = instance.all_edges();
     let path_comps = instance.path_nodes().collect_vec();
     let npc = instance.npc();
 
-    let mut cycle_value = pc.value(&path_comps, &npc, &instance.context.inv);
+    let mut cycle_value = pc.value(&path_comps, &all_edges, &npc, &instance.context.inv);
 
     let complex = pc.cycle.iter().any(|(_, comp, _)| match comp {
         CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
@@ -56,15 +57,17 @@ impl PseudoCycle {
     pub fn value(
         &self,
         path_comps: &Vec<&PathComp>,
+        all_edges: &[Edge],
         npc: &NicePairConfig,
         credit_inv: &CreditInv,
     ) -> Credit {
-        self.total_component_value(path_comps, npc, credit_inv) - self.total_edge_cost
+        self.total_component_value(path_comps, all_edges, npc, credit_inv) - self.total_edge_cost
     }
 
     fn total_component_value(
         &self,
         path_comps: &Vec<&PathComp>,
+        all_edges: &[Edge],
         npc: &NicePairConfig,
         credit_inv: &CreditInv,
     ) -> Credit {
@@ -88,7 +91,7 @@ impl PseudoCycle {
                 match comp {
                     CycleComp::PathComp(idx) => {
                         let comp = path_comps[idx.raw()];
-                        value(comp, in_node, out_node, npc, credit_inv, lower_complex)
+                        self.comp_value(comp, in_node, out_node, npc, all_edges, credit_inv, lower_complex)
                     }
                     CycleComp::Rem => {
                         credit_inv.two_ec_credit(3) // non shortcutable triangle
@@ -97,49 +100,66 @@ impl PseudoCycle {
             })
             .sum()
     }
-}
 
-fn value(
-    comp: &PathComp,
-    in_node: &Node,
-    out_node: &Node,
-    npc: &NicePairConfig,
-    credit_inv: &CreditInv,
-    lower_complex: bool,
-) -> Credit {
-    let nice_pair = npc.is_nice_pair(*in_node, *out_node);
+    fn comp_value(
+        &self,
+        comp: &PathComp,
+        in_node: &Node,
+        out_node: &Node,
+        npc: &NicePairConfig,
+        all_edges: &[Edge],
+        credit_inv: &CreditInv,
+        lower_complex: bool,
+    ) -> Credit {
+        let nice_pair = npc.is_nice_pair(*in_node, *out_node);
 
-    match comp.comp.comp_type() {
-        CompType::Cycle(_) if !comp.used => {
-            if nice_pair {
-                credit_inv.credits(&comp.comp) + Credit::from_integer(1) // shortcut!
-            } else {
-                credit_inv.credits(&comp.comp)
+        match comp.comp.comp_type() {
+            CompType::Cycle(_) if !comp.used => {
+                if nice_pair {
+                    credit_inv.credits(&comp.comp) + Credit::from_integer(1) // shortcut!
+                } else {
+                    credit_inv.credits(&comp.comp)
+
+
+                    
+
+
+                }
             }
-        }
-        CompType::Cycle(_) if comp.used => {
-            assert!(comp.comp.is_c5());
-            if in_node != out_node {
-                credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5)
-            } else {
-                credit_inv.credits(&comp.comp)
+            CompType::Cycle(_) if comp.used => {
+                assert!(comp.comp.is_c5());
+                if in_node != out_node {
+                    credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5)
+                } else {
+                    credit_inv.credits(&comp.comp)
+                }
             }
-        }
-        CompType::Large => credit_inv.credits(&comp.comp),
-        CompType::Complex => {
-            let complex = if lower_complex {
-                credit_inv.complex_comp()
-            } else {
-                Credit::from_integer(0)
-            };
-            if nice_pair {
-                complex
-                    + complex_cycle_value_base(credit_inv, &comp.comp.graph(), *in_node, *out_node)
-            } else {
-                complex
-                    + complex_cycle_value_base(credit_inv, &comp.comp.graph(), *in_node, *out_node)
+            CompType::Large => credit_inv.credits(&comp.comp),
+            CompType::Complex => {
+                let complex = if lower_complex {
+                    credit_inv.complex_comp()
+                } else {
+                    Credit::from_integer(0)
+                };
+                if nice_pair {
+                    complex
+                        + complex_cycle_value_base(
+                            credit_inv,
+                            &comp.comp.graph(),
+                            *in_node,
+                            *out_node,
+                        )
+                } else {
+                    complex
+                        + complex_cycle_value_base(
+                            credit_inv,
+                            &comp.comp.graph(),
+                            *in_node,
+                            *out_node,
+                        )
+                }
             }
+            _ => panic!(),
         }
-        _ => panic!(),
     }
 }
