@@ -115,6 +115,17 @@ impl Edge {
         }
     }
 
+    pub fn other_idx(&self, idx: Pidx) -> Option<Pidx> {
+        let (i1,i2) = self.path_indices();
+        if i1 == idx {
+            return Some(i2);
+        } else if i2 == idx {
+            return Some(i1);
+        } else {
+            None
+        }
+    }
+
     pub fn path_incident(&self, path_idx: Pidx) -> bool {
         path_idx == self.path_index_n1 || path_idx == self.path_index_n2
     }
