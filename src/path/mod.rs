@@ -4,6 +4,8 @@ mod proof;
 mod tactics;
 mod util;
 mod utils;
+mod pseudo_cycle;
+mod extension;
 
 use std::{cmp::Ordering, fmt::Display};
 

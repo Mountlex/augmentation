@@ -4,11 +4,11 @@ use crate::{
     comps::CompType,
     path::PathProofNode,
     path::{
-        instance::{CycleComp, Instance, PseudoCycle},
+        instance::Instance,
         utils::complex_cycle_value_base,
-        NicePairConfig, PathComp,
+        NicePairConfig, PathComp, pseudo_cycle::{CycleComp, PseudoCycle},
     },
-    Credit, CreditInv, Node, types::Edge,
+    Credit, Node, types::Edge,
 };
 
 pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {

@@ -3,9 +3,8 @@ use std::fmt::Write;
 use itertools::Itertools;
 
 use crate::{
-    path::PathProofNode,
-    path::{enumerators::pseudo_cycles::product_of_first, instance::Instance, Pidx},
-    Node,
+    path::{PathProofNode, extension::{InOutNode, Extension}},
+    path::{enumerators::pseudo_cycles::product_of_first, instance::Instance, Pidx}
 };
 
 use super::cycle_rearrange::{check_fixed_extension_feasible, valid_in_out_npc};
@@ -20,18 +19,18 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
     let mut msg = String::new();
 
     if let Some(rearrangement) = instance.rearrangement() {
-        let extension = &rearrangement.extension;
+        let extension = rearrangement;
 
-        let new_last_idx = extension.last().unwrap().1;
+        let new_last_idx = extension.end;
         let new_last_comp = &all_comps[new_last_idx.raw()];
         let new_last_nodes = new_last_comp.comp.matching_nodes();
         let outside_hits = all_outside.iter().filter(|n| new_last_nodes.contains(n));
         for outside_hit in outside_hits {
-            // new_last will be prelast
+            // new_last will be prelast, check if end_in and outside_hit build feasible nice path
             if valid_in_out_npc(
                 &new_last_comp.comp,
                 &npc,
-                extension.last().unwrap().0.unwrap(),
+                extension.end_in,
                 *outside_hit,
                 true,
                 new_last_comp.used,
@@ -57,7 +56,9 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
         }
     }
 
-    let last_comp = all_comps.first().unwrap();
+
+    // check if last comp has feasible outside edges
+    let last_comp = &all_comps[Pidx::Last.raw()];
     let last_comp_nodes = last_comp.comp.matching_nodes();
 
     for outside_hit in all_outside.iter().filter(|n| last_comp_nodes.contains(n)) {
@@ -80,6 +81,8 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
 
         let nice_paths = product_of_first(cons_edges).collect_vec();
         for nice_path in nice_paths {
+            // (0.in -- 1.out):(1.in -- 2.out):(2.in -- 3.out) ... (... -- start.out)
+            
             if valid_in_out_npc(
                 &last_comp.comp,
                 &npc,
@@ -88,13 +91,31 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
                 true,
                 last_comp.used,
             ) {
-                if nice_path.len() > 1 {
-                    let mut extension: Vec<(Option<Node>, Pidx, Option<Node>)> = vec![];
-                    extension.push((Some(nice_path.first().unwrap().1), Pidx::Last, None));
-                    for (i, w) in nice_path.windows(2).enumerate() {
-                        extension.push((Some(w[1].0), Pidx::from(i + 1), Some(w[0].1)));
-                    }
-                    extension.reverse();
+                
+                    let end = Pidx::Last;
+                    let end_in = nice_path.first().unwrap().0;
+                    let start = Pidx::from(nice_path.len());
+                    let start_out = nice_path.last().unwrap().1;
+
+                    let mut inner = nice_path.windows(2).enumerate().map(|(i, edges)| {
+                        InOutNode {
+                            in_node: edges[1].0,
+                            idx: Pidx::from(i + 1),
+                            out_node: edges[0].1,
+                        }
+                    }).collect_vec();
+                    // IMPORTANT
+                    inner.reverse();
+
+
+                    // extension [start.out -- .. -- 2.in:2.out -- 1.in:1.out -- end.in]
+                    let extension = Extension {
+                        start,
+                        start_out,
+                        end,
+                        end_in,
+                        inner,
+                    };
 
                     let mut feasible =
                         check_fixed_extension_feasible(&extension, &all_comps, &npc, false);
@@ -108,12 +129,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
                             true,
                         );
                     }
-                } else {
-                    return PathProofNode::new_leaf(
-                        format!("Longer nice path found via outside edge ({})!", outside_hit),
-                        true,
-                    );
-                }
+                
             }
         }
     }

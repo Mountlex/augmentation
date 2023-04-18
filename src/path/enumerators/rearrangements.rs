@@ -1,63 +1,76 @@
 use itertools::Itertools;
 
 use crate::{
-    path::instance::{CycleComp, Instance, Rearrangement},
+    path::{instance::{Instance, StackElement}, extension::{Extension, InOutNode}, pseudo_cycle::CycleComp},
     Node,
 };
 
-pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = Rearrangement>> {
+pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = Extension>> {
     let pc = instance.pseudo_cycle().unwrap();
 
     if !pc.consecutive_end() || pc.cycle.iter().any(|(_, n, _)| n.is_rem()) {
         return Box::new(std::iter::empty());
     }
 
-    // find path index of last node in cycle
+    // find path index of newest node in cycle
     // We know by the precondition that all previous nodes in the path are also in this cycle
-    // [...,hit,cycle_nodes]
-    let (cycle_idx, _path_comp) = pc
+    // [ ... -- max_idx -- ... ]
+    //   --------------    ---- 
+    //     cycle nodes     remaining path node
+    let (max_idx, _) = pc
         .cycle
         .iter()
         .enumerate()
         .max_by_key(|(_, (_, comp, _))| comp)
         .unwrap();
 
-    // [hit,<cycle_idx + 1>....,new_last]
+    // [<max_idx>,<max_idx + 1>....,new_last]
     let path1 = vec![
-        pc.cycle.split_at(cycle_idx).1,
-        pc.cycle.split_at(cycle_idx).0,
+        pc.cycle.split_at(max_idx).1,
+        pc.cycle.split_at(max_idx).0,
     ]
     .concat();
-    let mut extension1 = path1
-        .into_iter()
-        .map(|(n1, c, n2)| (Some(n1), *c.to_idx(), Some(n2)))
-        .collect_vec();
-    extension1.last_mut().unwrap().2 = None;
+    let extension1 = Extension {
+        start: path1[0].1.to_idx(),
+        start_out: path1[0].2,
+        end: path1.last().unwrap().1.to_idx(),
+        end_in: path1.last().unwrap().0,
+        inner: path1.iter().skip(1).take(path1.len() - 2).map(|(n1,c,n2)| {
+            InOutNode {
+                in_node: *n1,
+                idx: c.to_idx(),
+                out_node: *n2,
+            }
+        }).collect_vec()
+    };
 
-    // [hit,<cycle_idx - 1>....,new_last]
-    let mut p1 = pc.cycle.split_at(cycle_idx + 1).0.to_vec();
-    let mut p2 = pc.cycle.split_at(cycle_idx + 1).1.to_vec();
+   
+    // path2 = [<max_idx>,<max_idx - 1>....,new_last]
+    let mut p1 = pc.cycle.split_at(max_idx + 1).0.to_vec();
+    let mut p2 = pc.cycle.split_at(max_idx + 1).1.to_vec();
     p1.reverse();
     p2.reverse();
     let mut path2 = vec![p1, p2].concat();
     fix_in_out_direction(&mut path2);
-    let mut extension2 = path2
-        .into_iter()
-        .map(|(n1, c, n2)| (Some(n1), *c.to_idx(), Some(n2)))
-        .collect_vec();
-    extension2.last_mut().unwrap().2 = None;
-
-    // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]  3 is new last of nice path
+    let extension2 = Extension {
+        start: path2[0].1.to_idx(),
+        start_out: path2[0].2,
+        end: path2.last().unwrap().1.to_idx(),
+        end_in: path2.last().unwrap().0,
+        inner: path2.iter().skip(1).take(path2.len() - 2).map(|(n1,c,n2)| {
+            InOutNode {
+                in_node: *n1,
+                idx: c.to_idx(),
+                out_node: *n2,
+            }
+        }).collect_vec()
+    };
+       // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]  3 is new last of nice path
     let iter = vec![
-        Rearrangement {
-            extension: extension1,
-        },
-        Rearrangement {
-            extension: extension2,
-        },
-    ]
-    .into_iter();
-
+        extension1,
+        extension2,
+    ].into_iter();
+  
     Box::new(iter)
 }
 

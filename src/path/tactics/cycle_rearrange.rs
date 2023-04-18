@@ -2,8 +2,8 @@ use itertools::Itertools;
 
 use crate::{
     comps::Component,
-    path::PathProofNode,
-    path::{instance::Instance, NicePairConfig, PathComp, Pidx},
+    path::{PathProofNode, extension::Extension, Pidx},
+    path::{instance::Instance, NicePairConfig, PathComp},
     Node,
 };
 
@@ -14,18 +14,15 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
     let npc = instance.npc();
 
     let mut feasible =
-        check_fixed_extension_feasible(&rearrangement.extension, &path_comps, &npc, true);
+        check_fixed_extension_feasible(rearrangement, &path_comps, &npc, true);
     feasible.eval();
     if !feasible.success() {
         feasible
     } else {
-        let extension = &rearrangement.extension;
+        let extension = rearrangement;
 
-        let (_, old_last_idx, _) = extension.iter().find(|(_, idx, _)| idx.is_last()).unwrap();
-        let old_last_comp = &path_comps[old_last_idx.raw()].comp;
-
-        let new_last_idx = extension.last().unwrap().1;
-        let new_last_comp = &path_comps[new_last_idx.raw()].comp;
+        let old_last_comp = &path_comps[Pidx::Last.raw()].comp;
+        let new_last_comp = &path_comps[extension.end.raw()].comp;
 
         // Complex > C5 > C4 > Large > C7 > C6 > C3
 
@@ -98,23 +95,26 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
 
 // Pidx here means the original pidx
 pub fn check_fixed_extension_feasible(
-    extension: &[(Option<Node>, Pidx, Option<Node>)],
+    extension: &Extension,
     path_comps: &Vec<PathComp>,
     npc: &NicePairConfig,
     prelast_is_prelast: bool,
 ) -> PathProofNode {
-    // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]
+    // extension: [start.out -- 1.in:1.out -- 2.in:2.out -- end.in]
 
-    // check for inner zoomed nodes of extension that they fullfil nice path properties
-    for i in 1..extension.len() - 1 {
-        let (in_node, idx, out_node) = &extension[i];
+    // check for inner zoomed nodes of extension that they fulfill nice path properties
+    for (i, inner) in extension.inner.iter().enumerate() {
+        let in_node = inner.in_node;
+        let idx = inner.idx;
+        let out_node = inner.out_node; 
+
         let comp = &path_comps[idx.raw()];
         let valid_in_out = valid_in_out_npc(
             &comp.comp,
             npc,
-            in_node.unwrap(),
-            out_node.unwrap(),
-            i == extension.len() - 2 && prelast_is_prelast,
+            in_node,
+            out_node,
+            i == extension.inner.len() - 1 && prelast_is_prelast,
             comp.used,
         );
         if !valid_in_out {
@@ -125,15 +125,18 @@ pub fn check_fixed_extension_feasible(
         }
     }
 
-    let (_, hit, hit_out) = extension.first().unwrap();
-    let hit_comp = &path_comps[hit.raw()];
+    // check if start connection fulfills nice path properties
+    let start = extension.start;
+    let start_out = extension.start_out;
+
+    let start_comp = &path_comps[start.raw()];
     let valid_in_out = valid_in_out_npc(
-        &hit_comp.comp,
+        &start_comp.comp,
         npc,
-        hit_comp.in_node.unwrap(),
-        hit_out.unwrap(),
-        extension.len() == 2 && prelast_is_prelast,
-        hit_comp.used,
+        start_comp.in_node.unwrap(),
+        start_out,
+        extension.inner.is_empty() && prelast_is_prelast,
+        start_comp.used,
     );
     if !valid_in_out {
         return PathProofNode::new_leaf(
@@ -166,58 +169,3 @@ pub fn valid_in_out_npc(
     }
 }
 
-// fn check_matching_edge_extension_feasible(extension: &[SuperNode]) -> ProofNode {
-//     let old_last_node = extension
-//         .iter()
-//         .find(|n| n.path_idx().is_last())
-//         .unwrap()
-//         .get_zoomed();
-//     let old_last_comp = old_last_node.get_comp();
-
-//     let hit = extension.first().unwrap();
-
-//     // this is the case where we have an unexpanded matching edge
-
-//     // old_last --- ... --- new_prelast --- new_last --- hit --- rem_path
-//     //     |                                              |
-//     //     -----------------------------------------------|
-//     //                               matching edge
-
-//     let new_prelast = &extension[extension.len() - 2];
-//     let new_prelast_comp = new_prelast.get_comp();
-
-//     if new_prelast_comp.is_c5() {
-//         return ProofNode::new_leaf(
-//             format!("New prelast is C5 but we cannot check nice path properties",),
-//             false,
-//         )
-//         .into();
-//     }
-//     let old_last_np = old_last_node.npc.is_nice_pair(
-//         old_last_node.in_node.unwrap(),
-//         old_last_node.out_node.unwrap(),
-//     );
-
-//     if (old_last_comp.is_c3() || old_last_comp.is_c4()) && !old_last_np {
-//         return ProofNode::new_leaf(
-//             format!(
-//                 "Cannot rearrange cycle: last comp is {} but has no nice pair!",
-//                 old_last_comp
-//             ),
-//             false,
-//         )
-//         .into();
-//     }
-
-//     if let SuperNode::Abstract(hit_node) = hit {
-//         let hit_comp = hit_node.get_comp();
-
-//         if hit_comp.is_c3() || hit_comp.is_c4() {
-//             // Note that for aided C5 we dont have to ensure a nice pair, because it is not prelast.
-//             return ProofNode::new_leaf(format!("Cannot rearrange cycle: hit comp is {} but has nice pair in cycle, so we cannot guarantee nice pair on path!", hit_comp), false).into();
-//         }
-//     } else {
-//         panic!()
-//     }
-//     ProofNode::new_leaf("Feasbile path".into(), true)
-// }

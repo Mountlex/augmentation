@@ -2,8 +2,8 @@ use itertools::{iproduct, Itertools};
 
 use crate::{
     path::{
-        instance::{CycleComp, Instance, PseudoCycle},
-        HalfAbstractEdge, PathComp,
+        instance::Instance,
+        HalfAbstractEdge, PathComp, pseudo_cycle::{PseudoCycle, CycleComp},
     },
     types::Edge,
     Credit, Node,
