@@ -60,7 +60,7 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
         };
 
         let comp_filter = comp.clone();
-        let comp_map = comp.clone();
+        let comp_map = comp;
         let node_map = node;
 
         // for all in_nodes of the new component
@@ -90,10 +90,10 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                 iter
             }));
 
-        iter.map(|path_comp| InstPart::new_path_comp(path_comp.clone()))
+        iter.map(InstPart::new_path_comp)
     });
 
-    return Box::new(iter);
+    Box::new(iter)
 }
 
 // TODO READ
@@ -116,7 +116,6 @@ pub fn path_extension_enumerator(instance: &Instance) -> Box<dyn Iterator<Item =
                 .into_iter()
                 .powerset()
                 .flat_map(move |rem_edges_hit_new_node| {
-
                     let path_comp = inst_part.path_nodes.first().unwrap().clone();
                     let node_idx = inst_part.path_nodes.first().unwrap().path_idx;
 

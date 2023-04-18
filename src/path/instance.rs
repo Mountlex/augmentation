@@ -8,7 +8,10 @@ use crate::{
     Credit, CreditInv, Node,
 };
 
-use super::{proof::InstPart, HalfAbstractEdge, NicePairConfig, PathComp, pseudo_cycle::PseudoCycle, extension::Extension};
+use super::{
+    extension::Extension, proof::InstPart, pseudo_cycle::PseudoCycle, HalfAbstractEdge,
+    NicePairConfig, PathComp,
+};
 
 #[derive(Clone, Debug)]
 pub struct Instance {
@@ -120,17 +123,17 @@ impl Instance {
                 return parts[parts.len() - lookback].edges.first().cloned();
             } else if parts[parts.len() - lookback].edges.len() > 1 {
                 break;
-            } else if parts[parts.len() - lookback].path_nodes.len() > 0 {
+            } else if !parts[parts.len() - lookback].path_nodes.is_empty() {
                 break;
-            } else if parts[parts.len() - lookback].out_edges.len() > 0 {
+            } else if !parts[parts.len() - lookback].out_edges.is_empty() {
                 break;
-            } else if parts[parts.len() - lookback].rem_edges.len() > 0 {
+            } else if !parts[parts.len() - lookback].rem_edges.is_empty() {
                 break;
             }
             lookback += 1;
         }
 
-        return None;
+        None
     }
 
     pub fn rem_edges(&self) -> Vec<HalfAbstractEdge> {
@@ -262,10 +265,6 @@ impl PathNode {
         }
     }
 }
-
-
-
-
 
 #[derive(Clone, Debug)]
 pub struct InstanceContext {

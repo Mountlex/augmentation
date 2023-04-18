@@ -319,8 +319,6 @@ impl Tactic {
                     }
                 }
 
-            
-
                 PathProofNode::new_leaf("No manual proof!".into(), false)
             }
             Tactic::TacticsExhausted => PathProofNode::new_leaf("Tactics exhausted!".into(), false),
@@ -503,7 +501,6 @@ pub fn check_progress(instance: &mut Instance, part: InstPart) -> bool {
     outcome.success()
 }
 
-
 #[derive(Clone, Copy)]
 pub struct PathProofOptions {
     pub edge_depth: u8,
@@ -519,7 +516,7 @@ pub fn prove_nice_path_progress(
     output_dir: PathBuf,
     output_depth: usize,
     options: PathProofOptions,
-    parallel: bool,
+    _parallel: bool,
 ) {
     std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
 
@@ -545,19 +542,17 @@ pub fn prove_nice_path_progress(
 
     let proof_cases = last_nodes;
 
-
     proof_cases.into_iter().for_each(|last_node| {
-            prove_last_node(
-                nodes.clone(),
-                last_node,
-                credit_inv.clone(),
-                &output_dir,
-                output_depth,
-                options,
-                true,
-            )
-        })
-    
+        prove_last_node(
+            nodes.clone(),
+            last_node,
+            credit_inv.clone(),
+            &output_dir,
+            output_depth,
+            options,
+            true,
+        )
+    })
 }
 
 fn compute_initial_cases(
@@ -623,10 +618,14 @@ fn prove_last_node(
     output_dir: &PathBuf,
     output_depth: usize,
     options: PathProofOptions,
-    parallel: bool,
+    _parallel: bool,
 ) {
-
-    let cases = compute_initial_cases(nodes, last_node.clone(), options.initial_depth, credit_inv.clone());
+    let cases = compute_initial_cases(
+        nodes,
+        last_node.clone(),
+        options.initial_depth,
+        credit_inv.clone(),
+    );
     println!("{} cases to check!", cases.len());
 
     for case in &cases {
@@ -634,30 +633,27 @@ fn prove_last_node(
         println!("{}: {}", profile, case);
     }
 
-    let mut total_proof = PathProofNode::new_all(format!("Full proof"));
+    let mut total_proof = PathProofNode::new_all("Full proof".to_string());
 
-    let proofs: Vec<PathProofNode> = cases.into_par_iter().map(|mut case| {
-        let expr = inductive_proof(options, options.node_depth);
-        let mut proof = expr.prove(&mut case);
-        let outcome = proof.eval();
-        let profile = case.get_profile(outcome.success());
-        if outcome.success() {
-            println!(
-                "✔️ Proved case {}: {}",
-                profile, case
-            );
-        } else {
-            println!(
-                "❌ Disproved case {}: {}",
-                profile, case
-            );
-            let buf = proof_to_string(&proof, output_depth, &credit_inv);
-            log::info!("{}", buf);
-        };
+    let proofs: Vec<PathProofNode> = cases
+        .into_par_iter()
+        .map(|mut case| {
+            let expr = inductive_proof(options, options.node_depth);
+            let mut proof = expr.prove(&mut case);
+            let outcome = proof.eval();
+            let profile = case.get_profile(outcome.success());
+            if outcome.success() {
+                println!("✔️ Proved case {}: {}", profile, case);
+            } else {
+                println!("❌ Disproved case {}: {}", profile, case);
+                let buf = proof_to_string(&proof, output_depth, &credit_inv);
+                log::info!("{}", buf);
+            };
 
-        proof
-    }).collect();
-    
+            proof
+        })
+        .collect();
+
     for p in proofs {
         total_proof.add_child(p);
     }
@@ -697,7 +693,7 @@ fn proof_to_string(proof: &PathProofNode, output_depth: usize, credit_inv: &Cred
     proof
         .print_tree(&mut buf, output_depth)
         .expect("Unable to format tree");
-    return buf;
+    buf
 }
 
 fn print_path_statistics(proof: &PathProofNode) {

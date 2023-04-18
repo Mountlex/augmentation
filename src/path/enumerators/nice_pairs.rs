@@ -11,7 +11,6 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
     let rem_edges = instance.rem_edges();
     let out_edges = instance.out_edges();
 
-
     let old_npc = instance.npc();
 
     let connected_nodes = instance.connected_nodes().cloned().collect_vec();
@@ -60,7 +59,6 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
                     )
                     .into_iter()
                     .map(move |mut npc| {
-                      
                         let mut inst_part_clone = inst_part.clone();
 
                         inst_part_clone.nice_pairs.append(&mut npc.nice_pairs);
@@ -83,7 +81,7 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
         }));
     }
 
-    let cases = Box::new(cases.into_iter().map(move |mut part| {
+    let cases = Box::new(cases.map(move |mut part| {
         let nice_pairs = vec![old_npc.nice_pairs.clone(), part.nice_pairs.clone()].concat();
         part.nice_pairs = nice_pairs.into_iter().unique().collect_vec();
         part
@@ -98,8 +96,8 @@ pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Ins
 fn comp_npcs(
     node: &PathComp,
     nodes: &[Node],
-    consistent_npc: &NicePairConfig,
-    consistent_nodes: &[Node],
+    _consistent_npc: &NicePairConfig,
+    _consistent_nodes: &[Node],
 ) -> Vec<NicePairConfig> {
     let comp = &node.comp;
 
@@ -136,7 +134,7 @@ fn comp_npcs(
                 npc.nice_pairs
                     .push((node.in_node.unwrap(), node.out_node.unwrap()))
             }
-            return vec![npc];
+            vec![npc]
 
             // TODO add all nice pairs
 

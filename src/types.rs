@@ -116,9 +116,9 @@ impl Edge {
     }
 
     pub fn other_idx(&self, idx: Pidx) -> Option<Pidx> {
-        let (i1,i2) = self.path_indices();
+        let (i1, i2) = self.path_indices();
         if i1 == idx {
-            return Some(i2);
+            Some(i2)
         } else if i2 == idx {
             return Some(i1);
         } else {

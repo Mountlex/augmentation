@@ -1,7 +1,11 @@
 use itertools::Itertools;
 
 use crate::{
-    path::{instance::{Instance, StackElement}, extension::{Extension, InOutNode}, pseudo_cycle::CycleComp},
+    path::{
+        extension::{Extension, InOutNode},
+        instance::Instance,
+        pseudo_cycle::CycleComp,
+    },
     Node,
 };
 
@@ -15,7 +19,7 @@ pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = 
     // find path index of newest node in cycle
     // We know by the precondition that all previous nodes in the path are also in this cycle
     // [ ... -- max_idx -- ... ]
-    //   --------------    ---- 
+    //   --------------    ----
     //     cycle nodes     remaining path node
     let (max_idx, _) = pc
         .cycle
@@ -25,26 +29,24 @@ pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = 
         .unwrap();
 
     // [<max_idx>,<max_idx + 1>....,new_last]
-    let path1 = vec![
-        pc.cycle.split_at(max_idx).1,
-        pc.cycle.split_at(max_idx).0,
-    ]
-    .concat();
+    let path1 = vec![pc.cycle.split_at(max_idx).1, pc.cycle.split_at(max_idx).0].concat();
     let extension1 = Extension {
         start: path1[0].1.to_idx(),
         start_out: path1[0].2,
         end: path1.last().unwrap().1.to_idx(),
         end_in: path1.last().unwrap().0,
-        inner: path1.iter().skip(1).take(path1.len() - 2).map(|(n1,c,n2)| {
-            InOutNode {
+        inner: path1
+            .iter()
+            .skip(1)
+            .take(path1.len() - 2)
+            .map(|(n1, c, n2)| InOutNode {
                 in_node: *n1,
                 idx: c.to_idx(),
                 out_node: *n2,
-            }
-        }).collect_vec()
+            })
+            .collect_vec(),
     };
 
-   
     // path2 = [<max_idx>,<max_idx - 1>....,new_last]
     let mut p1 = pc.cycle.split_at(max_idx + 1).0.to_vec();
     let mut p2 = pc.cycle.split_at(max_idx + 1).1.to_vec();
@@ -57,20 +59,20 @@ pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = 
         start_out: path2[0].2,
         end: path2.last().unwrap().1.to_idx(),
         end_in: path2.last().unwrap().0,
-        inner: path2.iter().skip(1).take(path2.len() - 2).map(|(n1,c,n2)| {
-            InOutNode {
+        inner: path2
+            .iter()
+            .skip(1)
+            .take(path2.len() - 2)
+            .map(|(n1, c, n2)| InOutNode {
                 in_node: *n1,
                 idx: c.to_idx(),
                 out_node: *n2,
-            }
-        }).collect_vec()
+            })
+            .collect_vec(),
     };
-       // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]  3 is new last of nice path
-    let iter = vec![
-        extension1,
-        extension2,
-    ].into_iter();
-  
+    // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]  3 is new last of nice path
+    let iter = vec![extension1, extension2].into_iter();
+
     Box::new(iter)
 }
 

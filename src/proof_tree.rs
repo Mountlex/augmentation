@@ -203,7 +203,6 @@ impl<T: Clone> ProofNode<T> {
                 }
                 node.outcome = Some(node.child.eval());
                 node.outcome.unwrap()
-                
             }
             ProofNode::All(node) => {
                 if let Some(s) = node.outcome {

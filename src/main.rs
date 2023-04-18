@@ -301,7 +301,7 @@ fn setup_logging(_verbose: bool) -> Result<(), fern::InitError> {
                 .open("program.log")?,
         );
 
-    let stdout_config = fern::Dispatch::new()
+    let _stdout_config = fern::Dispatch::new()
         .format(|out, message, record| {
             // special format for debug messages coming from our own crate.
             if record.level() > log::LevelFilter::Info && record.target() == "cmd_program" {

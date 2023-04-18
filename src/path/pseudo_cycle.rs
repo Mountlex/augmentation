@@ -2,11 +2,9 @@ use std::fmt::Display;
 
 use itertools::Itertools;
 
-use crate::{Node, Credit};
+use crate::{Credit, Node};
 
 use super::Pidx;
-
-
 
 #[derive(Clone, Debug)]
 pub struct PseudoCycle {

@@ -1,11 +1,11 @@
 mod enumerators;
+mod extension;
 mod instance;
 mod proof;
+mod pseudo_cycle;
 mod tactics;
 mod util;
 mod utils;
-mod pseudo_cycle;
-mod extension;
 
 use std::{cmp::Ordering, fmt::Display};
 

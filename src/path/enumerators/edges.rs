@@ -9,7 +9,7 @@ use crate::{
         tactics::cycle_rearrange::{check_fixed_extension_feasible, valid_in_out_npc},
         util::contract::is_contractible,
         utils::hamiltonian_paths,
-        HalfAbstractEdge, NicePairConfig, PathComp, Pidx,
+        HalfAbstractEdge, PathComp, Pidx,
     },
     types::Edge,
     Credit, Node,
@@ -24,9 +24,7 @@ pub fn edge_enumerator(
 
     //return res;
 
-    if res.is_none() {
-        return None;
-    }
+    res.as_ref()?;
 
     let (iter, name) = res.unwrap();
     let cases = iter.collect_vec();
@@ -361,7 +359,7 @@ fn compute_good_edges(
         top.good_out.append(&mut good_out);
     }
 
-    return Box::new(rem_parts.into_iter());
+    Box::new(rem_parts.into_iter())
 }
 
 fn to_cases(
@@ -421,9 +419,9 @@ fn to_cases_with_edge_cost(
     // Filter: consider only cases where edge are _not_ already good.
     Box::new(iter.filter(move |part| {
         if !part.edges.is_empty() {
-            !good_edges.contains(&part.edges.first().unwrap())
+            !good_edges.contains(part.edges.first().unwrap())
         } else if !part.out_edges.is_empty() {
-            !good_out.contains(&part.out_edges.first().unwrap())
+            !good_out.contains(part.out_edges.first().unwrap())
         } else {
             true
         }
@@ -680,14 +678,12 @@ impl Iterator for EdgeIterator {
                 return None;
             }
             self.current = Some((c_node, c_hit));
-            return Some((self.nodes[c_node], self.hits[c_hit]));
+            Some((self.nodes[c_node], self.hits[c_hit]))
+        } else if self.nodes.is_empty() || self.hits.is_empty() {
+            None
         } else {
-            if self.nodes.is_empty() || self.hits.is_empty() {
-                return None;
-            } else {
-                self.current = Some((0, 0));
-                return Some((self.nodes[0], self.hits[0]));
-            }
+            self.current = Some((0, 0));
+            Some((self.nodes[0], self.hits[0]))
         }
     }
 }

@@ -3,7 +3,8 @@ use itertools::{iproduct, Itertools};
 use crate::{
     path::{
         instance::Instance,
-        HalfAbstractEdge, PathComp, pseudo_cycle::{PseudoCycle, CycleComp},
+        pseudo_cycle::{CycleComp, PseudoCycle},
+        HalfAbstractEdge, PathComp,
     },
     types::Edge,
     Credit, Node,
@@ -172,15 +173,7 @@ pub fn pseudo_cycles_of_length(
             let cons_edges = vec![perm.clone(), vec![first]]
                 .concat()
                 .windows(2)
-                .map(|e| {
-                    edges_between(
-                        &all_edges,
-                        last_single_edge.clone(),
-                        &all_rem_edges,
-                        &e[0],
-                        &e[1],
-                    )
-                })
+                .map(|e| edges_between(&all_edges, last_single_edge, &all_rem_edges, &e[0], &e[1]))
                 .collect_vec();
 
             assert_eq!(length, cons_edges.len());

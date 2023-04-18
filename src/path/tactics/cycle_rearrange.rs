@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::{
     comps::Component,
-    path::{PathProofNode, extension::Extension, Pidx},
+    path::{extension::Extension, PathProofNode, Pidx},
     path::{instance::Instance, NicePairConfig, PathComp},
     Node,
 };
@@ -13,8 +13,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let npc = instance.npc();
 
-    let mut feasible =
-        check_fixed_extension_feasible(rearrangement, &path_comps, &npc, true);
+    let mut feasible = check_fixed_extension_feasible(rearrangement, &path_comps, &npc, true);
     feasible.eval();
     if !feasible.success() {
         feasible
@@ -106,7 +105,7 @@ pub fn check_fixed_extension_feasible(
     for (i, inner) in extension.inner.iter().enumerate() {
         let in_node = inner.in_node;
         let idx = inner.idx;
-        let out_node = inner.out_node; 
+        let out_node = inner.out_node;
 
         let comp = &path_comps[idx.raw()];
         let valid_in_out = valid_in_out_npc(
@@ -168,4 +167,3 @@ pub fn valid_in_out_npc(
         true
     }
 }
-

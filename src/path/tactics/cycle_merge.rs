@@ -1,14 +1,16 @@
-use itertools::{Itertools, iproduct};
+use itertools::{iproduct, Itertools};
 
 use crate::{
     comps::CompType,
     path::PathProofNode,
     path::{
         instance::Instance,
+        pseudo_cycle::{CycleComp, PseudoCycle},
         utils::complex_cycle_value_base,
-        NicePairConfig, PathComp, pseudo_cycle::{CycleComp, PseudoCycle},
+        NicePairConfig, PathComp,
     },
-    Credit, Node, types::Edge,
+    types::Edge,
+    Credit, Node,
 };
 
 pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
@@ -17,7 +19,7 @@ pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
     let path_comps = instance.path_nodes().collect_vec();
     let npc = instance.npc();
 
-    let mut cycle_value = pc.value(&path_comps, &all_edges, &npc, &instance);
+    let mut cycle_value = pc.value(&path_comps, &all_edges, &npc, instance);
 
     let complex = pc.cycle.iter().any(|(_, comp, _)| match comp {
         CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
@@ -59,7 +61,7 @@ impl PseudoCycle {
         path_comps: &Vec<&PathComp>,
         all_edges: &[Edge],
         npc: &NicePairConfig,
-        instance: &Instance
+        instance: &Instance,
     ) -> Credit {
         self.total_component_value(path_comps, all_edges, npc, instance) - self.total_edge_cost
     }
@@ -69,7 +71,7 @@ impl PseudoCycle {
         path_comps: &Vec<&PathComp>,
         all_edges: &[Edge],
         npc: &NicePairConfig,
-        instance: &Instance
+        instance: &Instance,
     ) -> Credit {
         let first_complex = self
             .cycle
@@ -91,7 +93,15 @@ impl PseudoCycle {
                 match comp {
                     CycleComp::PathComp(idx) => {
                         let comp = path_comps[idx.raw()];
-                        self.comp_value(comp, in_node, out_node, npc, all_edges, instance, lower_complex)
+                        self.comp_value(
+                            comp,
+                            in_node,
+                            out_node,
+                            npc,
+                            all_edges,
+                            instance,
+                            lower_complex,
+                        )
                     }
                     CycleComp::Rem => {
                         instance.context.inv.two_ec_credit(3) // non shortcutable triangle
@@ -119,34 +129,61 @@ impl PseudoCycle {
         match comp.comp.comp_type() {
             CompType::Cycle(_) if !comp.used => {
                 if nice_pair {
-                    instance.context.inv.credits(&comp.comp) + Credit::from_integer(1) // shortcut!
+                    instance.context.inv.credits(&comp.comp) + Credit::from_integer(1)
+                // shortcut!
                 } else {
-                    let in_adj = all_edges.iter().filter(|e| comp.comp.is_adjacent(&e.n1, in_node) || comp.comp.is_adjacent(&e.n2, in_node)).collect_vec();
-                    let out_adj = all_edges.iter().filter(|e| comp.comp.is_adjacent(&e.n1, out_node) || comp.comp.is_adjacent(&e.n2, out_node)).collect_vec();
+                    let in_adj = all_edges
+                        .iter()
+                        .filter(|e| {
+                            comp.comp.is_adjacent(&e.n1, in_node)
+                                || comp.comp.is_adjacent(&e.n2, in_node)
+                        })
+                        .collect_vec();
+                    let out_adj = all_edges
+                        .iter()
+                        .filter(|e| {
+                            comp.comp.is_adjacent(&e.n1, out_node)
+                                || comp.comp.is_adjacent(&e.n2, out_node)
+                        })
+                        .collect_vec();
 
-                    let cycle_indices = self.cycle.iter().flat_map(|(_, c, _)| match c{
-                        CycleComp::PathComp(idx) => Some(idx),
-                        CycleComp::Rem => None,
-                    }).cloned().collect_vec();
+                    let cycle_indices = self
+                        .cycle
+                        .iter()
+                        .flat_map(|(_, c, _)| match c {
+                            CycleComp::PathComp(idx) => Some(idx),
+                            CycleComp::Rem => None,
+                        })
+                        .cloned()
+                        .collect_vec();
 
-                    let (upper,lower) = comp.comp.paths_between(in_node, out_node);
-                    
-                    let local_merge_credits = iproduct!(in_adj,out_adj).filter(|(e1,e2)| 
-                    e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx) && !cycle_indices.contains(&e2.other_idx(comp.path_idx).unwrap()))
-                    .filter(|(e1, e2)| {
-                        let n1 = e1.endpoint_at(comp.path_idx).unwrap();
-                        let n2 = e2.endpoint_at(comp.path_idx).unwrap();
+                    let (upper, lower) = comp.comp.paths_between(in_node, out_node);
 
-                        (upper.contains(&n1) && lower.contains(&n2)) || (upper.contains(&n2) && lower.contains(&n1))
-                    })
-                    .map(|(e1,e2)| { let hit_comp = path_comps.iter().find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap()).unwrap();
-                        credit_inv.credits(&hit_comp.comp)
-                    }).max();
-                    
+                    let local_merge_credits = iproduct!(in_adj, out_adj)
+                        .filter(|(e1, e2)| {
+                            e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
+                                && !cycle_indices.contains(&e2.other_idx(comp.path_idx).unwrap())
+                        })
+                        .filter(|(e1, e2)| {
+                            let n1 = e1.endpoint_at(comp.path_idx).unwrap();
+                            let n2 = e2.endpoint_at(comp.path_idx).unwrap();
+
+                            (upper.contains(&n1) && lower.contains(&n2))
+                                || (upper.contains(&n2) && lower.contains(&n1))
+                        })
+                        .map(|(_e1, e2)| {
+                            let hit_comp = path_comps
+                                .iter()
+                                .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
+                                .unwrap();
+                            credit_inv.credits(&hit_comp.comp)
+                        })
+                        .max();
+
                     if let Some(add) = local_merge_credits {
-                        return credit_inv.credits(&comp.comp) + add;
+                        credit_inv.credits(&comp.comp) + add
                     } else {
-                        return credit_inv.credits(&comp.comp)
+                        credit_inv.credits(&comp.comp)
                     }
                 }
             }
