@@ -629,6 +629,11 @@ fn prove_last_node(
     let cases = compute_initial_cases(nodes, last_node.clone(), options.initial_depth, credit_inv.clone());
     println!("{} cases to check!", cases.len());
 
+    for case in &cases {
+        let profile = case.get_profile(false);
+        println!("{}: {}", profile, case);
+    }
+
     let mut total_proof = PathProofNode::new_all(format!("Full proof"));
 
     let proofs: Vec<PathProofNode> = cases.into_par_iter().map(|mut case| {
