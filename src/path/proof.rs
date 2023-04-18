@@ -164,7 +164,11 @@ impl Quantor {
             };
 
             for case in case_iterator {
-                let item_msg = format!("{} {}", case, enum_msg);
+                let item_msg = if matches!(case, StackElement::Inst(_)) {
+                    format!("instpart {}", enum_msg)
+                } else {
+                    format!("rearrangement or pc {}", enum_msg)
+                };
                 stack.push(case);
                 let mut proof_item = self.formula().prove(stack);
                 proof_item = PathProofNode::new_info(item_msg, proof_item);

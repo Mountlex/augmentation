@@ -9,6 +9,8 @@ use crate::{
     Node,
 };
 
+// checked
+
 pub fn enumerate_rearrangements(instance: &Instance) -> Box<dyn Iterator<Item = Extension>> {
     let pc = instance.pseudo_cycle().unwrap();
 

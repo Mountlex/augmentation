@@ -251,7 +251,9 @@ impl Component {
         }
     }
 
-    pub fn sym_matching_nodes(&self) -> &[Node] {
+    /// A list of all nodes which could be in-nodes. 
+    /// Removes symmetric cases.
+    pub fn in_nodes(&self) -> &[Node] {
         match self {
             Component::Large(n) => std::slice::from_ref(n),
             Component::ComplexTree(_, nodes) => nodes,

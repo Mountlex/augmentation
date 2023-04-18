@@ -7,6 +7,8 @@ use crate::{
     Node,
 };
 
+// checked
+
 pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
     let rearrangement = instance.rearrangement().unwrap();
 
@@ -28,7 +30,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
         // Reduce C3 to anything except C3
         if old_last_comp.is_c3() && !new_last_comp.is_c3() {
             return PathProofNode::new_leaf(
-                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                format!("Rearrange cycle: now ends with {}!", new_last_comp.short_name()),
                 true,
             );
         }
@@ -36,19 +38,19 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
         // Reduce C6 to anything except C3 and C6
         if old_last_comp.is_c6() && !new_last_comp.is_c3() && !new_last_comp.is_c6() {
             return PathProofNode::new_leaf(
-                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                format!("Rearrange cycle: now ends with {}!", new_last_comp.short_name()),
                 true,
             );
         }
 
-        // Reduce C6 to anything except C3 and C6 and C7
+        // Reduce C7 to anything except C3 and C6 and C7
         if old_last_comp.is_c7()
             && !new_last_comp.is_c3()
             && !new_last_comp.is_c6()
             && !new_last_comp.is_c7()
         {
             return PathProofNode::new_leaf(
-                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                format!("Rearrange cycle: now ends with {}!", new_last_comp.short_name()),
                 true,
             );
         }
@@ -61,7 +63,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
             && !new_last_comp.is_c7()
         {
             return PathProofNode::new_leaf(
-                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                format!("Rearrange cycle: now ends with {}!", new_last_comp.short_name()),
                 true,
             );
         }
@@ -69,7 +71,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
         // Reduce C4 to C5
         if old_last_comp.is_c4() && new_last_comp.is_c5() {
             return PathProofNode::new_leaf(
-                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                format!("Rearrange cycle: now ends with {}!", new_last_comp.short_name()),
                 true,
             );
         }
@@ -77,7 +79,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
         // Reduce anything that is not complex to complex
         if !old_last_comp.is_complex() && new_last_comp.is_complex() {
             return PathProofNode::new_leaf(
-                format!("Rearrange cycle: now ends with {}!", new_last_comp),
+                format!("Rearrange cycle: now ends with {}!", new_last_comp.short_name()),
                 true,
             );
         }
@@ -85,7 +87,7 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
         PathProofNode::new_leaf(
             format!(
                 "No feasible reduction (old_last = {}, new_last = {}",
-                old_last_comp, new_last_comp
+                old_last_comp.short_name(), new_last_comp.short_name()
             ),
             false,
         )

@@ -52,11 +52,11 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
         };
 
         let in_nodes = if !node_idx.is_last() {
-            comp.sym_matching_nodes().to_vec()
+            comp.in_nodes().to_vec()
         } else if let Some(fixed) = comp.fixed_node() {
             vec![fixed]
         } else {
-            comp.sym_matching_nodes().to_vec()
+            comp.in_nodes().to_vec()
         };
 
         let comp_filter = comp.clone();

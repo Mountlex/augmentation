@@ -12,6 +12,8 @@ use crate::{
 
 use super::cycle_rearrange::{check_fixed_extension_feasible, valid_in_out_npc};
 
+// checked
+
 pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
     let all_outside = instance.out_edges();
     let all_edges = instance.all_edges();
