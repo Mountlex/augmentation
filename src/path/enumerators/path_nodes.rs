@@ -112,8 +112,8 @@ pub fn path_extension_enumerator(
         }
     }
 
-    let profile = instance.get_profile(true);
-    log::info!("Currently extending: {}", profile);
+    //let profile = instance.get_profile(true);
+    //log::info!("Currently extending: {}", profile);
 
     let old_path_len = path_comps.len();
 

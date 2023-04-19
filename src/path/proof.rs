@@ -351,7 +351,10 @@ impl Tactic {
 
                 PathProofNode::new_leaf("No manual proof!".into(), false)
             }
-            Tactic::TacticsExhausted => PathProofNode::new_leaf("Tactics exhausted!".into(), false),
+            Tactic::TacticsExhausted => {
+                log::info!("tactics exhausted for: {}", stack);
+                PathProofNode::new_leaf("Tactics exhausted!".into(), false)
+            },
             Tactic::Print => {
                 let all_edges = stack.all_edges();
                 let outside = stack.out_edges();
