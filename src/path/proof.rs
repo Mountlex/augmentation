@@ -2,7 +2,7 @@ use std::fmt::{Display, Write};
 use std::path::PathBuf;
 
 use itertools::Itertools;
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator, IndexedParallelIterator};
 
 use crate::path::instance::{InstanceContext, PathNode};
 use crate::path::{PathComp, Pidx};
@@ -163,33 +163,58 @@ impl Quantor {
                 Quantor::Any(e, _) => PathProofNode::new_any(e.msg().to_string()),
             };
 
-            for case in case_iterator {
-                let item_msg = match case {
-                    StackElement::Inst(_) => format!("part {}", enum_msg),
-                    StackElement::PseudoCycle(_) => format!("pc {}", enum_msg),
-                    StackElement::Rearrangement(_) => format!("rearr {}", enum_msg),
-                };
-                stack.push(case);
-                let mut proof_item = self.formula().prove(stack);
-                proof_item = PathProofNode::new_info(item_msg, proof_item);
-                let outcome = proof_item.eval();
+            if let Quantor::AllOpt(OptEnumerator::PathNode, _, _, _) = self {
+                let cases = case_iterator.collect_vec();
+                let nodes: Vec<PathProofNode> = cases.into_par_iter().map(|case| {
+                    let item_msg = match case {
+                        StackElement::Inst(_) => format!("part {}", enum_msg),
+                        StackElement::PseudoCycle(_) => format!("pc {}", enum_msg),
+                        StackElement::Rearrangement(_) => format!("rearr {}", enum_msg),
+                    };
+                    let mut stack = stack.clone();
+                    stack.push(case);
+                    let mut proof_item = self.formula().prove(&mut stack);
+                    proof_item = PathProofNode::new_info(item_msg, proof_item);
+                    let outcome = proof_item.eval();
 
-                if let Quantor::AllOpt(OptEnumerator::PathNode, _, _, _) = self {
-                    proof_item.add_payload(stack.get_profile(outcome.success()));
+                    if let Quantor::AllOpt(OptEnumerator::PathNode, _, _, _) = self {
+                        proof_item.add_payload(stack.get_profile(outcome.success()));
+                    }
+
+                    proof_item
+                }).collect();
+                for node in nodes {
+                    proof.add_child(node);
                 }
+            } else {
+                for case in case_iterator {
+                    let item_msg = match case {
+                        StackElement::Inst(_) => format!("part {}", enum_msg),
+                        StackElement::PseudoCycle(_) => format!("pc {}", enum_msg),
+                        StackElement::Rearrangement(_) => format!("rearr {}", enum_msg),
+                    };
+                    stack.push(case);
+                    let mut proof_item = self.formula().prove(stack);
+                    proof_item = PathProofNode::new_info(item_msg, proof_item);
+                    let outcome = proof_item.eval();
 
-                proof.add_child(proof_item);
-                let res = outcome.success();
-                stack.pop();
+                    if let Quantor::AllOpt(OptEnumerator::PathNode, _, _, _) = self {
+                        proof_item.add_payload(stack.get_profile(outcome.success()));
+                    }
 
-                let should_break = match self {
-                    Quantor::AllOpt(_, _, _, sc) => !res && *sc,
-                    Quantor::All(_, _, sc) => !res && *sc,
-                    Quantor::Any(_, _) => res,
-                };
+                    proof.add_child(proof_item);
+                    let res = outcome.success();
+                    stack.pop();
 
-                if should_break {
-                    break;
+                    let should_break = match self {
+                        Quantor::AllOpt(_, _, _, sc) => !res && *sc,
+                        Quantor::All(_, _, sc) => !res && *sc,
+                        Quantor::Any(_, _) => res,
+                    };
+
+                    if should_break {
+                        break;
+                    }
                 }
             }
 
