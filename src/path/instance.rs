@@ -279,6 +279,7 @@ pub struct InstanceProfile {
 }
 
 impl InstanceProfile {
+    #[allow(dead_code)]
     pub fn includes(&self, other: &InstanceProfile) -> bool {
         other.comp_types.len() < self.comp_types.len()
             && self

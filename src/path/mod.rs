@@ -120,9 +120,10 @@ impl NicePairConfig {
             .any(|(a, b)| (*a == u && *b == v) || (*a == v && *b == u))
     }
 
-    /// Checks whether this configuration is consistent with `consistent_npc` on the node set `consistent_nodes`.
-    /// This function returns true if for every pair of nodes from `consistent_nodes`, this configuration has the
-    /// same value for this pair as `consistent_npc`.
+    // Checks whether this configuration is consistent with `consistent_npc` on the node set `consistent_nodes`.
+    // This function returns true if for every pair of nodes from `consistent_nodes`, this configuration has the
+    // same value for this pair as `consistent_npc`.
+    #[allow(dead_code)]
     pub fn is_consistent_with(
         &self,
         consistent_npc: &NicePairConfig,

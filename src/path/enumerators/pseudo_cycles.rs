@@ -54,7 +54,6 @@ pub fn product_of_first<T: Clone + Copy + 'static>(
         let edges6 = edges.remove(0);
         let edges7 = edges.remove(0);
 
-
         Box::new(
             iproduct!(edges0, edges1, edges2, edges3, edges4, edges5, edges6, edges7)
                 .map(|(e1, e2, e3, e4, e5, e6, e7, e8)| vec![e1, e2, e3, e4, e5, e6, e7, e8]),

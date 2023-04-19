@@ -251,7 +251,7 @@ impl Component {
         }
     }
 
-    /// A list of all nodes which could be in-nodes. 
+    /// A list of all nodes which could be in-nodes.
     /// Removes symmetric cases.
     pub fn in_nodes(&self) -> &[Node] {
         match self {

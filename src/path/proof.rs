@@ -127,7 +127,7 @@ impl Display for InstPart {
 #[derive(Debug, Clone)]
 enum Quantor {
     All(Enumerator, Box<Expression>, bool),
-    AllOpt(OptEnumerator, Box<Expression>, Box<Expression>),
+    AllOpt(OptEnumerator, Box<Expression>, Box<Expression>, bool),
     Any(Enumerator, Box<Expression>),
 }
 
@@ -135,7 +135,7 @@ impl Quantor {
     fn formula(&self) -> &Box<Expression> {
         match self {
             Quantor::All(_, t, _) => t,
-            Quantor::AllOpt(_, t, _) => t,
+            Quantor::AllOpt(_, t, _, _) => t,
             Quantor::Any(_, t) => t,
         }
     }
@@ -145,7 +145,7 @@ impl Quantor {
         let (case_iterator, otherwise) = match self {
             Quantor::All(e, _, _sc) => (Some(e.get_iter(stack)), None),
             Quantor::Any(e, _) => (Some(e.get_iter(stack)), None),
-            Quantor::AllOpt(e, _, otherwise) => {
+            Quantor::AllOpt(e, _, otherwise, _) => {
                 if let Some((cases, msg)) = e.try_iter(stack) {
                     enum_msg = msg;
                     (Some(cases), Some(otherwise))
@@ -159,22 +159,22 @@ impl Quantor {
         if let Some(case_iterator) = case_iterator {
             let mut proof = match self {
                 Quantor::All(e, _, _) => PathProofNode::new_all(e.msg().to_string()),
-                Quantor::AllOpt(e, _, _) => PathProofNode::new_all(e.msg().to_string()),
+                Quantor::AllOpt(e, _, _, _) => PathProofNode::new_all(e.msg().to_string()),
                 Quantor::Any(e, _) => PathProofNode::new_any(e.msg().to_string()),
             };
 
             for case in case_iterator {
-                let item_msg = if matches!(case, StackElement::Inst(_)) {
-                    format!("instpart {}", enum_msg)
-                } else {
-                    format!("rearrangement or pc {}", enum_msg)
+                let item_msg = match case {
+                    StackElement::Inst(_) => format!("part {}", enum_msg),
+                    StackElement::PseudoCycle(_) => format!("pc {}", enum_msg),
+                    StackElement::Rearrangement(_) => format!("rearr {}", enum_msg),
                 };
                 stack.push(case);
                 let mut proof_item = self.formula().prove(stack);
                 proof_item = PathProofNode::new_info(item_msg, proof_item);
                 let outcome = proof_item.eval();
 
-                if let Quantor::All(Enumerator::PathNodes, _, _) = self {
+                if let Quantor::AllOpt(OptEnumerator::PathNode, _, _, _) = self {
                     proof_item.add_payload(stack.get_profile(outcome.success()));
                 }
 
@@ -183,7 +183,7 @@ impl Quantor {
                 stack.pop();
 
                 let should_break = match self {
-                    Quantor::AllOpt(_, _, _) => !res,
+                    Quantor::AllOpt(_, _, _, sc) => !res && *sc,
                     Quantor::All(_, _, sc) => !res && *sc,
                     Quantor::Any(_, _) => res,
                 };
@@ -204,7 +204,6 @@ impl Quantor {
 
 #[derive(Debug, Clone)]
 enum Enumerator {
-    PathNodes, // includes enumeration of in and out
     NicePairs,
     PseudoCycle,
     Rearrangments,
@@ -213,7 +212,7 @@ enum Enumerator {
 impl Enumerator {
     fn msg(&self) -> &str {
         match self {
-            Enumerator::PathNodes => "Enumerate new path node",
+            //Enumerator::PathNodes => "Enumerate new path node",
             Enumerator::NicePairs => "Enumerate nice pairs",
             Enumerator::PseudoCycle => "Enumerate pseudo cycles",
             Enumerator::Rearrangments => "Enumerate rearrangements",
@@ -222,19 +221,18 @@ impl Enumerator {
 
     fn get_iter(&self, stack: &Instance) -> Box<dyn Iterator<Item = StackElement>> {
         match self {
-            Enumerator::PathNodes => {
-                Box::new(path_extension_enumerator(stack).map(StackElement::Inst))
-            }
-            //.collect_vec(),
+            // Enumerator::PathNodes => {
+            //     Box::new(path_extension_enumerator(stack).map(StackElement::Inst))
+            // }
             Enumerator::NicePairs => Box::new(nice_pairs_enumerator(stack).map(StackElement::Inst)),
-            //.collect_vec(),
+
             Enumerator::PseudoCycle => {
                 Box::new(enumerate_pseudo_cycles(stack).map(StackElement::PseudoCycle))
             }
-            //.collect_vec(),
+
             Enumerator::Rearrangments => {
                 Box::new(enumerate_rearrangements(stack).map(StackElement::Rearrangement))
-            } //.collect_vec(),
+            }
         }
     }
 }
@@ -242,21 +240,24 @@ impl Enumerator {
 #[derive(Debug, Clone)]
 enum OptEnumerator {
     Edges,
+    PathNode,
 }
 
 impl OptEnumerator {
     fn msg(&self) -> &str {
         match self {
             OptEnumerator::Edges => "Enumerate edges",
+            OptEnumerator::PathNode => "Enumerate path node",
         }
     }
 
     fn try_iter(
         &self,
-        stack: &mut Instance,
+        instance: &mut Instance,
     ) -> Option<(Box<dyn Iterator<Item = StackElement>>, String)> {
         let result = match self {
-            OptEnumerator::Edges => edge_enumerator(stack),
+            OptEnumerator::Edges => edge_enumerator(instance),
+            OptEnumerator::PathNode => path_extension_enumerator(instance),
         };
 
         if let Some((case_iter, msg)) = result {
@@ -417,15 +418,21 @@ fn all_sc(enumerator: Enumerator, expr: Expression) -> Expression {
     Expression::Quantor(Quantor::All(enumerator, Box::new(expr), true))
 }
 
-fn all(enumerator: Enumerator, expr: Expression, sc: bool) -> Expression {
-    Expression::Quantor(Quantor::All(enumerator, Box::new(expr), sc))
-}
+// fn all(enumerator: Enumerator, expr: Expression, sc: bool) -> Expression {
+//     Expression::Quantor(Quantor::All(enumerator, Box::new(expr), sc))
+// }
 
-fn all_opt(enumerator: OptEnumerator, expr: Expression, otherwise: Expression) -> Expression {
+fn all_opt(
+    enumerator: OptEnumerator,
+    expr: Expression,
+    otherwise: Expression,
+    sc: bool,
+) -> Expression {
     Expression::Quantor(Quantor::AllOpt(
         enumerator,
         Box::new(expr),
         Box::new(otherwise),
+        sc,
     ))
 }
 
@@ -446,8 +453,8 @@ fn inductive_proof(options: PathProofOptions, depth: u8) -> Expression {
 }
 
 fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
-    all(
-        Enumerator::PathNodes,
+    all_opt(
+        OptEnumerator::PathNode,
         all_sc(
             Enumerator::NicePairs,
             or4(
@@ -456,6 +463,11 @@ fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
                 progress(),
                 find_all_edges(options.edge_depth, step),
             ),
+        ),
+        or3(
+            expr(Tactic::ManualCheck),
+            expr(Tactic::Print),
+            expr(Tactic::TacticsExhausted),
         ),
         options.sc,
     )
@@ -474,6 +486,7 @@ fn find_edge(enumerator: Expression, otherwise: Expression) -> Expression {
         OptEnumerator::Edges,
         all_sc(Enumerator::NicePairs, or(progress(), enumerator)),
         otherwise,
+        true,
     )
 }
 
@@ -700,6 +713,7 @@ fn proof_to_string(proof: &PathProofNode, output_depth: usize, credit_inv: &Cred
     buf
 }
 
+#[allow(dead_code)]
 fn print_path_statistics(proof: &PathProofNode) {
     let mut profiles = vec![];
     proof.get_payloads(&mut profiles);

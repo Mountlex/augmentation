@@ -3,6 +3,7 @@ use itertools::Itertools;
 use crate::{
     comps::Component,
     path::{
+        enumerators::edges::edge_enumerator,
         instance::{Instance, PathNode},
         proof::InstPart,
         PathComp, Pidx,
@@ -97,13 +98,24 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
 }
 
 // TODO READ
-pub fn path_extension_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart>> {
+pub fn path_extension_enumerator(
+    instance: &mut Instance,
+) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
+    let path_comps = instance.path_nodes().cloned().collect_vec();
+    let rem_edges = instance.rem_edges();
+
+    if rem_edges.is_empty() && path_comps.len() >= 3 {
+        // If we cannot find more edges, and there are no rem edges, it wont help to enumerate more nodes.
+        if edge_enumerator(instance).is_none() {
+            log::info!("Enumerating more path nodes does not help!");
+            return None;
+        }
+    }
+
     let profile = instance.get_profile(true);
     log::info!("Currently extending: {}", profile);
 
-    let path_comps = instance.path_nodes().cloned().collect_vec();
     let old_path_len = path_comps.len();
-    let rem_edges = instance.rem_edges();
 
     // Enumerate components and in / out
     let iter = path_comp_enumerator(instance);
@@ -179,7 +191,7 @@ pub fn path_extension_enumerator(instance: &Instance) -> Box<dyn Iterator<Item =
                 })
         }));
 
-    Box::new(iter)
+    return Some((Box::new(iter), "path node".into()));
 }
 
 fn prevalid_in_out(c: &Component, new_in: Node, new_out: Node, prelast: bool) -> bool {
