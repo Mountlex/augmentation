@@ -142,8 +142,13 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         }
     }
 
+    let outside_used_for_gain = instance.used_for_credit_gain();
+
     // Prio 3.5.1: Gainful outside edges
-    for outside in outside_edges {
+    for outside in outside_edges
+        .into_iter()
+        .filter(|e| !outside_used_for_gain.contains(e))
+    {
         let out_pidx = nodes_to_pidx[outside.get_id() as usize].unwrap();
 
         for subpath in path_comps
@@ -246,16 +251,25 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                             .cloned()
                             .collect_vec();
 
-                        let iter =
-                            edge_iterator(vec![outside], all_other_nodes, false, true).unwrap();
+                        if !all_other_nodes.is_empty() {
+                            let iter =
+                                edge_iterator(vec![outside], all_other_nodes, false, true).unwrap();
 
-                        let iter = to_cases_with_edge_cost(
-                            iter,
-                            nodes_to_pidx,
-                            instance,
-                            Credit::from(1) - gain,
-                        );
-                        return Some((Box::new(iter), format!("Gainful edge at node {}", outside)));
+                            let iter = to_cases_with_edge_cost(
+                                iter,
+                                nodes_to_pidx,
+                                instance,
+                                Credit::from(1) - gain,
+                            );
+                            let iter = Box::new(iter.map(move |mut part| {
+                                part.used_for_credit_gain.push(outside); // do not use this outside again
+                                part
+                            }));
+                            return Some((
+                                Box::new(iter),
+                                format!("Gainful edge at node {}", outside),
+                            ));
+                        }
                     }
                 }
             }

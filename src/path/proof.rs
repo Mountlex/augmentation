@@ -30,6 +30,7 @@ pub struct InstPart {
     pub nice_pairs: Vec<(Node, Node)>,
     pub edges: Vec<Edge>,
     pub out_edges: Vec<Node>,
+    pub used_for_credit_gain: Vec<Node>,
     pub rem_edges: Vec<HalfAbstractEdge>,
     pub non_rem_edges: Vec<Node>,
     pub connected_nodes: Vec<Node>,
@@ -45,6 +46,7 @@ impl InstPart {
             edges: vec![],
             out_edges: vec![],
             rem_edges: vec![],
+            used_for_credit_gain: vec![],
             non_rem_edges: vec![],
             connected_nodes: vec![],
             good_edges: vec![],
@@ -57,6 +59,7 @@ impl InstPart {
             && self.nice_pairs.is_empty()
             && self.edges.is_empty()
             && self.out_edges.is_empty()
+            && self.used_for_credit_gain.is_empty()
             && self.rem_edges.is_empty()
             && self.non_rem_edges.is_empty()
             && self.connected_nodes.is_empty()
@@ -70,6 +73,7 @@ impl InstPart {
             nice_pairs: vec![],
             edges: vec![],
             out_edges: vec![],
+            used_for_credit_gain: vec![],
             rem_edges: vec![],
             non_rem_edges: vec![],
             connected_nodes: vec![],
@@ -107,6 +111,11 @@ impl Display for InstPart {
         if !self.out_edges.is_empty() {
             write!(f, "Outside: ")?;
             write!(f, "{}", self.out_edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.used_for_credit_gain.is_empty() {
+            write!(f, "Used for credit gain: ")?;
+            write!(f, "{}", self.used_for_credit_gain.iter().join(", "))?;
             write!(f, ", ")?;
         }
         if !self.rem_edges.is_empty() {
@@ -163,6 +172,7 @@ impl Quantor {
                 Quantor::Any(e, _) => PathProofNode::new_any(e.msg().to_string()),
             };
 
+            //if false {
             if let Quantor::AllOpt(OptEnumerator::PathNode, _, _, _) = self {
                 let cases = case_iterator.collect_vec();
                 let nodes: Vec<PathProofNode> = cases.into_par_iter().map(|case| {
