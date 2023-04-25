@@ -1,0 +1,1 @@
+cargo run --release -- path 4 15 c3 -o proofs -n 5 -e 6 -i 2
