@@ -1,4 +1,4 @@
-cargo run --release -- path 2 7 c3 -o proofs  -n 3 -e 1 
+# cargo run --release -- path 2 7 c3 -o proofs  -n 3 -e 1 
 cargo run --release -- path 2 7 c4 -o proofs  -n 3 -e 5 -i 2
 cargo run --release -- path 2 7 c5 -o proofs  -n 2 -e 4 
 cargo run --release -- path 2 7 c6 -o proofs  -n 1 -e 3 

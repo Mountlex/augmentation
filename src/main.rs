@@ -151,7 +151,7 @@ struct Path {
 
 #[derive(clap::ValueEnum, Clone)]
 enum LastComp {
-    C3,
+    //C3,
     C4,
     C5,
     C6,
@@ -231,7 +231,7 @@ fn prove_path(path: Path) {
 
     let comps = if inv.c < Credit::new(2, 7) {
         vec![
-            c3(),
+            //c3(),
             c4(),
             c5(),
             c6(),
@@ -242,7 +242,7 @@ fn prove_path(path: Path) {
         ]
     } else {
         vec![
-            c3(),
+            //c3(),
             c4(),
             c5(),
             c6(),
@@ -253,7 +253,7 @@ fn prove_path(path: Path) {
     };
 
     let last_comp = match path.last_comp {
-        LastComp::C3 => c3(),
+        //LastComp::C3 => c3(),
         LastComp::C4 => c4(),
         LastComp::C5 => c5(),
         LastComp::C6 => c6(),

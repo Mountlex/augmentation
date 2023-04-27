@@ -104,7 +104,7 @@ impl PseudoCycle {
                         )
                     }
                     CycleComp::Rem => {
-                        instance.context.inv.two_ec_credit(3) // non shortcutable triangle
+                        instance.context.inv.two_ec_credit(4) // non shortcutable triangle
                     }
                 }
             })
