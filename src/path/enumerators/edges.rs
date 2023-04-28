@@ -155,7 +155,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         let old_last = path_comps.first().unwrap();
         let gain = match old_last.comp.comp_type() {
             crate::comps::CompType::Cycle(n) if n <= 5 => {
-                instance.context.inv.two_ec_credit(3)
+                instance.context.inv.two_ec_credit(4)
             }
             crate::comps::CompType::Cycle(_) => {
                 instance.context.inv.two_ec_credit(6) - Credit::from(1)
