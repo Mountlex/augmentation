@@ -235,7 +235,7 @@ fn prove_path(path: Path) {
             c4(),
             c5(),
             c6(),
-            c7(),
+            //c7(),
             large(),
             //complex_tree(),
             //complex_path(),
