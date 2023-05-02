@@ -152,16 +152,6 @@ impl PseudoCycle {
                                     && !cycle_indices
                                         .contains(&e2.other_idx(comp.path_idx).unwrap())
                             })
-                            .filter(|(e1, e2)| {
-                                let hit_comp = path_comps
-                                    .iter()
-                                    .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
-                                    .unwrap();
-
-                                e1.endpoint_at(hit_comp.path_idx)
-                                    != e2.endpoint_at(hit_comp.path_idx)
-                                    || e1.endpoint_at(hit_comp.path_idx).unwrap().is_comp()
-                            })
                             .map(|(e1, e2)| {
                                 let n1 = e1.endpoint_at(comp.path_idx).unwrap();
                                 let n2 = e2.endpoint_at(comp.path_idx).unwrap();
@@ -215,15 +205,6 @@ impl PseudoCycle {
                                     && !cycle_indices
                                         .contains(&e2.other_idx(comp.path_idx).unwrap())
                             })
-                            .filter(|(e1, e2)| {
-                                let hit_comp = path_comps
-                                    .iter()
-                                    .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
-                                    .unwrap();
-
-                                e1.endpoint_at(hit_comp.path_idx)
-                                    != e2.endpoint_at(hit_comp.path_idx) || e1.endpoint_at(hit_comp.path_idx).unwrap().is_comp()
-                            })
                             .map(|(e1, e2)| {
                                 let hit_comp = path_comps
                                     .iter()
@@ -254,15 +235,6 @@ impl PseudoCycle {
                                 e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
                                     && !cycle_indices
                                         .contains(&e2.other_idx(comp.path_idx).unwrap())
-                            })
-                            .filter(|(e1, e2)| {
-                                let hit_comp = path_comps
-                                    .iter()
-                                    .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
-                                    .unwrap();
-
-                                e1.endpoint_at(hit_comp.path_idx)
-                                    != e2.endpoint_at(hit_comp.path_idx) || e1.endpoint_at(hit_comp.path_idx).unwrap().is_comp()
                             })
                             .map(|(e1, e2)| {
                                 let n1 = e1.endpoint_at(comp.path_idx).unwrap();
@@ -317,16 +289,6 @@ impl PseudoCycle {
                             // edges must hit same vertec
                             e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
                                 && !cycle_indices.contains(&e2.other_idx(comp.path_idx).unwrap())
-                        })
-                        .filter(|(e1, e2)| {
-                            // edges must hit different vertices
-                            let hit_comp = path_comps
-                                .iter()
-                                .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
-                                .unwrap();
-
-                            e1.endpoint_at(hit_comp.path_idx)
-                                != e2.endpoint_at(hit_comp.path_idx) || e1.endpoint_at(hit_comp.path_idx).unwrap().is_comp()
                         })
                         .filter(|(e1, e2)| {
                             let n1 = e1.endpoint_at(comp.path_idx).unwrap();
