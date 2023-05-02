@@ -310,27 +310,23 @@ impl PseudoCycle {
                     instance.context.inv.credits(&comp.comp) + Credit::from_integer(1)
                 // shortcut!
                 } else {
-                    let in_adj = all_edges
-                        .iter()
-                        .filter(|e| {
-                            comp.comp.is_adjacent(&e.n1, in_node)
-                                || comp.comp.is_adjacent(&e.n2, in_node)
-                        })
-                        .collect_vec();
-                    let out_adj = all_edges
-                        .iter()
-                        .filter(|e| {
-                            comp.comp.is_adjacent(&e.n1, out_node)
-                                || comp.comp.is_adjacent(&e.n2, out_node)
-                        })
-                        .collect_vec();
+                   let (upper, lower) = comp.comp.paths_between(in_node, out_node);
 
-                    let (upper, lower) = comp.comp.paths_between(in_node, out_node);
-
-                    let local_merge_credits = iproduct!(in_adj, out_adj)
+                    let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
                         .filter(|(e1, e2)| {
+                            // edges must hit same vertec
                             e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
                                 && !cycle_indices.contains(&e2.other_idx(comp.path_idx).unwrap())
+                        })
+                        .filter(|(e1, e2)| {
+                            // edges must hit different vertices
+                            let hit_comp = path_comps
+                                .iter()
+                                .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
+                                .unwrap();
+
+                            e1.endpoint_at(hit_comp.path_idx)
+                                != e2.endpoint_at(hit_comp.path_idx) || e1.endpoint_at(hit_comp.path_idx).unwrap().is_comp()
                         })
                         .filter(|(e1, e2)| {
                             let n1 = e1.endpoint_at(comp.path_idx).unwrap();
@@ -344,13 +340,27 @@ impl PseudoCycle {
                                 .iter()
                                 .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
                                 .unwrap();
-                            if e1.endpoint_at(hit_comp.path_idx)
-                                != e2.endpoint_at(hit_comp.path_idx) || e1.endpoint_at(hit_comp.path_idx).unwrap().is_comp()
-                            {
-                                credit_inv.credits(&hit_comp.comp)
-                            } else {
-                                Credit::from_integer(0)
-                            }
+
+                                let n1 = e1.endpoint_at(comp.path_idx).unwrap();
+                                let n2 = e2.endpoint_at(comp.path_idx).unwrap();
+
+                                let other_shortcut = if npc.is_nice_pair(
+                                    e1.endpoint_at(hit_comp.path_idx).unwrap(),
+                                    e2.endpoint_at(hit_comp.path_idx).unwrap(),
+                                ) {
+                                    Credit::from_integer(1)
+                                } else {
+                                    Credit::from_integer(0)
+                                };
+
+                                if ((upper.contains(&n1) && lower.contains(&n2))
+                                || (upper.contains(&n2) && lower.contains(&n1))) && ((comp.comp.is_adjacent(&n1, in_node) && comp.comp.is_adjacent(&n2, out_node)) || (comp.comp.is_adjacent(&n2, in_node) && comp.comp.is_adjacent(&n1, out_node))) {
+                                    credit_inv.credits(&hit_comp.comp) + other_shortcut
+                                } else if comp.comp.is_adjacent(&n1, &n2) {
+                                    credit_inv.credits(&hit_comp.comp) + other_shortcut - Credit::from_integer(1)
+                                } else {
+                                    credit_inv.credits(&hit_comp.comp) + other_shortcut
+                                }
                         })
                         .max();
 
