@@ -126,7 +126,159 @@ impl PseudoCycle {
         let path_comps = instance.path_nodes().collect_vec();
         let credit_inv = &instance.context.inv;
 
+        let cycle_indices = self
+        .cycle
+        .iter()
+        .flat_map(|(_, c, _)| match c {
+            CycleComp::PathComp(idx) => Some(idx),
+            CycleComp::Rem => None,
+        })
+        .cloned()
+        .collect_vec();
+
+        let incident_edges = all_edges
+        .iter()
+        .filter(|e| {
+            e.path_incident(comp.path_idx)
+        })
+        .collect_vec();
+
         match comp.comp.comp_type() {
+            CompType::Cycle(4) => {
+                if nice_pair {
+                    if comp.comp.is_adjacent(in_node, out_node) {
+                        let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
+                        .filter(|(e1, e2)| {
+                            // pair of edges that hits the same comp but not this cycle
+                            e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
+                                && !cycle_indices.contains(&e2.other_idx(comp.path_idx).unwrap())
+                        })
+                        .filter(|(e1, e2)| {
+                            let hit_comp = path_comps
+                                .iter()
+                                .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
+                                .unwrap();
+
+                            e1.endpoint_at(hit_comp.path_idx) != e2.endpoint_at(hit_comp.path_idx)
+                        })
+                        .map(|(e1, e2)| {
+                            let n1 = e1.endpoint_at(comp.path_idx).unwrap();
+                            let n2 = e2.endpoint_at(comp.path_idx).unwrap();
+
+                            let hit_comp = path_comps
+                                .iter()
+                                .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
+                                .unwrap();
+
+                            let other_shortcut = if npc.is_nice_pair(e1.endpoint_at(hit_comp.path_idx).unwrap(), e2.endpoint_at(hit_comp.path_idx).unwrap()) {
+                                Credit::from_integer(1)
+                            } else {
+                                Credit::from_integer(0)
+                            };
+                                
+                            if !(n1 == *in_node && n2 == *in_node) && !(n2 == *in_node && n1 == *in_node) && comp.comp.is_adjacent(&n1, &n2) {
+                                // in this case we can double shortcut C4
+                                credit_inv.credits(&hit_comp.comp) - Credit::from_integer(2) + other_shortcut + Credit::from_integer(1)
+                            } else {
+                                // in this case we cannot double shortcut C4
+                                credit_inv.credits(&hit_comp.comp) - Credit::from_integer(2) + other_shortcut 
+                            }
+                        })
+                        .max();
+
+                        if let Some(add) = local_merge_credits {
+                            credit_inv.credits(&comp.comp) + Credit::from_integer(1) + add
+                        } else {
+                            credit_inv.credits(&comp.comp) + Credit::from_integer(1)
+                        }
+                    } else {
+                        credit_inv.credits(&comp.comp) + Credit::from_integer(1)
+                    }
+                } else {
+                    // case of no nice pair
+                    if in_node != out_node {
+                        // we can always shortcut C4 in this case
+                        let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
+                        .filter(|(e1, e2)| {
+                            // pair of edges that hits the same comp but not this cycle
+                            e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
+                                && !cycle_indices.contains(&e2.other_idx(comp.path_idx).unwrap())
+                        })
+                        .filter(|(e1, e2)| {
+                            let hit_comp = path_comps
+                                .iter()
+                                .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
+                                .unwrap();
+
+                            e1.endpoint_at(hit_comp.path_idx) != e2.endpoint_at(hit_comp.path_idx)
+                        })
+                        .map(|(e1, e2)| {
+                            let hit_comp = path_comps
+                                .iter()
+                                .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
+                                .unwrap();
+                            if npc.is_nice_pair(e1.endpoint_at(hit_comp.path_idx).unwrap(), e2.endpoint_at(hit_comp.path_idx).unwrap()) {
+                                credit_inv.credits(&hit_comp.comp) // we make two shortcuts
+                            } else {
+                                credit_inv.credits(&hit_comp.comp) - Credit::from_integer(1) // we make only one shortcut
+                            }
+                        })
+                        .max();
+
+                        if let Some(add) = local_merge_credits {
+                            credit_inv.credits(&comp.comp) + add
+                        } else {
+                            credit_inv.credits(&comp.comp)
+                        }
+                    } else {
+                        // in_node == out_node
+                        let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
+                        .filter(|(e1, e2)| {
+                            // pair of edges that hits the same comp but not this cycle
+                            e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
+                                && !cycle_indices.contains(&e2.other_idx(comp.path_idx).unwrap())
+                        })
+                        .filter(|(e1, e2)| {
+                            let hit_comp = path_comps
+                                .iter()
+                                .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
+                                .unwrap();
+
+                            e1.endpoint_at(hit_comp.path_idx) != e2.endpoint_at(hit_comp.path_idx)
+                        })
+                        .map(|(e1, e2)| {
+                            let n1 = e1.endpoint_at(comp.path_idx).unwrap();
+                            let n2 = e2.endpoint_at(comp.path_idx).unwrap();
+
+                            let hit_comp = path_comps
+                                .iter()
+                                .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
+                                .unwrap();
+
+                            let other_shortcut = if npc.is_nice_pair(e1.endpoint_at(hit_comp.path_idx).unwrap(), e2.endpoint_at(hit_comp.path_idx).unwrap()) {
+                                Credit::from_integer(1)
+                            } else {
+                                Credit::from_integer(0)
+                            };
+                                
+                            if (n1 == *in_node || n2 == *in_node) && !comp.comp.is_adjacent(&n1, &n2) {
+                                // in this case we cannot shortcut C4
+                                credit_inv.credits(&hit_comp.comp) - Credit::from_integer(2) + other_shortcut
+                            } else {
+                                // in this case we can shortcut C4
+                                credit_inv.credits(&hit_comp.comp) - Credit::from_integer(2) + other_shortcut + Credit::from_integer(1)
+                            }
+                        })
+                        .max();
+
+                        if let Some(add) = local_merge_credits {
+                            credit_inv.credits(&comp.comp) + add
+                        } else {
+                            credit_inv.credits(&comp.comp)
+                        }
+                    }
+                }
+            }
             CompType::Cycle(_) if !comp.used => {
                 if nice_pair {
                     instance.context.inv.credits(&comp.comp) + Credit::from_integer(1)
@@ -147,16 +299,6 @@ impl PseudoCycle {
                         })
                         .collect_vec();
 
-                    let cycle_indices = self
-                        .cycle
-                        .iter()
-                        .flat_map(|(_, c, _)| match c {
-                            CycleComp::PathComp(idx) => Some(idx),
-                            CycleComp::Rem => None,
-                        })
-                        .cloned()
-                        .collect_vec();
-
                     let (upper, lower) = comp.comp.paths_between(in_node, out_node);
 
                     let local_merge_credits = iproduct!(in_adj, out_adj)
@@ -171,12 +313,16 @@ impl PseudoCycle {
                             (upper.contains(&n1) && lower.contains(&n2))
                                 || (upper.contains(&n2) && lower.contains(&n1))
                         })
-                        .map(|(_e1, e2)| {
+                        .map(|(e1, e2)| {
                             let hit_comp = path_comps
                                 .iter()
                                 .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
                                 .unwrap();
-                            credit_inv.credits(&hit_comp.comp)
+                            if e1.endpoint_at(hit_comp.path_idx) != e2.endpoint_at(hit_comp.path_idx) {
+                                credit_inv.credits(&hit_comp.comp)
+                            } else {
+                                Credit::from_integer(0)
+                            }
                         })
                         .max();
 
