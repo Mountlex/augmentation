@@ -184,7 +184,7 @@ impl PseudoCycle {
                                         + other_shortcut
                                 }
                             })
-                            .max();
+                            .max().max(Some(Credit::from_integer(0)));
 
                         if let Some(add) = local_merge_credits {
                             credit_inv.credits(&comp.comp) + Credit::from_integer(1) + add
@@ -220,7 +220,7 @@ impl PseudoCycle {
                                     // we make only one shortcut
                                 }
                             })
-                            .max();
+                            .max().max(Some(Credit::from_integer(0)));
 
                         if let Some(add) = local_merge_credits {
                             credit_inv.credits(&comp.comp) + add
@@ -267,7 +267,7 @@ impl PseudoCycle {
                                         + Credit::from_integer(1)
                                 }
                             })
-                            .max();
+                            .max().max(Some(Credit::from_integer(0)));
 
                         if let Some(add) = local_merge_credits {
                             credit_inv.credits(&comp.comp) + add
@@ -324,7 +324,7 @@ impl PseudoCycle {
                                     credit_inv.credits(&hit_comp.comp) + other_shortcut
                                 }
                         })
-                        .max();
+                        .max().max(Some(Credit::from_integer(0)));
 
                     if let Some(add) = local_merge_credits {
                         credit_inv.credits(&comp.comp) + add
