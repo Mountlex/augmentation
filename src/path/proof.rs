@@ -666,6 +666,8 @@ fn compute_initial_cases(
     cases
 }
 
+use chrono::prelude::*;
+
 fn prove_last_node(
     nodes: Vec<PathNode>,
     last_node: PathNode,
@@ -697,10 +699,12 @@ fn prove_last_node(
             let mut proof = expr.prove(&mut case);
             let outcome = proof.eval();
             let profile = case.get_profile(outcome.success());
+
+            let local: String = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
             if outcome.success() {
-                println!("✔️ Proved case {}: {}", profile, case);
+                println!("[{}] ✔️ Proved case {}: {}", local, profile, case);
             } else {
-                println!("❌ Disproved case {}: {}", profile, case);
+                println!("[{}] ❌ Disproved case {}: {}", local, profile, case);
                 let buf = proof_to_string(&proof, output_depth, &credit_inv);
                 log::info!("{}", buf);
             };
