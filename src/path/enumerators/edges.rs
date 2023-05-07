@@ -292,31 +292,31 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
 
 
     // Prio 3.5: 4-matching
-    // for s in 2..=len - 1 {
-    //     let comp_nodes = path_comps
-    //         .iter()
-    //         .take(s)
-    //         .flat_map(|c| c.comp.matching_nodes().to_vec())
-    //         .collect_vec();
+    for s in 2..=len - 1 {
+        let comp_nodes = path_comps
+            .iter()
+            .take(s)
+            .flat_map(|c| c.comp.matching_nodes().to_vec())
+            .collect_vec();
 
-    //     let size: usize = path_comps
-    //         .iter()
-    //         .take(s)
-    //         .map(|comp| comp.comp.num_vertices())
-    //         .sum();
+        let size: usize = path_comps
+            .iter()
+            .take(s)
+            .map(|comp| comp.comp.num_vertices())
+            .sum();
 
-    //     let other_nodes = path_comps
-    //         .iter()
-    //         .filter(|p| p.path_idx.raw() >= s)
-    //         .flat_map(|p| p.comp.matching_nodes().to_vec())
-    //         .collect_vec();
-    //     if size >= 10 {
-    //         if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4) {
-    //             let iter = to_cases(iter, nodes_to_pidx, instance);
-    //             return Some((iter, format!("4-Matching of {} first pathnodes", s)));
-    //         }
-    //     }
-    // }
+        let other_nodes = path_comps
+            .iter()
+            .filter(|p| p.path_idx.raw() >= s)
+            .flat_map(|p| p.comp.matching_nodes().to_vec())
+            .collect_vec();
+        if size >= 10 {
+            if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4) {
+                let iter = to_cases(iter, nodes_to_pidx, instance);
+                return Some((iter, format!("4-Matching of {} first pathnodes", s)));
+            }
+        }
+    }
 
     // Prio 4: Edges due to contractablility
     for path_comp in path_comps.iter().take(len - 1) {
