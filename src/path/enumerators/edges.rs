@@ -251,7 +251,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                             }
                         };
 
-                        gain = Credit::from(0);
+                        gain = instance.context.inv.two_ec_credit(6) - Credit::from(1);
 
                         let all_other_nodes = path_comps
                             .iter()
