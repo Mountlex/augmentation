@@ -109,12 +109,14 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
     }
 
     // Prio 3.5.1: Gainful outside edges
-    for outside in outside_edges
-        .into_iter()
+    for &outside in outside_edges
+        .iter()
         .filter(|e| !outside_used_for_gain.contains(e))
     {
         let out_pidx = nodes_to_pidx[outside.get_id() as usize].unwrap();
         let out_comp = &path_comps[out_pidx.raw()];
+
+        let out_at_out_comp = outside_edges.iter().filter(|o| nodes_to_pidx[o.get_id() as usize].unwrap() == out_pidx).count();
         // let old_last = path_comps.first().unwrap();
         // let gain = match old_last.comp.comp_type() {
         //     crate::comps::CompType::Cycle(n) if n <= 5 => {
@@ -164,7 +166,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         //         format!("Gainful edge at node {}", outside),
         //     ));
         // }
-        if  out_comp.comp.is_c5()  || out_comp.comp.is_c4()  {
+        if  (out_comp.comp.is_c5()  || out_comp.comp.is_c4()) && out_at_out_comp > 1 {
 
         for subpath in path_comps
             .iter()
