@@ -278,7 +278,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                             let relevant_out_comp_nodes = out_comp.comp.nodes().iter().filter(|o| !out_comp.comp.is_adjacent(&outside, o)).cloned().collect_vec();
 
                             let iter =
-                                edge_iterator(relevant_out_comp_nodes, all_other_nodes, false, true).unwrap();
+                                edge_iterator(relevant_out_comp_nodes.clone(), all_other_nodes, false, true).unwrap();
 
                             let iter = to_cases_with_edge_cost(
                                 iter,
@@ -287,7 +287,9 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                                 Credit::from(1) - gain,
                             );
                             let iter = Box::new(iter.map(move |mut part| {
-                                part.used_for_credit_gain.push(outside); // do not use this outside again
+                                for n in &relevant_out_comp_nodes {
+                                    part.used_for_credit_gain.push(*n); // do not use this outside again
+                                }
                                 part
                             }));
                             return Some((
