@@ -236,7 +236,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                         // }
                         // we have gainful edges
                         let old_last = path_comps.first().unwrap();
-                        let gain = match old_last.comp.comp_type() {
+                        let mut gain = match old_last.comp.comp_type() {
                             crate::comps::CompType::Cycle(n) if n <= 5 => {
                                 instance.context.inv.two_ec_credit(4)
                             }
@@ -250,6 +250,8 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                                 instance.context.inv.two_ec_credit(6) - Credit::from(1)
                             }
                         };
+
+                        gain = Credit::from(0);
 
                         let all_other_nodes = path_comps
                             .iter()
