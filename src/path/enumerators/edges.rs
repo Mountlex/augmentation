@@ -164,7 +164,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         //         format!("Gainful edge at node {}", outside),
         //     ));
         // }
-        if out_comp.comp.is_c4() {
+        if out_comp.comp.is_c5() {
 
         for subpath in path_comps
             .iter()
