@@ -114,7 +114,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         .filter(|e| !outside_used_for_gain.contains(e))
     {
         let out_pidx = nodes_to_pidx[outside.get_id() as usize].unwrap();
-
+        let out_comp = &path_comps[out_pidx.raw()];
         // let old_last = path_comps.first().unwrap();
         // let gain = match old_last.comp.comp_type() {
         //     crate::comps::CompType::Cycle(n) if n <= 5 => {
@@ -164,6 +164,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         //         format!("Gainful edge at node {}", outside),
         //     ));
         // }
+        if out_comp.comp.is_c4() {
 
         for subpath in path_comps
             .iter()
@@ -236,7 +237,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                         // }
                         // we have gainful edges
                         let old_last = path_comps.first().unwrap();
-                        let mut gain = match old_last.comp.comp_type() {
+                        let gain = match old_last.comp.comp_type() {
                             crate::comps::CompType::Cycle(n) if n <= 5 => {
                                 instance.context.inv.two_ec_credit(4)
                             }
@@ -251,7 +252,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                             }
                         };
 
-                        gain = instance.context.inv.two_ec_credit(6) - Credit::from(1);
+                        //gain = instance.context.inv.two_ec_credit(6) - Credit::from(1);
 
                         let all_other_nodes = path_comps
                             .iter()
@@ -288,6 +289,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                         }
                     }
                 }
+            }
             }
         }
     }
