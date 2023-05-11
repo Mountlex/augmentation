@@ -237,8 +237,6 @@ fn prove_path(path: Path) {
             c6(),
             c7(),
             large(),
-            //complex_tree(),
-            //complex_path(),
         ]
     } else {
         vec![
@@ -247,8 +245,6 @@ fn prove_path(path: Path) {
             c5(),
             c6(),
             large(),
-            complex_tree(),
-            complex_path(),
         ]
     };
 

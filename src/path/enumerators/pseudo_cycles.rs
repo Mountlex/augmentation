@@ -19,6 +19,7 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     all_rem_edges.push(HalfAbstractEdge {
         source: last_comp.in_node.unwrap(),
         source_idx: last_comp.path_idx,
+        cost: Credit::from_integer(1)
     });
 
     if path_comps.len() < 2 {

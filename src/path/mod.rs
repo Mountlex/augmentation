@@ -13,6 +13,7 @@ use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 pub use proof::PathProofOptions;
 
+use crate::Credit;
 use crate::proof_tree::ProofNode;
 use crate::Node;
 
@@ -81,6 +82,7 @@ impl PartialEq for PathComp {
 pub struct HalfAbstractEdge {
     source: Node,
     source_idx: Pidx,
+    cost: Credit,
 }
 
 impl Display for HalfAbstractEdge {

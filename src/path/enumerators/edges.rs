@@ -237,9 +237,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                         check_fixed_extension_feasible(&extension, &path_comps, &npc, false);
                     feasible.eval();
                     if feasible.success() {
-                        if path_comps.len() == 5 && path_comps[1].comp.is_c5() && path_comps[2].comp.is_c5() && path_comps[3].comp.is_c5() && path_comps[4].comp.is_c5() && outside_edges.contains(&Node::Node(5)) && outside_edges.contains(&Node::Node(15)) && outside_edges.contains(&Node::Node(12)){
-                            info!("gainful edge at {}, instance {}.", outside, instance);
-                        }
+                        
                         // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
                         //     println!("feasible extension {:?}", extension);
                         //     //panic!();
@@ -267,6 +265,8 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                             }
                         };
 
+                        
+
                         // let cases = out_comp.comp.nodes().iter().filter(|o| !out_comp.comp.is_adjacent(&outside, o)).cloned().collect_vec();
                         // let gain = instance.context.inv.two_ec_credit(4);
 
@@ -284,10 +284,14 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                             .cloned()
                             .collect_vec();
 
+                            // if path_comps.len() == 5 && path_comps[1].comp.is_c5() && path_comps[2].comp.is_c5() && path_comps[3].comp.is_c5() && path_comps[4].comp.is_c5() && outside_edges.contains(&Node::Node(5)) && outside_edges.contains(&Node::Node(15)) && outside_edges.contains(&Node::Node(12)){
+                            //     info!("gainful edge at {}, cases {}, all_other {}, instance {}.", outside, cases.iter().join(","), all_other_nodes.iter().join(","), instance);
+                            // }
+
                         if !all_other_nodes.is_empty() {
 
                             let iter =
-                                edge_iterator(cases.clone(), all_other_nodes, false, true).unwrap();
+                                edge_iterator(cases.clone(), all_other_nodes, false, false).unwrap();
 
                             let iter = to_cases_with_edge_cost(
                                 iter,
@@ -480,6 +484,7 @@ fn to_cases_with_edge_cost(
                 part.rem_edges.push(HalfAbstractEdge {
                     source: node,
                     source_idx: nodes_to_pidx[node.get_id() as usize].unwrap(),
+                    cost
                 });
             }
             Hit::Node(hit_node) => {
