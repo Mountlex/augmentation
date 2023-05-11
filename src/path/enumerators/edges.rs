@@ -176,6 +176,8 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         {
             // subpath = [out_idx (end) -- ... -- rightmost enumerated comp (start)]
 
+            let removed_comp = path_comps.iter().find(|c| !subpath.contains(c)).unwrap();
+
             let length = subpath.len();
             let first = subpath[0].clone();
             let cons_edges = subpath
@@ -240,22 +242,29 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                         // }
                         // we have gainful edges
                         
-                        // let gain = match old_last.comp.comp_type() {
-                        //     crate::comps::CompType::Cycle(n) if n <= 5 => {
-                        //         instance.context.inv.two_ec_credit(4)
-                        //     }
-                        //     crate::comps::CompType::Cycle(_) => {
-                        //         instance.context.inv.two_ec_credit(6) - Credit::from(1)
-                        //     }
-                        //     crate::comps::CompType::Large => {
-                        //         instance.context.inv.two_ec_credit(6) - Credit::from(1)
-                        //     }
-                        //     crate::comps::CompType::Complex => {
-                        //         instance.context.inv.two_ec_credit(6) - Credit::from(1)
-                        //     }
-                        // };
+                        let (cases, gain) = match removed_comp.comp.comp_type() {
+                            crate::comps::CompType::Cycle(4) => {
+                                
+                                let cases = out_comp.comp.nodes().iter().filter(|o| !out_comp.comp.is_adjacent(&outside, o)).cloned().collect_vec();
+                                (cases, instance.context.inv.two_ec_credit(4))
+                            }
+                            crate::comps::CompType::Cycle(5) => {
+                                let cases = out_comp.comp.nodes().iter().filter(|&o| o != &outside).cloned().collect_vec();
+                                (cases, instance.context.inv.two_ec_credit(4))
+                            }
+                            crate::comps::CompType::Cycle(_) => {
+                                (vec![outside], instance.context.inv.two_ec_credit(6) - Credit::from(1))
+                            }
+                            crate::comps::CompType::Large => {
+                                (vec![outside], instance.context.inv.two_ec_credit(6) - Credit::from(1))
+                            }
+                            crate::comps::CompType::Complex => {
+                                panic!("no complex")
+                            }
+                        };
 
-                        let gain = instance.context.inv.two_ec_credit(4);
+                        // let cases = out_comp.comp.nodes().iter().filter(|o| !out_comp.comp.is_adjacent(&outside, o)).cloned().collect_vec();
+                        // let gain = instance.context.inv.two_ec_credit(4);
 
                         let all_other_nodes = path_comps
                             .iter()
@@ -273,12 +282,8 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
 
                         if !all_other_nodes.is_empty() {
 
-                            // calculate nodes of out_comp which are not adjacent to outside
-                            // the set below includes outside
-                            let relevant_out_comp_nodes = out_comp.comp.nodes().iter().filter(|o| !out_comp.comp.is_adjacent(&outside, o)).cloned().collect_vec();
-
                             let iter =
-                                edge_iterator(relevant_out_comp_nodes.clone(), all_other_nodes, false, true).unwrap();
+                                edge_iterator(cases.clone(), all_other_nodes, false, true).unwrap();
 
                             let iter = to_cases_with_edge_cost(
                                 iter,
@@ -287,7 +292,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                                 Credit::from(1) - gain,
                             );
                             let iter = Box::new(iter.map(move |mut part| {
-                                for n in &relevant_out_comp_nodes {
+                                for n in &cases {
                                     part.used_for_credit_gain.push(*n); // do not use this outside again
                                 }
                                 part

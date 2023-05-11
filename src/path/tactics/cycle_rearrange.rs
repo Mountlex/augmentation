@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::Component,
+    comps::{CompType, Component},
     path::{extension::Extension, PathProofNode, Pidx},
     path::{instance::Instance, NicePairConfig, PathComp},
     Node,
@@ -25,74 +25,38 @@ pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
         let old_last_comp = &path_comps[Pidx::Last.raw()].comp;
         let new_last_comp = &path_comps[extension.end.raw()].comp;
 
-        // Complex > C5 > C4 > Large > C7 > C6 > C3
+        let order = [
+            CompType::Cycle(5),
+            CompType::Cycle(4),
+            CompType::Large,
+            CompType::Cycle(7),
+            CompType::Cycle(6),
+        ];
+        // let order = [
+        //     CompType::Large,
+        //     CompType::Cycle(7),
+        //     CompType::Cycle(6),
+        //     CompType::Cycle(5),
+        //     CompType::Cycle(4),
+        // ];
 
-        // Reduce C3 to anything except C3
-        if old_last_comp.is_c3() && !new_last_comp.is_c3() {
-            return PathProofNode::new_leaf(
-                format!(
-                    "Rearrange cycle: now ends with {}!",
-                    new_last_comp.short_name()
-                ),
-                true,
-            );
-        }
+        let old_type = old_last_comp.comp_type();
+        let new_type = new_last_comp.comp_type();
 
-        // Reduce C6 to anything except C3 and C6
-        if old_last_comp.is_c6() && !new_last_comp.is_c3() && !new_last_comp.is_c6() {
-            return PathProofNode::new_leaf(
-                format!(
-                    "Rearrange cycle: now ends with {}!",
-                    new_last_comp.short_name()
-                ),
-                true,
-            );
-        }
+        let old_pos = order
+            .iter()
+            .enumerate()
+            .find(|(_, t)| t == &&old_type)
+            .map(|(i, _)| i)
+            .unwrap();
+        let new_pos = order
+            .iter()
+            .enumerate()
+            .find(|(_, t)| t == &&new_type)
+            .map(|(i, _)| i)
+            .unwrap();
 
-        // Reduce C7 to anything except C3 and C6 and C7
-        if old_last_comp.is_c7()
-            && !new_last_comp.is_c3()
-            && !new_last_comp.is_c6()
-            && !new_last_comp.is_c7()
-        {
-            return PathProofNode::new_leaf(
-                format!(
-                    "Rearrange cycle: now ends with {}!",
-                    new_last_comp.short_name()
-                ),
-                true,
-            );
-        }
-
-        // Reduce Large to anything except C3 and C6 and C7 and Large
-        if old_last_comp.is_large()
-            && !new_last_comp.is_large()
-            && !new_last_comp.is_c3()
-            && !new_last_comp.is_c6()
-            && !new_last_comp.is_c7()
-        {
-            return PathProofNode::new_leaf(
-                format!(
-                    "Rearrange cycle: now ends with {}!",
-                    new_last_comp.short_name()
-                ),
-                true,
-            );
-        }
-
-        // Reduce C4 to C5
-        if old_last_comp.is_c4() && new_last_comp.is_c5() {
-            return PathProofNode::new_leaf(
-                format!(
-                    "Rearrange cycle: now ends with {}!",
-                    new_last_comp.short_name()
-                ),
-                true,
-            );
-        }
-
-        // Reduce anything that is not complex to complex
-        if !old_last_comp.is_complex() && new_last_comp.is_complex() {
+        if new_pos < old_pos {
             return PathProofNode::new_leaf(
                 format!(
                     "Rearrange cycle: now ends with {}!",
