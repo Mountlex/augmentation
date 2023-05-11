@@ -153,6 +153,6 @@ impl Eq for Edge {}
 
 impl Display for Edge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {})", self.n1, self.n2)
+        write!(f, "({}, {}, c={})", self.n1, self.n2, self.cost)
     }
 }

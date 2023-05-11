@@ -29,7 +29,7 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
     for i in 3..=(path_comps.len() + 1) {
         let fixed_edge_iter = pseudo_cycles_of_length(
             path_comps.clone(),
-            last_single_edge,
+            None,
             all_edges.clone(),
             all_rem_edges.clone(),
             i,
