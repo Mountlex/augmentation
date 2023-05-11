@@ -291,7 +291,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                         if !all_other_nodes.is_empty() {
 
                             let iter =
-                                edge_iterator(cases.clone(), all_other_nodes, false, false).unwrap();
+                                edge_iterator(cases.clone(), all_other_nodes, false, false). unwrap();  // TODO add rem edges!!!!!!!!!!!!!!!!!!!!!!!
 
                             let iter = to_cases_with_edge_cost(
                                 iter,

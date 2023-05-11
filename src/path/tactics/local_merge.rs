@@ -23,27 +23,32 @@ fn merge(
     let total_comp_credit = context.inv.credits(left_comp) + context.inv.credits(right_comp);
 
     for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
-        let buy_cost: Credit = buy.iter().map(|e| e.cost).sum();
-        //assert_eq!(buy_cost, Credit::from(2));
-        let l1 = left_comp.incident(buy[0]).unwrap();
-        let l2 = left_comp.incident(buy[1]).unwrap();
-        let r1 = right_comp.incident(buy[0]).unwrap();
-        let r2 = right_comp.incident(buy[1]).unwrap();
+        if buy[0].cost == Credit::from_integer(1) || buy[1].cost == Credit::from_integer(1) {
+            let buy_cost: Credit = buy.iter().map(|e| e.cost).sum();
+            //assert_eq!(buy_cost, Credit::from(2));
+            let l1 = left_comp.incident(buy[0]).unwrap();
+            let l2 = left_comp.incident(buy[1]).unwrap();
+            let r1 = right_comp.incident(buy[0]).unwrap();
+            let r2 = right_comp.incident(buy[1]).unwrap();
 
-        let mut credits = total_comp_credit - buy_cost;
+            let mut credits = total_comp_credit - buy_cost;
 
-        if npc.is_nice_pair(l1, l2) {
-            credits += Credit::from_integer(1)
-        }
-        if npc.is_nice_pair(r1, r2) {
-            credits += Credit::from_integer(1)
-        }
+            if npc.is_nice_pair(l1, l2) {
+                credits += Credit::from_integer(1)
+            }
+            if npc.is_nice_pair(r1, r2) {
+                credits += Credit::from_integer(1)
+            }
 
-        let req_credits = context
-            .inv
-            .two_ec_credit(left_comp.num_edges() + right_comp.num_edges());
-        if credits >= req_credits {
-            return PathProofNode::new_leaf_success("Local merge".into(), credits == req_credits);
+            let req_credits = context
+                .inv
+                .two_ec_credit(left_comp.num_edges() + right_comp.num_edges());
+            if credits >= req_credits {
+                return PathProofNode::new_leaf_success(
+                    "Local merge".into(),
+                    credits == req_credits,
+                );
+            }
         }
     }
 
@@ -70,39 +75,47 @@ fn merge2(
 
     for buy1 in edges_between1.iter().powerset().filter(|p| p.len() == 2) {
         for buy2 in edges_between2.iter().powerset().filter(|p| p.len() == 2) {
-            let buy_cost: Credit = buy1.iter().map(|e| e.cost).sum::<Credit>()
-                + buy2.iter().map(|e| e.cost).sum::<Credit>();
-            //assert_eq!(buy_cost, Credit::from(2));
-            let l1 = left_comp.incident(buy1[0]).unwrap();
-            let l2 = left_comp.incident(buy1[1]).unwrap();
-            let ml1 = middle_comp.incident(buy1[0]).unwrap();
-            let ml2 = middle_comp.incident(buy1[1]).unwrap();
+            if buy1
+                .iter()
+                .chain(buy2.iter())
+                .filter(|e| e.cost < Credit::from_integer(1))
+                .count()
+                <= 1
+            {
+                let buy_cost: Credit = buy1.iter().map(|e| e.cost).sum::<Credit>()
+                    + buy2.iter().map(|e| e.cost).sum::<Credit>();
+                //assert_eq!(buy_cost, Credit::from(2));
+                let l1 = left_comp.incident(buy1[0]).unwrap();
+                let l2 = left_comp.incident(buy1[1]).unwrap();
+                let ml1 = middle_comp.incident(buy1[0]).unwrap();
+                let ml2 = middle_comp.incident(buy1[1]).unwrap();
 
-            let mr1 = middle_comp.incident(buy2[0]).unwrap();
-            let mr2 = middle_comp.incident(buy2[1]).unwrap();
-            let r1 = right_comp.incident(buy2[0]).unwrap();
-            let r2 = right_comp.incident(buy2[1]).unwrap();
+                let mr1 = middle_comp.incident(buy2[0]).unwrap();
+                let mr2 = middle_comp.incident(buy2[1]).unwrap();
+                let r1 = right_comp.incident(buy2[0]).unwrap();
+                let r2 = right_comp.incident(buy2[1]).unwrap();
 
-            let mut credits = total_comp_credit - buy_cost;
+                let mut credits = total_comp_credit - buy_cost;
 
-            if npc.is_nice_pair(l1, l2) {
-                credits += Credit::from_integer(1)
-            }
-            if npc.is_nice_pair(ml1, ml2) || npc.is_nice_pair(mr1, mr2) {
-                credits += Credit::from_integer(1)
-            }
-            if npc.is_nice_pair(r1, r2) {
-                credits += Credit::from_integer(1)
-            }
+                if npc.is_nice_pair(l1, l2) {
+                    credits += Credit::from_integer(1)
+                }
+                if npc.is_nice_pair(ml1, ml2) || npc.is_nice_pair(mr1, mr2) {
+                    credits += Credit::from_integer(1)
+                }
+                if npc.is_nice_pair(r1, r2) {
+                    credits += Credit::from_integer(1)
+                }
 
-            let req_credits = context.inv.two_ec_credit(
-                left_comp.num_edges() + middle_comp.num_edges() + right_comp.num_edges(),
-            );
-            if credits >= req_credits {
-                return PathProofNode::new_leaf_success(
-                    "Local merge".into(),
-                    credits == req_credits,
+                let req_credits = context.inv.two_ec_credit(
+                    left_comp.num_edges() + middle_comp.num_edges() + right_comp.num_edges(),
                 );
+                if credits >= req_credits {
+                    return PathProofNode::new_leaf_success(
+                        "Local merge".into(),
+                        credits == req_credits,
+                    );
+                }
             }
         }
     }

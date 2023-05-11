@@ -193,14 +193,15 @@ pub fn pseudo_cycles_of_length(
 
             assert_eq!(length, cons_edges.len());
 
-            product_of_first(cons_edges).map(move |edges| {
+            product_of_first(cons_edges).flat_map(move |edges| {
                 let cycle_indices = &perm;
 
-                let total_edge_cost = edges.iter().map(|(_, c)| c).sum();
-
-                assert_eq!(cycle_indices.len(), length);
-
-                let cycle = cycle_indices
+                if edges.iter().filter(|(_, c)| *c < Credit::from_integer(1)).count() <= 1 {
+                    let total_edge_cost = edges.iter().map(|(_, c)| c).sum();
+                    
+                    assert_eq!(cycle_indices.len(), length);
+                    
+                    let cycle = cycle_indices
                     .iter()
                     .enumerate()
                     .map(|(i, cycle_comp)| {
@@ -208,12 +209,15 @@ pub fn pseudo_cycles_of_length(
                         (edges[last_edge].0 .1, cycle_comp.clone(), edges[i].0 .0)
                     })
                     .collect_vec();
-
+                
                 // cycle nodes:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in:3.out -- 0.in]
-                PseudoCycle {
+                Some(PseudoCycle {
                     cycle,
                     total_edge_cost,
-                }
+                })
+            } else {
+                None
+            }
             })
         })
 }
