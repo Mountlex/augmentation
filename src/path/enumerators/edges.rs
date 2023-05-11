@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use log::info;
 
 use crate::path::extension::{Extension, InOutNode};
 use crate::path::{instance::Instance, proof::InstPart};
@@ -167,7 +168,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         //     ));
         // }
         let old_last = path_comps.first().unwrap();
-        if  (out_comp.comp.is_c5()  || out_comp.comp.is_c4()) && old_last.comp.is_c4() {
+        if  old_last.comp.is_c4() {
 
         for subpath in path_comps
             .iter()
@@ -236,6 +237,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                         check_fixed_extension_feasible(&extension, &path_comps, &npc, false);
                     feasible.eval();
                     if feasible.success() {
+                        info!("gainful edge at {}, instance {}.", outside, instance);
                         // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
                         //     println!("feasible extension {:?}", extension);
                         //     //panic!();
