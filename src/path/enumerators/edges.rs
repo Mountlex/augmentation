@@ -237,7 +237,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                         check_fixed_extension_feasible(&extension, &path_comps, &npc, false);
                     feasible.eval();
                     if feasible.success() {
-                        info!("gainful edge at {}, instance {}.", outside, instance);
+                        //info!("gainful edge at {}, instance {}.", outside, instance);
                         // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
                         //     println!("feasible extension {:?}", extension);
                         //     //panic!();
