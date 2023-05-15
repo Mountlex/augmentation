@@ -78,16 +78,32 @@ impl PartialEq for PathComp {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct EdgeId(pub usize);
+impl EdgeId {
+    pub fn inc(&self) -> EdgeId {
+        EdgeId(self.0 + 1)
+    }
+}
+
+impl Display for EdgeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ID({})", self.0)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct HalfAbstractEdge {
     source: Node,
     source_idx: Pidx,
+    id: EdgeId,
+    matching_with: Vec<EdgeId>,
     cost: Credit,
 }
 
 impl Display for HalfAbstractEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-REM", self.source)
+        write!(f, "{}-REM(c={})", self.source, self.cost)
     }
 }
 

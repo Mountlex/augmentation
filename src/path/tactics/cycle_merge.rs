@@ -6,7 +6,6 @@ use crate::{
     path::{
         instance::Instance,
         pseudo_cycle::{CycleComp, PseudoCycle},
-        utils::complex_cycle_value_base,
         NicePairConfig, PathComp,
     },
     types::Edge,
@@ -19,26 +18,27 @@ pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
     let path_comps = instance.path_nodes().collect_vec();
     let npc = instance.npc();
 
-    let mut cycle_value = pc.value(&path_comps, &all_edges, &npc, instance);
+    let cycle_value = pc.value(&path_comps, &all_edges, &npc, instance);
 
-    let complex = pc.cycle.iter().any(|(_, comp, _)| match comp {
-        CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
-        CycleComp::Rem => false,
-    });
-    if complex {
-        // 2c due to gainful bridge covering. We convert the resulting complex to a large
-        cycle_value += Credit::from_integer(1) * instance.context.inv.c
-    }
+    // let complex = pc.cycle.iter().any(|(_, comp, _)| match comp {
+    //     CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
+    //     CycleComp::Rem => false,
+    // });
+    // if complex {
+    //     // 2c due to gainful bridge covering. We convert the resulting complex to a large
+    //     cycle_value += Credit::from_integer(1) * instance.context.inv.c
+    // }
 
-    if complex && cycle_value >= Credit::from_integer(1) {
-        PathProofNode::new_leaf(
-            format!(
-                "Merged pseudo cycle with to a block with value {}!",
-                cycle_value
-            ),
-            true,
-        )
-    } else if cycle_value >= Credit::from_integer(2) {
+    // if complex && cycle_value >= Credit::from_integer(1) {
+    //     PathProofNode::new_leaf(
+    //         format!(
+    //             "Merged pseudo cycle with to a block with value {}!",
+    //             cycle_value
+    //         ),
+    //         true,
+    //     )
+    // } else 
+    if cycle_value >= Credit::from_integer(2) {
         PathProofNode::new_leaf(
             format!("Merged pseudo cycle with value {}!", cycle_value),
             true,
@@ -73,22 +73,22 @@ impl PseudoCycle {
         npc: &NicePairConfig,
         instance: &Instance,
     ) -> Credit {
-        let first_complex = self
-            .cycle
-            .iter()
-            .enumerate()
-            .rev()
-            .find(|(_, n)| match n.1 {
-                CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
-                CycleComp::Rem => false,
-            })
-            .map(|(i, _)| i);
+        // let first_complex = self
+        //     .cycle
+        //     .iter()
+        //     .enumerate()
+        //     .rev()
+        //     .find(|(_, n)| match n.1 {
+        //         CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
+        //         CycleComp::Rem => false,
+        //     })
+        //     .map(|(i, _)| i);
 
         self.cycle
             .iter()
             .enumerate()
-            .map(|(j, (in_node, comp, out_node))| {
-                let lower_complex = first_complex.is_some() && first_complex.unwrap() > j;
+            .map(|(_j, (in_node, comp, out_node))| {
+                // let lower_complex = first_complex.is_some() && first_complex.unwrap() > j;
 
                 match comp {
                     CycleComp::PathComp(idx) => {
@@ -100,7 +100,7 @@ impl PseudoCycle {
                             npc,
                             all_edges,
                             instance,
-                            lower_complex,
+                            //lower_complex,
                         )
                     }
                     CycleComp::Rem => {
@@ -119,7 +119,7 @@ impl PseudoCycle {
         npc: &NicePairConfig,
         all_edges: &[Edge],
         instance: &Instance,
-        lower_complex: bool,
+        // lower_complex: bool,
     ) -> Credit {
         let nice_pair = npc.is_nice_pair(*in_node, *out_node);
 
@@ -141,6 +141,8 @@ impl PseudoCycle {
             .filter(|e| e.path_incident(comp.path_idx))
             .collect_vec();
 
+
+        // TODO check that cycle not aided twice. Use two return values
         match comp.comp.comp_type() {
             CompType::Cycle(4) => {
                 if nice_pair {
@@ -342,30 +344,30 @@ impl PseudoCycle {
                 }
             }
             CompType::Large => credit_inv.credits(&comp.comp),
-            CompType::Complex => {
-                let complex = if lower_complex {
-                    credit_inv.complex_comp()
-                } else {
-                    Credit::from_integer(0)
-                };
-                if nice_pair {
-                    complex
-                        + complex_cycle_value_base(
-                            credit_inv,
-                            &comp.comp.graph(),
-                            *in_node,
-                            *out_node,
-                        )
-                } else {
-                    complex
-                        + complex_cycle_value_base(
-                            credit_inv,
-                            &comp.comp.graph(),
-                            *in_node,
-                            *out_node,
-                        )
-                }
-            }
+            // CompType::Complex => {
+            //     let complex = if lower_complex {
+            //         credit_inv.complex_comp()
+            //     } else {
+            //         Credit::from_integer(0)
+            //     };
+            //     if nice_pair {
+            //         complex
+            //             + complex_cycle_value_base(
+            //                 credit_inv,
+            //                 &comp.comp.graph(),
+            //                 *in_node,
+            //                 *out_node,
+            //             )
+            //     } else {
+            //         complex
+            //             + complex_cycle_value_base(
+            //                 credit_inv,
+            //                 &comp.comp.graph(),
+            //                 *in_node,
+            //                 *out_node,
+            //             )
+            //     }
+            // }
             _ => panic!(),
         }
     }

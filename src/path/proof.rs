@@ -22,7 +22,7 @@ use super::tactics::cycle_rearrange::check_path_rearrangement;
 use super::tactics::local_merge::check_local_merge;
 use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
-use super::HalfAbstractEdge;
+use super::{HalfAbstractEdge, EdgeId};
 
 #[derive(Clone, Debug)]
 pub struct InstPart {
@@ -32,7 +32,7 @@ pub struct InstPart {
     pub out_edges: Vec<Node>,
     pub used_for_credit_gain: Vec<Node>,
     pub rem_edges: Vec<HalfAbstractEdge>,
-    pub non_rem_edges: Vec<Node>,
+    pub non_rem_edges: Vec<EdgeId>,
     pub connected_nodes: Vec<Node>,
     pub good_edges: Vec<Edge>,
     pub good_out: Vec<Node>,

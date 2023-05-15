@@ -4,7 +4,7 @@ use crate::{
     path::{
         instance::Instance,
         pseudo_cycle::{CycleComp, PseudoCycle},
-        HalfAbstractEdge, PathComp,
+        HalfAbstractEdge, PathComp, EdgeId,
     },
     types::Edge,
     Credit, Node,
@@ -13,13 +13,15 @@ use crate::{
 pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle>> {
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let all_edges = instance.all_edges();
-    let last_single_edge = instance.last_single_edge();
+    //let last_single_edge = instance.last_single_edge();
     let mut all_rem_edges = instance.rem_edges();
     let last_comp = path_comps.last().cloned().unwrap();
     all_rem_edges.push(HalfAbstractEdge {
         source: last_comp.in_node.unwrap(),
         source_idx: last_comp.path_idx,
-        cost: Credit::from_integer(1)
+        cost: Credit::from_integer(1),
+        id: EdgeId(0),
+        matching_with: vec![],
     });
 
     if path_comps.len() < 2 {
@@ -147,12 +149,12 @@ pub fn edges_between(
         (CycleComp::PathComp(idx), CycleComp::Rem) => rem_edges
             .iter()
             .filter(|e| e.source_idx == *idx)
-            .map(|e| ((e.source, Node::Rem), Credit::from(1)))
+            .map(|e| ((e.source, Node::Rem), e.cost))
             .collect_vec(),
         (CycleComp::Rem, CycleComp::PathComp(idx)) => rem_edges
             .iter()
             .filter(|e| e.source_idx == *idx)
-            .map(|e| ((Node::Rem, e.source), Credit::from(1)))
+            .map(|e| ((Node::Rem, e.source), e.cost))
             .collect_vec(),
         (CycleComp::Rem, CycleComp::Rem) => panic!(),
     }

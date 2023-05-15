@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     extension::Extension, proof::InstPart, pseudo_cycle::PseudoCycle, HalfAbstractEdge,
-    NicePairConfig, PathComp,
+    NicePairConfig, PathComp, EdgeId,
 };
 
 #[derive(Clone, Debug)]
@@ -118,48 +118,55 @@ impl Instance {
         implied_edges
     }
 
-    pub fn last_single_edge(&self) -> Option<Edge> {
-        //sh run2_7.sh  25,08s user 0,19s system 146% cpu 17,255 total
-        return None;
-        let parts = self.inst_parts().collect_vec();
+    // pub fn last_single_edge(&self) -> Option<Edge> {
+    //     //sh run2_7.sh  25,08s user 0,19s system 146% cpu 17,255 total
+    //     return None;
+    //     let parts = self.inst_parts().collect_vec();
 
-        let mut lookback = 1;
+    //     let mut lookback = 1;
 
-        while lookback <= parts.len() {
-            if parts[parts.len() - lookback].edges.len() == 1 {
-                return parts[parts.len() - lookback].edges.first().cloned();
-            } else if parts[parts.len() - lookback].edges.len() > 1 {
-                break;
-            } else if !parts[parts.len() - lookback].path_nodes.is_empty() {
-                break;
-            } else if !parts[parts.len() - lookback].out_edges.is_empty() {
-                break;
-            } else if !parts[parts.len() - lookback].rem_edges.is_empty() {
-                break;
-            }
-            lookback += 1;
-        }
+    //     while lookback <= parts.len() {
+    //         if parts[parts.len() - lookback].edges.len() == 1 {
+    //             return parts[parts.len() - lookback].edges.first().cloned();
+    //         } else if parts[parts.len() - lookback].edges.len() > 1 {
+    //             break;
+    //         } else if !parts[parts.len() - lookback].path_nodes.is_empty() {
+    //             break;
+    //         } else if !parts[parts.len() - lookback].out_edges.is_empty() {
+    //             break;
+    //         } else if !parts[parts.len() - lookback].rem_edges.is_empty() {
+    //             break;
+    //         }
+    //         lookback += 1;
+    //     }
 
-        None
-    }
+    //     None
+    // }
 
     pub fn rem_edges(&self) -> Vec<HalfAbstractEdge> {
-        let mut rem_edges: Vec<HalfAbstractEdge> = vec![];
-        for part in self.inst_parts() {
-            if !part.non_rem_edges.is_empty() {
-                for non_rem in &part.non_rem_edges {
-                    if let Some((pos, _)) = rem_edges
-                        .iter()
-                        .find_position(|edge| &edge.source == non_rem)
-                    {
-                        rem_edges.swap_remove(pos);
-                    }
-                }
-            }
-            rem_edges.append(&mut part.rem_edges.iter().cloned().collect_vec());
-        }
+        let rem_edges: Vec<HalfAbstractEdge> = self.inst_parts()
+        .flat_map(|part| part.rem_edges.iter())
+        .cloned().collect_vec();
 
-        rem_edges
+        let non_rem_edges: Vec<EdgeId> = self.inst_parts()
+        .flat_map(|part| part.non_rem_edges.iter())
+        .cloned().collect_vec();
+
+        rem_edges.into_iter().filter(|e| !non_rem_edges.contains(&e.id)).collect_vec()
+    }
+
+    pub fn new_rem_id(&self) -> EdgeId {
+        let rem_edges: EdgeId = self.inst_parts()
+        .flat_map(|part| part.rem_edges.iter())
+        .map(|e| e.id)
+        .max().unwrap_or_else(|| EdgeId(0));
+
+        let non_rem_edges: EdgeId = self.inst_parts()
+        .flat_map(|part| part.non_rem_edges.iter())
+        .cloned()
+        .max().unwrap_or_else(|| EdgeId(0));
+
+        non_rem_edges.max(rem_edges).inc()
     }
 
     pub fn pseudo_cycle(&self) -> Option<&PseudoCycle> {

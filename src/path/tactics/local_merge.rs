@@ -125,7 +125,7 @@ fn merge2(
 
 pub fn check_local_merge(instance: &Instance) -> PathProofNode {
     let all_edges = instance.all_edges();
-    let last_added_edge = instance.last_single_edge();
+    //let last_added_edge = instance.last_single_edge();
     let all_comps = instance.path_nodes().cloned().collect_vec();
     let npc = instance.npc();
 
