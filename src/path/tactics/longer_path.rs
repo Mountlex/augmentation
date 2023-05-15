@@ -14,7 +14,7 @@ use super::cycle_rearrange::{check_fixed_extension_feasible, valid_in_out_npc};
 
 // checked
 
-pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
+pub fn check_longer_nice_path(instance: &Instance, finite: bool) -> PathProofNode {
     let all_outside = instance.out_edges();
     let all_edges = instance.all_edges();
     let all_comps = instance.path_nodes().cloned().collect_vec();
@@ -41,7 +41,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
                 new_last_comp.used,
             ) {
                 let mut feasible =
-                    check_fixed_extension_feasible(extension, &all_comps, &npc, false);
+                    check_fixed_extension_feasible(extension, &all_comps, &npc, false, finite);
                 feasible.eval();
                 if feasible.success() {
                     return PathProofNode::new_leaf(
@@ -136,7 +136,7 @@ pub fn check_longer_nice_path(instance: &Instance) -> PathProofNode {
                     };
 
                     let mut feasible =
-                        check_fixed_extension_feasible(&extension, &all_comps, &npc, false);
+                        check_fixed_extension_feasible(&extension, &all_comps, &npc, false, finite);
                     feasible.eval();
                     if feasible.success() {
                         return PathProofNode::new_leaf(

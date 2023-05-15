@@ -19,8 +19,9 @@ use super::pseudo_cycles::pseudo_cycles_of_length;
 
 pub fn edge_enumerator(
     instance: &mut Instance,
+    finite: bool,
 ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
-    let res = enumerate_parts(instance);
+    let res = enumerate_parts(instance, finite);
 
     //return res;
 
@@ -28,7 +29,7 @@ pub fn edge_enumerator(
 
     let (iter, name) = res.unwrap();
     let cases = iter.collect_vec();
-    let iter = compute_good_edges(instance, Box::new(cases.into_iter()));
+    let iter = compute_good_edges(instance, finite, Box::new(cases.into_iter()));
 
     Some((iter, name))
 }
@@ -42,7 +43,7 @@ pub fn edge_enumerator(
 //     nodes_to_pidx: Vec<Option<Pidx>>,
 // }
 
-fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
+fn enumerate_parts(instance: &Instance, finite: bool) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let old_path_len = path_comps.len();
     let outside_edges = instance.out_edges();
@@ -64,7 +65,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
         .skip(1)
         .flat_map(|p| p.comp.matching_nodes().to_vec())
         .collect_vec();
-    if let Some(iter) = ensure_three_matching(last_nodes, other_nodes, instance) {
+    if let Some(iter) = ensure_three_matching(last_nodes, other_nodes, instance, finite) {
         return Some((
             to_cases(iter, nodes_to_pidx, instance),
             "3-Matching of last pathnode.".to_string(),
@@ -75,7 +76,12 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
     let len = path_comps.len();
     //let mut path_comps = path_comps.into_iter().take(len - 1).collect_vec();
     //path_comps.sort_by_key(|p| p.comp.matching_nodes().len());
-    for path_comp in path_comps.iter().skip(1).take(len - 2) {
+    let iter = if finite {
+        path_comps.iter().collect_vec()
+    } else {
+        path_comps.iter().skip(1).take(len - 2).collect_vec()
+    };
+    for path_comp in iter {
         let idx = path_comp.path_idx;
         let comp_nodes = path_comp.comp.matching_nodes().to_vec();
         let other_nodes = path_comps
@@ -83,7 +89,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
             .filter(|p| p.path_idx != path_comp.path_idx)
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
-        if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance) {
+        if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance, finite) {
             let iter = to_cases(iter, nodes_to_pidx, instance);
             return Some((iter, format!("3-Matching of {}", idx)));
         }
@@ -101,7 +107,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
             .filter(|p| p.path_idx.raw() >= s)
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
-        if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance) {
+        if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance, finite) {
             let iter = to_cases(iter, nodes_to_pidx, instance);
             return Some((iter, format!("3-Matching of {} first pathnodes", s)));
         }
@@ -181,7 +187,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
                         };
 
                         let mut feasible =
-                            check_fixed_extension_feasible(&extension, &path_comps, &npc, false);
+                            check_fixed_extension_feasible(&extension, &path_comps, &npc, false, false);
                         feasible.eval();
                         if feasible.success() {
                             // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
@@ -247,7 +253,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
 
                             if !all_other_nodes.is_empty() {
                                 let iter =
-                                    edge_iterator(cases.clone(), all_other_nodes, false, true)
+                                    edge_iterator(cases.clone(), all_other_nodes, false, !finite)
                                         .unwrap(); 
 
                                 let iter = to_cases_with_edge_cost(
@@ -294,7 +300,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
         if size >= 10 {
-            if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4) {
+            if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4,finite) {
                 let iter = to_cases(iter, nodes_to_pidx, instance);
                 return Some((iter, format!("4-Matching of {} first pathnodes", s)));
             }
@@ -302,9 +308,14 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
     }
 
     // Prio 4: Edges due to contractablility
-    for path_comp in path_comps.iter().take(len - 1) {
+    let iter = if finite {
+        path_comps.iter().collect_vec()
+    } else {
+        path_comps.iter().take(len - 1).collect_vec()
+    };
+    for path_comp in iter {
         let idx = path_comp.path_idx;
-        if let Some(iter) = handle_contractable_components(path_comp, instance) {
+        if let Some(iter) = handle_contractable_components(path_comp, instance, finite) {
             let iter = to_cases(iter, nodes_to_pidx, instance);
             return Some((iter, format!("Contractablility of {}", idx)));
         }
@@ -368,7 +379,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
 
                     // We now enumerate all edges which potentially resolve the contractability. Those are between the good vertices and
                     // (all vertices / bad vertices) (including good vertices)
-                    let iter = edge_iterator(good_verts, all_nodes, true, true).unwrap();
+                    let iter = edge_iterator(good_verts, all_nodes, true, !finite).unwrap();
 
                     let iter = to_cases(iter, nodes_to_pidx, instance);
                     //println!("iter: {}", iter.iter().join(", "));
@@ -386,6 +397,7 @@ fn enumerate_parts(instance: &Instance) -> Option<(Box<dyn Iterator<Item = InstP
 
 fn compute_good_edges(
     instance: &mut Instance,
+    finite: bool,
     iter: Box<dyn Iterator<Item = InstPart>>,
 ) -> Box<dyn Iterator<Item = InstPart>> {
     let mut good_edges = vec![];
@@ -394,7 +406,7 @@ fn compute_good_edges(
     let mut rem_parts = vec![];
     let parts = iter.collect_vec();
     for mut part in parts {
-        if check_progress(instance, part.clone()) {
+        if check_progress(instance, finite, part.clone()) {
             good_edges.append(&mut part.edges);
             good_out.append(&mut part.out_edges);
         } else {
@@ -484,6 +496,7 @@ fn to_cases_with_edge_cost(
 fn handle_contractable_components(
     path_comp: &PathComp,
     instance: &Instance,
+    finite: bool
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
     let comp = &path_comp.comp;
 
@@ -549,7 +562,7 @@ fn handle_contractable_components(
                 .flat_map(|p| p.comp.matching_nodes().to_vec())
                 .collect_vec();
 
-            return edge_iterator(free_nodes, complement, true, true);
+            return edge_iterator(free_nodes, complement, true, !finite);
         }
     }
 
@@ -560,8 +573,9 @@ fn ensure_three_matching(
     set1: Vec<Node>,
     set2: Vec<Node>,
     instance: &Instance,
+    finite: bool,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
-    ensure_k_matching(set1, set2, instance, 3)
+    ensure_k_matching(set1, set2, instance, 3, finite)
 }
 
 fn ensure_k_matching(
@@ -569,6 +583,7 @@ fn ensure_k_matching(
     set2: Vec<Node>,
     instance: &Instance,
     k: u8,
+    finite: bool,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
     let outside_edges_at_set = instance
         .out_edges()
@@ -670,7 +685,7 @@ fn ensure_k_matching(
             })
             .collect_vec();
 
-        return edge_iterator(free_set, free_complement, true, true);
+        return edge_iterator(free_set, free_complement, true, !finite);
     }
 
     None

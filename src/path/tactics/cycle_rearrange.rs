@@ -9,13 +9,13 @@ use crate::{
 
 // checked
 
-pub fn check_path_rearrangement(instance: &Instance) -> PathProofNode {
+pub fn check_path_rearrangement(instance: &Instance, finite: bool) -> PathProofNode {
     let rearrangement = instance.rearrangement().unwrap();
 
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let npc = instance.npc();
 
-    let mut feasible = check_fixed_extension_feasible(rearrangement, &path_comps, &npc, true);
+    let mut feasible = check_fixed_extension_feasible(rearrangement, &path_comps, &npc, true, finite);
     feasible.eval();
     if !feasible.success() {
         feasible
@@ -83,6 +83,7 @@ pub fn check_fixed_extension_feasible(
     path_comps: &Vec<PathComp>,
     npc: &NicePairConfig,
     prelast_is_prelast: bool,
+    finite: bool,
 ) -> PathProofNode {
     // extension: [start.out -- 1.in:1.out -- 2.in:2.out -- end.in]
 
@@ -109,24 +110,26 @@ pub fn check_fixed_extension_feasible(
         }
     }
 
-    // check if start connection fulfills nice path properties
-    let start = extension.start;
-    let start_out = extension.start_out;
+    if !finite {
+        // check if start connection fulfills nice path properties
+        let start = extension.start;
+        let start_out = extension.start_out;
 
-    let start_comp = &path_comps[start.raw()];
-    let valid_in_out = valid_in_out_npc(
-        &start_comp.comp,
-        npc,
-        start_comp.in_node.unwrap(),
-        start_out,
-        extension.inner.is_empty() && prelast_is_prelast,
-        start_comp.used,
-    );
-    if !valid_in_out {
-        return PathProofNode::new_leaf(
-            "New path does not fulfill nice path properties at rightmost vertex!".to_string(),
-            false,
+        let start_comp = &path_comps[start.raw()];
+        let valid_in_out = valid_in_out_npc(
+            &start_comp.comp,
+            npc,
+            start_comp.in_node.unwrap(),
+            start_out,
+            extension.inner.is_empty() && prelast_is_prelast,
+            start_comp.used,
         );
+        if !valid_in_out {
+            return PathProofNode::new_leaf(
+                "New path does not fulfill nice path properties at rightmost vertex!".to_string(),
+                false,
+            );
+        }
     }
 
     PathProofNode::new_leaf("Feasible path".into(), true)

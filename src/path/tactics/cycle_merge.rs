@@ -12,7 +12,7 @@ use crate::{
     Credit, Node,
 };
 
-pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
+pub fn check_cycle_merge(instance: &Instance, finite: bool) -> PathProofNode {
     let pc = instance.pseudo_cycle().unwrap();
     let all_edges = instance.all_edges();
     let path_comps = instance.path_nodes().collect_vec();

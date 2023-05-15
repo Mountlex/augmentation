@@ -106,7 +106,7 @@ pub fn path_extension_enumerator(
 
     if rem_edges.is_empty() && path_comps.len() >= 3 {
         // If we cannot find more edges, and there are no rem edges, it wont help to enumerate more nodes.
-        if edge_enumerator(instance).is_none() {
+        if edge_enumerator(instance, false).is_none() {
             log::info!("Enumerating more path nodes does not help!");
             return None;
         }

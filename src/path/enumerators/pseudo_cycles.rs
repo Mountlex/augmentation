@@ -10,7 +10,7 @@ use crate::{
     Credit, Node,
 };
 
-pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = PseudoCycle>> {
+pub fn enumerate_pseudo_cycles(instance: &Instance, finite: bool) -> Box<dyn Iterator<Item = PseudoCycle>> {
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let all_edges = instance.all_edges();
     //let last_single_edge = instance.last_single_edge();
@@ -24,7 +24,7 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
         matching_with: vec![],
     });
 
-    if path_comps.len() < 2 {
+    if path_comps.len() < 3 {
         return Box::new(std::iter::empty());
     }
 
@@ -36,7 +36,7 @@ pub fn enumerate_pseudo_cycles(instance: &Instance) -> Box<dyn Iterator<Item = P
             all_edges.clone(),
             all_rem_edges.clone(),
             i,
-            true,
+            !finite,
         );
         iter = Box::new(iter.chain(fixed_edge_iter))
     }
