@@ -146,6 +146,7 @@ impl PseudoCycle {
         match comp.comp.comp_type() {
             CompType::Cycle(4) => {
                 if nice_pair {
+                    return credit_inv.credits(&comp.comp) + Credit::from_integer(1);
                     if comp.comp.is_adjacent(in_node, out_node) {
                         let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
                             .filter(|(e1, e2)| {
@@ -197,6 +198,7 @@ impl PseudoCycle {
                         credit_inv.credits(&comp.comp) + Credit::from_integer(1)
                     }
                 } else {
+                    return  credit_inv.credits(&comp.comp);
                     // case of no nice pair
                     if in_node != out_node {
                         // we can always shortcut C4 in this case
@@ -284,6 +286,7 @@ impl PseudoCycle {
                     instance.context.inv.credits(&comp.comp) + Credit::from_integer(1)
                 // shortcut!
                 } else {
+                    return credit_inv.credits(&comp.comp);
                    let (upper, lower) = comp.comp.paths_between(in_node, out_node);
 
                     let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
