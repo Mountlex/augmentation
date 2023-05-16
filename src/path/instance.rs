@@ -9,8 +9,8 @@ use crate::{
 };
 
 use super::{
-    extension::Extension, proof::InstPart, pseudo_cycle::PseudoCycle, HalfAbstractEdge,
-    NicePairConfig, PathComp, EdgeId,
+    extension::Extension, proof::InstPart, pseudo_cycle::PseudoCycle, EdgeId, HalfAbstractEdge,
+    NicePairConfig, PathComp,
 };
 
 #[derive(Clone, Debug)]
@@ -144,27 +144,38 @@ impl Instance {
     // }
 
     pub fn rem_edges(&self) -> Vec<HalfAbstractEdge> {
-        let rem_edges: Vec<HalfAbstractEdge> = self.inst_parts()
-        .flat_map(|part| part.rem_edges.iter())
-        .cloned().collect_vec();
+        let rem_edges: Vec<HalfAbstractEdge> = self
+            .inst_parts()
+            .flat_map(|part| part.rem_edges.iter())
+            .cloned()
+            .collect_vec();
 
-        let non_rem_edges: Vec<EdgeId> = self.inst_parts()
-        .flat_map(|part| part.non_rem_edges.iter())
-        .cloned().collect_vec();
+        let non_rem_edges: Vec<EdgeId> = self
+            .inst_parts()
+            .flat_map(|part| part.non_rem_edges.iter())
+            .cloned()
+            .collect_vec();
 
-        rem_edges.into_iter().filter(|e| !non_rem_edges.contains(&e.id)).collect_vec()
+        rem_edges
+            .into_iter()
+            .filter(|e| !non_rem_edges.contains(&e.id))
+            .collect_vec()
     }
 
     pub fn new_rem_id(&self) -> EdgeId {
-        let rem_edges: EdgeId = self.inst_parts()
-        .flat_map(|part| part.rem_edges.iter())
-        .map(|e| e.id)
-        .max().unwrap_or_else(|| EdgeId(0));
+        let rem_edges: EdgeId = self
+            .inst_parts()
+            .flat_map(|part| part.rem_edges.iter())
+            .map(|e| e.id)
+            .max()
+            .unwrap_or_else(|| EdgeId(0));
 
-        let non_rem_edges: EdgeId = self.inst_parts()
-        .flat_map(|part| part.non_rem_edges.iter())
-        .cloned()
-        .max().unwrap_or_else(|| EdgeId(0));
+        let non_rem_edges: EdgeId = self
+            .inst_parts()
+            .flat_map(|part| part.non_rem_edges.iter())
+            .cloned()
+            .max()
+            .unwrap_or_else(|| EdgeId(0));
 
         non_rem_edges.max(rem_edges).inc()
     }

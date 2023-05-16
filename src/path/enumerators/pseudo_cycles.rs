@@ -4,13 +4,16 @@ use crate::{
     path::{
         instance::Instance,
         pseudo_cycle::{CycleComp, PseudoCycle},
-        HalfAbstractEdge, PathComp, EdgeId,
+        EdgeId, HalfAbstractEdge, PathComp,
     },
     types::Edge,
     Credit, Node,
 };
 
-pub fn enumerate_pseudo_cycles(instance: &Instance, finite: bool) -> Box<dyn Iterator<Item = PseudoCycle>> {
+pub fn enumerate_pseudo_cycles(
+    instance: &Instance,
+    finite: bool,
+) -> Box<dyn Iterator<Item = PseudoCycle>> {
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let all_edges = instance.all_edges();
     //let last_single_edge = instance.last_single_edge();
@@ -199,28 +202,33 @@ pub fn pseudo_cycles_of_length(
                 let cycle_indices = &perm;
 
                 // at most one credit gaining edge
-                if edges.iter().filter(|(_, c)| *c < Credit::from_integer(1)).count() <= 1 {
-                    let total_edge_cost = edges.iter().map(|(_, c)| c).sum();
-                    
-                    assert_eq!(cycle_indices.len(), length);
-                    
-                    let cycle = cycle_indices
+                if edges
                     .iter()
-                    .enumerate()
-                    .map(|(i, cycle_comp)| {
-                        let last_edge = if i == 0 { length - 1 } else { i - 1 };
-                        (edges[last_edge].0 .1, cycle_comp.clone(), edges[i].0 .0)
+                    .filter(|(_, c)| *c < Credit::from_integer(1))
+                    .count()
+                    <= 1
+                {
+                    let total_edge_cost = edges.iter().map(|(_, c)| c).sum();
+
+                    assert_eq!(cycle_indices.len(), length);
+
+                    let cycle = cycle_indices
+                        .iter()
+                        .enumerate()
+                        .map(|(i, cycle_comp)| {
+                            let last_edge = if i == 0 { length - 1 } else { i - 1 };
+                            (edges[last_edge].0 .1, cycle_comp.clone(), edges[i].0 .0)
+                        })
+                        .collect_vec();
+
+                    // cycle nodes:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in:3.out -- 0.in]
+                    Some(PseudoCycle {
+                        cycle,
+                        total_edge_cost,
                     })
-                    .collect_vec();
-                
-                // cycle nodes:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in:3.out -- 0.in]
-                Some(PseudoCycle {
-                    cycle,
-                    total_edge_cost,
-                })
-            } else {
-                None
-            }
+                } else {
+                    None
+                }
             })
         })
 }

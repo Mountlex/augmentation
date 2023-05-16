@@ -335,7 +335,7 @@ impl Tactic {
                 } else {
                     PathProofNode::new_leaf("Finite instance to be checked.".into(), false)
                 }
-            },
+            }
             Tactic::TacticsExhausted => {
                 log::info!("tactics exhausted for: {}", stack);
                 PathProofNode::new_leaf("Tactics exhausted!".into(), false)
@@ -388,7 +388,7 @@ impl Expression {
             }
             Expression::And(f1, f2) => {
                 let mut proof1 = f1.prove(stack);
-                proof1.eval(); 
+                proof1.eval();
                 if !proof1.success() {
                     proof1
                 } else {
@@ -477,10 +477,11 @@ fn inductive_proof(options: PathProofOptions, depth: u8) -> Expression {
 }
 
 fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
-    and( // finite case
-        or4(
+    and(
+        // finite case
+        or3(
             expr(Tactic::Print),
-            expr(Tactic::FilterInfinite),
+            //expr(Tactic::FilterInfinite),
             progress(true),
             find_all_edges_and_progress(
                 options.edge_depth,
@@ -500,20 +501,27 @@ fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
             ),
             or(expr(Tactic::Print), expr(Tactic::TacticsExhausted)),
             options.sc,
-        )
-        ,
+        ),
     )
 }
 
 fn find_all_edges_and_progress(depth: u8, finite: bool, otherwise: Expression) -> Expression {
     if depth > 0 {
-        find_edge_and_progress(find_all_edges_and_progress(depth - 1, finite, otherwise.clone()), finite, otherwise)
+        find_edge_and_progress(
+            find_all_edges_and_progress(depth - 1, finite, otherwise.clone()),
+            finite,
+            otherwise,
+        )
     } else {
         otherwise
     }
 }
 
-fn find_edge_and_progress(enumerator: Expression, finite: bool, otherwise: Expression) -> Expression {
+fn find_edge_and_progress(
+    enumerator: Expression,
+    finite: bool,
+    otherwise: Expression,
+) -> Expression {
     all_opt(
         OptEnumerator::Edges(finite),
         all_sc(Enumerator::NicePairs, or(progress(finite), enumerator)),
@@ -534,7 +542,10 @@ fn progress(finite: bool) -> Expression {
                 expr(Tactic::CycleMerge(finite)),
                 any(
                     Enumerator::Rearrangments(finite),
-                    or(expr(Tactic::Rearrangable(finite)), expr(Tactic::LongerPath(finite))),
+                    or(
+                        expr(Tactic::Rearrangable(finite)),
+                        expr(Tactic::LongerPath(finite)),
+                    ),
                 ),
             ),
         ),

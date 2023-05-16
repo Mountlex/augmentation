@@ -146,10 +146,8 @@ pub fn path_extension_enumerator(
                             .collect_vec();
 
                         // previous rem_edges which will be now realized are converted to non_rem_edges, so we collect those ids
-                        let non_rem_edges = rem_edges_hit_new_node
-                            .iter()
-                            .map(|e| e.id)
-                            .collect_vec();
+                        let non_rem_edges =
+                            rem_edges_hit_new_node.iter().map(|e| e.id).collect_vec();
 
                         iter = Box::new(iter.flat_map(move |inst_part| {
                             let matching_edges = matching_edges.clone();

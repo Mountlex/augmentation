@@ -37,7 +37,7 @@ pub fn check_cycle_merge(instance: &Instance, finite: bool) -> PathProofNode {
     //         ),
     //         true,
     //     )
-    // } else 
+    // } else
     if cycle_value >= Credit::from_integer(2) {
         PathProofNode::new_leaf(
             format!("Merged pseudo cycle with value {}!", cycle_value),
@@ -94,12 +94,7 @@ impl PseudoCycle {
                     CycleComp::PathComp(idx) => {
                         let comp = path_comps[idx.raw()];
                         self.comp_value(
-                            comp,
-                            in_node,
-                            out_node,
-                            npc,
-                            all_edges,
-                            instance,
+                            comp, in_node, out_node, npc, all_edges, instance,
                             //lower_complex,
                         )
                     }
@@ -140,7 +135,6 @@ impl PseudoCycle {
             .iter()
             .filter(|e| e.path_incident(comp.path_idx))
             .collect_vec();
-
 
         // TODO check that cycle not aided twice. Use two return values
         match comp.comp.comp_type() {
@@ -187,7 +181,8 @@ impl PseudoCycle {
                                         + other_shortcut
                                 }
                             })
-                            .max().max(Some(Credit::from_integer(0)));
+                            .max()
+                            .max(Some(Credit::from_integer(0)));
 
                         if let Some(add) = local_merge_credits {
                             credit_inv.credits(&comp.comp) + Credit::from_integer(1) + add
@@ -198,7 +193,7 @@ impl PseudoCycle {
                         credit_inv.credits(&comp.comp) + Credit::from_integer(1)
                     }
                 } else {
-                    return  credit_inv.credits(&comp.comp);
+                    return credit_inv.credits(&comp.comp);
                     // case of no nice pair
                     if in_node != out_node {
                         // we can always shortcut C4 in this case
@@ -224,7 +219,8 @@ impl PseudoCycle {
                                     // we make only one shortcut
                                 }
                             })
-                            .max().max(Some(Credit::from_integer(0)));
+                            .max()
+                            .max(Some(Credit::from_integer(0)));
 
                         if let Some(add) = local_merge_credits {
                             credit_inv.credits(&comp.comp) + add
@@ -271,7 +267,8 @@ impl PseudoCycle {
                                         + Credit::from_integer(1)
                                 }
                             })
-                            .max().max(Some(Credit::from_integer(0)));
+                            .max()
+                            .max(Some(Credit::from_integer(0)));
 
                         if let Some(add) = local_merge_credits {
                             credit_inv.credits(&comp.comp) + add
@@ -287,7 +284,7 @@ impl PseudoCycle {
                 // shortcut!
                 } else {
                     return credit_inv.credits(&comp.comp);
-                   let (upper, lower) = comp.comp.paths_between(in_node, out_node);
+                    let (upper, lower) = comp.comp.paths_between(in_node, out_node);
 
                     let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
                         .filter(|(e1, e2)| {
@@ -308,28 +305,35 @@ impl PseudoCycle {
                                 .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
                                 .unwrap();
 
-                                let n1 = e1.endpoint_at(comp.path_idx).unwrap();
-                                let n2 = e2.endpoint_at(comp.path_idx).unwrap();
+                            let n1 = e1.endpoint_at(comp.path_idx).unwrap();
+                            let n2 = e2.endpoint_at(comp.path_idx).unwrap();
 
-                                let other_shortcut = if npc.is_nice_pair(
-                                    e1.endpoint_at(hit_comp.path_idx).unwrap(),
-                                    e2.endpoint_at(hit_comp.path_idx).unwrap(),
-                                ) {
-                                    Credit::from_integer(1)
-                                } else {
-                                    Credit::from_integer(0)
-                                };
+                            let other_shortcut = if npc.is_nice_pair(
+                                e1.endpoint_at(hit_comp.path_idx).unwrap(),
+                                e2.endpoint_at(hit_comp.path_idx).unwrap(),
+                            ) {
+                                Credit::from_integer(1)
+                            } else {
+                                Credit::from_integer(0)
+                            };
 
-                                if ((upper.contains(&n1) && lower.contains(&n2))
-                                || (upper.contains(&n2) && lower.contains(&n1))) && ((comp.comp.is_adjacent(&n1, in_node) && comp.comp.is_adjacent(&n2, out_node)) || (comp.comp.is_adjacent(&n2, in_node) && comp.comp.is_adjacent(&n1, out_node))) {
-                                    credit_inv.credits(&hit_comp.comp) + other_shortcut
-                                } else if comp.comp.is_adjacent(&n1, &n2) {
-                                    credit_inv.credits(&hit_comp.comp) + other_shortcut - Credit::from_integer(1)
-                                } else {
-                                    credit_inv.credits(&hit_comp.comp) + other_shortcut
-                                }
+                            if ((upper.contains(&n1) && lower.contains(&n2))
+                                || (upper.contains(&n2) && lower.contains(&n1)))
+                                && ((comp.comp.is_adjacent(&n1, in_node)
+                                    && comp.comp.is_adjacent(&n2, out_node))
+                                    || (comp.comp.is_adjacent(&n2, in_node)
+                                        && comp.comp.is_adjacent(&n1, out_node)))
+                            {
+                                credit_inv.credits(&hit_comp.comp) + other_shortcut
+                            } else if comp.comp.is_adjacent(&n1, &n2) {
+                                credit_inv.credits(&hit_comp.comp) + other_shortcut
+                                    - Credit::from_integer(1)
+                            } else {
+                                credit_inv.credits(&hit_comp.comp) + other_shortcut
+                            }
                         })
-                        .max().max(Some(Credit::from_integer(0)));
+                        .max()
+                        .max(Some(Credit::from_integer(0)));
 
                     if let Some(add) = local_merge_credits {
                         credit_inv.credits(&comp.comp) + add

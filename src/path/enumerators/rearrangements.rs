@@ -88,7 +88,6 @@ pub fn enumerate_rearrangements(
 
         // every comp of pc could be the begin!
         let iter = (0..len).flat_map(move |max_idx| {
-            
             // [<max_idx>,<max_idx + 1>....,new_last]
             let path1 = vec![pc.cycle.split_at(max_idx).1, pc.cycle.split_at(max_idx).0].concat();
             let extension1 = Extension {
@@ -133,7 +132,7 @@ pub fn enumerate_rearrangements(
             };
             // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]  3 is new last of nice path
             let iter = vec![extension1, extension2].into_iter();
-            return Box::new(iter)
+            return Box::new(iter);
         });
 
         return Box::new(iter);

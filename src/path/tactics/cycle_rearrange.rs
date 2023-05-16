@@ -15,7 +15,8 @@ pub fn check_path_rearrangement(instance: &Instance, finite: bool) -> PathProofN
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let npc = instance.npc();
 
-    let mut feasible = check_fixed_extension_feasible(rearrangement, &path_comps, &npc, true, finite);
+    let mut feasible =
+        check_fixed_extension_feasible(rearrangement, &path_comps, &npc, true, finite);
     feasible.eval();
     if !feasible.success() {
         feasible

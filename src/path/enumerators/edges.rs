@@ -43,7 +43,10 @@ pub fn edge_enumerator(
 //     nodes_to_pidx: Vec<Option<Pidx>>,
 // }
 
-fn enumerate_parts(instance: &Instance, finite: bool) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
+fn enumerate_parts(
+    instance: &Instance,
+    finite: bool,
+) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
     let path_comps = instance.path_nodes().cloned().collect_vec();
     let old_path_len = path_comps.len();
     let outside_edges = instance.out_edges();
@@ -186,8 +189,13 @@ fn enumerate_parts(instance: &Instance, finite: bool) -> Option<(Box<dyn Iterato
                             inner,
                         };
 
-                        let mut feasible =
-                            check_fixed_extension_feasible(&extension, &path_comps, &npc, false, false);
+                        let mut feasible = check_fixed_extension_feasible(
+                            &extension,
+                            &path_comps,
+                            &npc,
+                            false,
+                            false,
+                        );
                         feasible.eval();
                         if feasible.success() {
                             // if path_comps[1].comp.is_c6() && path_comps[2].comp.is_c5() {
@@ -254,7 +262,7 @@ fn enumerate_parts(instance: &Instance, finite: bool) -> Option<(Box<dyn Iterato
                             if !all_other_nodes.is_empty() {
                                 let iter =
                                     edge_iterator(cases.clone(), all_other_nodes, false, !finite)
-                                        .unwrap(); 
+                                        .unwrap();
 
                                 let iter = to_cases_with_edge_cost(
                                     iter,
@@ -300,7 +308,7 @@ fn enumerate_parts(instance: &Instance, finite: bool) -> Option<(Box<dyn Iterato
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
         if size >= 10 {
-            if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4,finite) {
+            if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4, finite) {
                 let iter = to_cases(iter, nodes_to_pidx, instance);
                 return Some((iter, format!("4-Matching of {} first pathnodes", s)));
             }
@@ -454,7 +462,7 @@ fn to_cases_with_edge_cost(
                     source_idx: nodes_to_pidx[node.get_id() as usize].unwrap(),
                     cost,
                     matching_with: vec![], // TODO
-                    id: new_rem_id
+                    id: new_rem_id,
                 });
             }
             Hit::Node(hit_node) => {
@@ -496,7 +504,7 @@ fn to_cases_with_edge_cost(
 fn handle_contractable_components(
     path_comp: &PathComp,
     instance: &Instance,
-    finite: bool
+    finite: bool,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
     let comp = &path_comp.comp;
 
