@@ -23,6 +23,7 @@ fn merge(
     let total_comp_credit = context.inv.credits(left_comp) + context.inv.credits(right_comp);
 
     for buy in edges_between.iter().powerset().filter(|p| p.len() == 2) {
+        // at most one credit gaining edge
         if buy[0].cost == Credit::from_integer(1) || buy[1].cost == Credit::from_integer(1) {
             let buy_cost: Credit = buy.iter().map(|e| e.cost).sum();
             //assert_eq!(buy_cost, Credit::from(2));
@@ -145,7 +146,7 @@ pub fn check_local_merge(instance: &Instance) -> PathProofNode {
                 .filter(|e| e.between_path_nodes(left.path_idx, right.path_idx))
                 .cloned()
                 .collect_vec();
-            if !edges_between.is_empty() {
+            if edges_between.len() >= 2 {
                 let mut res = merge(left, right, &edges_between, &npc, &instance.context);
                 if res.eval().success() {
                     return Some(res);
@@ -181,7 +182,7 @@ pub fn check_local_merge(instance: &Instance) -> PathProofNode {
                     .filter(|e| e.between_path_nodes(middle.path_idx, right.path_idx))
                     .cloned()
                     .collect_vec();
-                if !edges_between1.is_empty() && !edges_between2.is_empty() {
+                if edges_between1.len() >= 2 && edges_between2.len() >= 2 {
                     let mut res = merge2(
                         left,
                         middle,

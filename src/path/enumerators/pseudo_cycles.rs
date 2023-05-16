@@ -198,6 +198,7 @@ pub fn pseudo_cycles_of_length(
             product_of_first(cons_edges).flat_map(move |edges| {
                 let cycle_indices = &perm;
 
+                // at most one credit gaining edge
                 if edges.iter().filter(|(_, c)| *c < Credit::from_integer(1)).count() <= 1 {
                     let total_edge_cost = edges.iter().map(|(_, c)| c).sum();
                     
