@@ -26,7 +26,7 @@ fn merge(
         // at most one credit gaining edge
         if buy[0].cost == Credit::from_integer(1) || buy[1].cost == Credit::from_integer(1) {
             let buy_cost: Credit = buy.iter().map(|e| e.cost).sum();
-            //assert_eq!(buy_cost, Credit::from(2));
+            //assert_eq!(buy_cost, Credit::from_integer(2));
             let l1 = left_comp.incident(buy[0]).unwrap();
             let l2 = left_comp.incident(buy[1]).unwrap();
             let r1 = right_comp.incident(buy[0]).unwrap();
@@ -85,7 +85,7 @@ fn merge2(
             {
                 let buy_cost: Credit = buy1.iter().map(|e| e.cost).sum::<Credit>()
                     + buy2.iter().map(|e| e.cost).sum::<Credit>();
-                //assert_eq!(buy_cost, Credit::from(2));
+                //assert_eq!(buy_cost, Credit::from_integer(2));
                 let l1 = left_comp.incident(buy1[0]).unwrap();
                 let l2 = left_comp.incident(buy1[1]).unwrap();
                 let ml1 = middle_comp.incident(buy1[0]).unwrap();

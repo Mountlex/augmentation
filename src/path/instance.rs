@@ -94,7 +94,7 @@ impl Instance {
 
         let cheap_edges = implied_edges
             .iter()
-            .filter(|e| e.cost < Credit::from(1))
+            .filter(|e| e.cost < Credit::from_integer(1))
             .cloned()
             .collect_vec();
         if !cheap_edges.is_empty() {

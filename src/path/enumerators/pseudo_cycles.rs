@@ -208,7 +208,7 @@ pub fn pseudo_cycles_of_length(
                     .count()
                     <= 1
                 {
-                    let total_edge_cost = edges.iter().map(|(_, c)| c).sum();
+                    let total_edge_cost = edges.iter().map(|(_, c)| *c).sum();
 
                     assert_eq!(cycle_indices.len(), length);
 

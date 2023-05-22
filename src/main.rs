@@ -174,7 +174,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn prove_local(tree: Tree) {
-    let inv = CreditInv::new(Rational64::new(tree.c_numer, tree.c_demon));
+    let inv = CreditInv::new(Credit::new(tree.c_numer, tree.c_demon));
 
     let leaf_comps = vec![large(), complex_tree(), complex_path()];
 
@@ -227,7 +227,7 @@ fn prove_local(tree: Tree) {
 }
 
 fn prove_path(path: Path) {
-    let inv = CreditInv::new(Rational64::new(path.c_numer, path.c_demon));
+    let inv = CreditInv::new(Rational64::new(path.c_numer, path.c_demon).into());
 
     let comps = if inv.c < Credit::new(2, 7) {
         vec![

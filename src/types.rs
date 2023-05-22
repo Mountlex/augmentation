@@ -24,7 +24,7 @@ impl Edge {
             n2,
             path_index_n1: Pidx::Last,
             path_index_n2: Pidx::Last,
-            cost: Credit::from(1),
+            cost: Credit::from_integer(1),
         }
     }
 
@@ -34,7 +34,7 @@ impl Edge {
             n2,
             path_index_n1: p1,
             path_index_n2: p2,
-            cost: Credit::from(1),
+            cost: Credit::from_integer(1),
         }
     }
 

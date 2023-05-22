@@ -227,11 +227,11 @@ fn enumerate_parts(
                                 }
                                 crate::comps::CompType::Cycle(_) => (
                                     vec![outside],
-                                    instance.context.inv.two_ec_credit(6) - Credit::from(1),
+                                    instance.context.inv.two_ec_credit(6) - Credit::from_integer(1),
                                 ),
                                 crate::comps::CompType::Large => (
                                     vec![outside],
-                                    instance.context.inv.two_ec_credit(6) - Credit::from(1),
+                                    instance.context.inv.two_ec_credit(6) - Credit::from_integer(1),
                                 ),
                                 crate::comps::CompType::Complex => {
                                     panic!("no complex")
@@ -249,7 +249,7 @@ fn enumerate_parts(
                                     !all_edges.iter().any(|e| {
                                         e.node_incident(n)
                                             && e.node_incident(&outside)
-                                            && e.cost <= Credit::from(1) - gain
+                                            && e.cost <= Credit::from_integer(1) - gain
                                     })
                                 })
                                 .cloned()
@@ -268,7 +268,7 @@ fn enumerate_parts(
                                     iter,
                                     nodes_to_pidx,
                                     instance,
-                                    Credit::from(1) - gain,
+                                    Credit::from_integer(1) - gain,
                                 );
                                 let iter = Box::new(iter.map(move |mut part| {
                                     for n in &cases {
@@ -435,7 +435,7 @@ fn to_cases(
     nodes_to_pidx: Vec<Option<Pidx>>,
     instance: &Instance,
 ) -> Box<dyn Iterator<Item = InstPart>> {
-    to_cases_with_edge_cost(iter, nodes_to_pidx, instance, Credit::from(1))
+    to_cases_with_edge_cost(iter, nodes_to_pidx, instance, Credit::from_integer(1))
 }
 
 fn to_cases_with_edge_cost(
