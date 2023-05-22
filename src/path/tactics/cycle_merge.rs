@@ -1,8 +1,5 @@
 use itertools::{iproduct, Itertools};
-use pathfinding::{
-    kuhn_munkres::kuhn_munkres,
-    prelude::Matrix,
-};
+use pathfinding::{kuhn_munkres::kuhn_munkres, prelude::Matrix};
 
 use crate::{
     comps::CompType,
@@ -130,10 +127,10 @@ impl PseudoCycle {
             .collect_vec();
 
         let mut M = Matrix::new(values.len(), path_comps.len() + 1, Credit::from_integer(0));
-        for v in &values {
-            *M.get_mut((v.comp_idx.raw(),v.comp_idx.raw())).unwrap() = v.base;
+        for (i, v) in values.iter().enumerate() {
+            *M.get_mut((i, v.comp_idx.raw())).unwrap() = v.base;
             for (s_idx, value) in &v.shortcuts {
-                *M.get_mut((v.comp_idx.raw(),s_idx.raw())).unwrap() = *value;
+                *M.get_mut((i, s_idx.raw())).unwrap() = *value;
             }
         }
 
