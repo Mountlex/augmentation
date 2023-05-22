@@ -122,46 +122,46 @@ fn comp_npcs(
         _ => {
             // cycle case
 
-            // let mut npc = NicePairConfig {
-            //     nice_pairs: comp.edges(),
-            // };
-            // if (comp.is_c3()
-            //     || comp.is_c4()
-            //     || (comp.is_c5() && !node.used && node.path_idx.is_prelast()))
-            //     && node.in_node.is_some()
-            //     && node.out_node.is_some()
-            // {
-            //     npc.nice_pairs
-            //         .push((node.in_node.unwrap(), node.out_node.unwrap()))
-            // }
-            // vec![npc]
+            let mut npc = NicePairConfig {
+                nice_pairs: comp.edges(),
+            };
+            if (comp.is_c3()
+                || comp.is_c4()
+                || (comp.is_c5() && !node.used && node.path_idx.is_prelast()))
+                && node.in_node.is_some()
+                && node.out_node.is_some()
+            {
+                npc.nice_pairs
+                    .push((node.in_node.unwrap(), node.out_node.unwrap()))
+            }
+            vec![npc]
 
             // TODO add all nice pairs
 
-            nodes
-                .iter()
-                .cloned()
-                .tuple_combinations::<(_, _)>()
-                .filter(|(u, v)| !comp.is_adjacent(u, v))
-                .powerset()
-                .map(|config| NicePairConfig { nice_pairs: config })
-                .map(|mut npc| {
-                    // adjacent vertices are always nice pairs!
-                    npc.nice_pairs.append(&mut comp.edges()); // C3 in out contained here
+            // nodes
+            //     .iter()
+            //     .cloned()
+            //     .tuple_combinations::<(_, _)>()
+            //     .filter(|(u, v)| !comp.is_adjacent(u, v))
+            //     .powerset()
+            //     .map(|config| NicePairConfig { nice_pairs: config })
+            //     .map(|mut npc| {
+            //         // adjacent vertices are always nice pairs!
+            //         npc.nice_pairs.append(&mut comp.edges()); // C3 in out contained here
 
-                    if (comp.is_c3()
-                        || comp.is_c4()
-                        || (comp.is_c5() && !node.used && node.path_idx.is_prelast()))
-                        && node.in_node.is_some()
-                        && node.out_node.is_some()
-                    {
-                        npc.nice_pairs
-                            .push((node.in_node.unwrap(), node.out_node.unwrap()))
-                    }
-                    npc
-                })
-                .filter(|npc| npc.is_consistent_with(consistent_npc, consistent_nodes))
-                .collect_vec()
+            //         if (comp.is_c3()
+            //             || comp.is_c4()
+            //             || (comp.is_c5() && !node.used && node.path_idx.is_prelast()))
+            //             && node.in_node.is_some()
+            //             && node.out_node.is_some()
+            //         {
+            //             npc.nice_pairs
+            //                 .push((node.in_node.unwrap(), node.out_node.unwrap()))
+            //         }
+            //         npc
+            //     })
+            //     .filter(|npc| npc.is_consistent_with(consistent_npc, consistent_nodes))
+            //     .collect_vec()
         }
     }
 }
