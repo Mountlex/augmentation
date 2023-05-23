@@ -477,7 +477,7 @@ fn inductive_proof(options: PathProofOptions, depth: u8) -> Expression {
     if depth > 0 {
         induction_step(options, inductive_proof(options, depth - 1))
     } else {
-        or(expr(Tactic::Print), expr(Tactic::TacticsExhausted))
+        or(expr(Tactic::Print), expr(Tactic::TacticsExhausted(false)))
     }
 }
 
@@ -491,7 +491,7 @@ fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
             find_all_edges_and_progress(
                 options.edge_depth,
                 true,
-                or(expr(Tactic::Print), expr(Tactic::TacticsExhausted)),
+                or(expr(Tactic::Print), expr(Tactic::TacticsExhausted(true))),
             ),
         ), // infinite case
         all_opt(
@@ -504,7 +504,7 @@ fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
                     find_all_edges_and_progress(options.edge_depth, false, step),
                 ),
             ),
-            or(expr(Tactic::Print), expr(Tactic::TacticsExhausted)),
+            or(expr(Tactic::Print), expr(Tactic::TacticsExhausted(false))),
             options.sc,
         ),
     )
