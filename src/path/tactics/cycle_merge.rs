@@ -177,7 +177,6 @@ impl PseudoCycle {
             .filter(|e| e.path_incident(comp.path_idx))
             .collect_vec();
 
-        // TODO check that cycle not aided twice. Use two return values
         match comp.comp.comp_type() {
             CompType::Cycle(4) => {
                 if nice_pair {

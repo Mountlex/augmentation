@@ -21,7 +21,6 @@ pub fn enumerate_rearrangements(
         return Box::new(std::iter::empty());
     }
 
-    // TODO if finite every rearrangement is possible
 
     if !finite {
         // find path index of newest node in cycle

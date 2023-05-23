@@ -20,7 +20,6 @@ pub fn check_longer_nice_path(instance: &Instance, finite: bool) -> PathProofNod
     let all_comps = instance.path_nodes().cloned().collect_vec();
     let npc = instance.npc();
 
-    // TODO better error messages
     let mut msg = String::new();
 
     if let Some(rearrangement) = instance.rearrangement() {

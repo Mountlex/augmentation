@@ -136,7 +136,6 @@ fn comp_npcs(
             // }
             // vec![npc]
 
-            // TODO add all nice pairs
 
             nodes
                 .iter()

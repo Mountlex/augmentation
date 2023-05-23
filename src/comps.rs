@@ -409,7 +409,6 @@ impl Component {
         }
     }
 
-    /// TODO this know computes combinations without replacement!
     pub fn subsets_of_size(&self, size: usize) -> Vec<Vec<Node>> {
         match self {
             Component::Large(n) => vec![vec![*n; size]],
