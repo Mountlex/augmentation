@@ -415,13 +415,13 @@ fn map(mapper: Mapper, expr: Expression) -> Expression {
 
 #[derive(Clone, Debug)]
 enum Mapper {
-    RemToOutside,
+    ToFiniteInstance,
 }
 
 impl Mapper {
     fn update_stack(&self, stack: &mut Instance) {
         match self {
-            Mapper::RemToOutside => {
+            Mapper::ToFiniteInstance => {
                 let mut rem_ids = stack.rem_edges().iter().map(|e| e.id).collect_vec();
                 let mut rem_sources = stack.rem_edges().iter().map(|e| e.source).collect_vec();
 
@@ -515,7 +515,7 @@ fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
     and(
         // finite case
         map(
-            Mapper::RemToOutside,
+            Mapper::ToFiniteInstance,
             or3(
                 expr(Tactic::Print),
                 //expr(Tactic::FilterInfinite),
