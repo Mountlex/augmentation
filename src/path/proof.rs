@@ -343,7 +343,6 @@ impl Tactic {
                     log::info!("tactics exhausted for: {}", stack);
                     PathProofNode::new_leaf("Tactics exhausted!".into(), false)
                 }
-                
             }
             Tactic::Print => {
                 let all_edges = stack.all_edges();
@@ -374,6 +373,7 @@ enum Expression {
     Tactic(Tactic),
     Or(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
+    Map(Mapper, Expression),
 }
 
 impl Expression {
@@ -400,6 +400,35 @@ impl Expression {
                     let proof2 = f2.prove(stack);
                     PathProofNode::new_and(proof1, proof2)
                 }
+            }
+            Expression::Map(mapper, expression) => {
+                mapper.update_stack(stack);
+                expression.prove(stack)
+            }
+        }
+    }
+}
+
+fn map(mapper: Mapper, expr: Expression) -> Expression {
+    Expression::Map(mapper, expr)
+}
+
+enum Mapper {
+    RemToOutside,
+}
+
+impl Mapper {
+    fn update_stack(&self, stack: &mut Instance) {
+        match self {
+            Mapper::RemToOutside => {
+                let mut rem_ids = stack.rem_edges().iter().map(|e| e.id).collect_vec();
+                let mut rem_sources = stack.rem_edges().iter().map(|e| e.source).collect_vec();
+
+                let mut part = InstPart::empty();
+                part.non_rem_edges.append(&mut rem_ids);
+                part.out_edges.append(&mut rem_sources);
+
+                stack.push(StackElement::Inst(part));
             }
         }
     }
@@ -484,14 +513,17 @@ fn inductive_proof(options: PathProofOptions, depth: u8) -> Expression {
 fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
     and(
         // finite case
-        or3(
-            expr(Tactic::Print),
-            //expr(Tactic::FilterInfinite),
-            progress(true),
-            find_all_edges_and_progress(
-                options.edge_depth,
-                true,
-                or(expr(Tactic::Print), expr(Tactic::TacticsExhausted(true))),
+        map(
+            Mapper::RemToOutside,
+            or3(
+                expr(Tactic::Print),
+                //expr(Tactic::FilterInfinite),
+                progress(true),
+                find_all_edges_and_progress(
+                    options.edge_depth,
+                    true,
+                    or(expr(Tactic::Print), expr(Tactic::TacticsExhausted(true))),
+                ),
             ),
         ), // infinite case
         all_opt(
