@@ -314,7 +314,7 @@ enum Tactic {
     Rearrangable(bool),
     Contractable,
     Pendant,
-    TacticsExhausted,
+    TacticsExhausted(bool),
     Print,
 }
 
@@ -335,9 +335,15 @@ impl Tactic {
             //         PathProofNode::new_leaf("Finite instance to be checked.".into(), false)
             //     }
             // }
-            Tactic::TacticsExhausted => {
-                log::info!("tactics exhausted for: {}", stack);
-                PathProofNode::new_leaf("Tactics exhausted!".into(), false)
+            Tactic::TacticsExhausted(finite) => {
+                if *finite {
+                    log::info!("tactics (finite) exhausted for: {}", stack);
+                    PathProofNode::new_leaf("Tactics (finite) exhausted!".into(), false)
+                } else {
+                    log::info!("tactics exhausted for: {}", stack);
+                    PathProofNode::new_leaf("Tactics exhausted!".into(), false)
+                }
+                
             }
             Tactic::Print => {
                 let all_edges = stack.all_edges();
