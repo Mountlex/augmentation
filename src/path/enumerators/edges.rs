@@ -25,6 +25,8 @@ pub fn edge_enumerator(
     res.as_ref()?;
 
     let (iter, name) = res.unwrap();
+    return Some((iter, name));
+
     let cases = iter.collect_vec();
     let iter = compute_good_edges(instance, finite, Box::new(cases.into_iter()));
 
@@ -443,8 +445,8 @@ fn to_cases_with_edge_cost(
 ) -> Box<dyn Iterator<Item = InstPart>> {
     let all_edges = instance.all_edges();
 
-    let good_edges = instance.good_edges().into_iter().cloned().collect_vec();
-    let good_out = instance.good_out().into_iter().cloned().collect_vec();
+    //let good_edges = instance.good_edges().into_iter().cloned().collect_vec();
+    //let good_out = instance.good_out().into_iter().cloned().collect_vec();
 
     let new_rem_id = instance.new_rem_id();
 
@@ -486,16 +488,18 @@ fn to_cases_with_edge_cost(
         }
     }));
 
+
+    return Box::new(iter);
     // Filter: consider only cases where edge are _not_ already good.
-    Box::new(iter.filter(move |part| {
-        if !part.edges.is_empty() {
-            !good_edges.contains(part.edges.first().unwrap())
-        } else if !part.out_edges.is_empty() {
-            !good_out.contains(part.out_edges.first().unwrap())
-        } else {
-            true
-        }
-    }))
+    // Box::new(iter.filter(move |part| {
+    //     if !part.edges.is_empty() {
+    //         !good_edges.contains(part.edges.first().unwrap())
+    //     } else if !part.out_edges.is_empty() {
+    //         !good_out.contains(part.out_edges.first().unwrap())
+    //     } else {
+    //         true
+    //     }
+    // }))
 }
 
 fn handle_contractable_components(
