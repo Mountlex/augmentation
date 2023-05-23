@@ -373,7 +373,7 @@ enum Expression {
     Tactic(Tactic),
     Or(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
-    Map(Mapper, Expression),
+    Map(Mapper, Box<Expression>),
 }
 
 impl Expression {
@@ -410,9 +410,10 @@ impl Expression {
 }
 
 fn map(mapper: Mapper, expr: Expression) -> Expression {
-    Expression::Map(mapper, expr)
+    Expression::Map(mapper, Box::new(expr))
 }
 
+#[derive(Clone, Debug)]
 enum Mapper {
     RemToOutside,
 }
