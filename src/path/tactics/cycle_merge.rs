@@ -1,4 +1,5 @@
 use itertools::{iproduct, Itertools};
+use num_traits::Zero;
 use pathfinding::{kuhn_munkres::kuhn_munkres, prelude::Matrix};
 
 use crate::{
@@ -126,17 +127,22 @@ impl PseudoCycle {
             })
             .collect_vec();
 
-        let mut M = Matrix::new(values.len(), path_comps.len() + 1, Credit::from_integer(0));
-        for (i, v) in values.iter().enumerate() {
-            *M.get_mut((i, v.comp_idx.raw())).unwrap() = v.base;
-            for (s_idx, value) in &v.shortcuts {
-                *M.get_mut((i, s_idx.raw())).unwrap() = *value;
-            }
-        }
+        let base: Credit = values.iter().map(|v| v.base).sum();
 
-        let (max_value, _) = kuhn_munkres(&M);
+        let best_shortcut = values.iter().flat_map(|v| v.shortcuts.iter().map(|(_,v)| *v)).max().unwrap_or(Credit::zero()).max(Credit::zero());
 
-        max_value
+        // let mut M = Matrix::new(values.len(), path_comps.len() + 1, Credit::from_integer(0));
+        // for (i, v) in values.iter().enumerate() {
+        //     *M.get_mut((i, v.comp_idx.raw())).unwrap() = v.base;
+        //     for (s_idx, value) in &v.shortcuts {
+        //         *M.get_mut((i, s_idx.raw())).unwrap() = *value;
+        //     }
+        // }
+
+        // let (max_value, _) = kuhn_munkres(&M);
+        // max_value
+
+        base + best_shortcut
     }
 
     fn comp_value(
