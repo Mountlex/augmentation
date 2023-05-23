@@ -153,6 +153,7 @@ pub fn path_extension_enumerator(
                             let matching_edges = matching_edges.clone();
                             let non_rem_edges = non_rem_edges.clone();
 
+                            //comp.subsets_of_size(matching_edges.len())
                             comp.subsets_of_size(matching_edges.len())
                                 .into_iter()
                                 .filter(move |matched| {

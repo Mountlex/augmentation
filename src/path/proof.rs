@@ -402,8 +402,11 @@ impl Expression {
                 }
             }
             Expression::Map(mapper, expression) => {
-                mapper.update_stack(stack);
-                expression.prove(stack)
+                let element = mapper.stack_element(&stack);
+                stack.push(element);
+                let result = expression.prove(stack);
+                stack.pop();
+                return result
             }
         }
     }
@@ -419,7 +422,7 @@ enum Mapper {
 }
 
 impl Mapper {
-    fn update_stack(&self, stack: &mut Instance) {
+    fn stack_element(&self, stack: &Instance) -> StackElement {
         match self {
             Mapper::ToFiniteInstance => {
                 let mut rem_ids = stack.rem_edges().iter().map(|e| e.id).collect_vec();
@@ -429,7 +432,7 @@ impl Mapper {
                 part.non_rem_edges.append(&mut rem_ids);
                 part.out_edges.append(&mut rem_sources);
 
-                stack.push(StackElement::Inst(part));
+               StackElement::Inst(part)
             }
         }
     }
