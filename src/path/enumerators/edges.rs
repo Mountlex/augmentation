@@ -7,15 +7,12 @@ use crate::{
         enumerators::pseudo_cycles::product_of_first,
         proof::check_progress,
         tactics::cycle_rearrange::{check_fixed_extension_feasible, valid_in_out_npc},
-        util::contract::is_contractible,
         utils::hamiltonian_paths,
         HalfAbstractEdge, PathComp, Pidx,
     },
     types::Edge,
     Credit, Node,
 };
-
-use super::pseudo_cycles::pseudo_cycles_of_length;
 
 pub fn edge_enumerator(
     instance: &mut Instance,

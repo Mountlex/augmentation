@@ -1,8 +1,11 @@
-use std::{fmt::Display, ops::{Add, Mul, Sub, AddAssign, Neg, Div, Rem}, iter::Sum};
+use std::{
+    fmt::Display,
+    iter::Sum,
+    ops::{Add, AddAssign, Div, Mul, Neg, Rem, Sub},
+};
 
 use num_rational::Rational64;
-use num_traits::{Bounded, Signed, Num, One, Zero};
-
+use num_traits::{Bounded, Num, One, Signed, Zero};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Credit(Rational64);
@@ -81,8 +84,6 @@ impl Sum for Credit {
         Credit(iter.map(|e| e.0).sum())
     }
 }
-
-
 
 impl Bounded for Credit {
     fn min_value() -> Self {

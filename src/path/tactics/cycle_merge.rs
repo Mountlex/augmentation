@@ -1,6 +1,5 @@
 use itertools::{iproduct, Itertools};
 use num_traits::Zero;
-use pathfinding::{kuhn_munkres::kuhn_munkres, prelude::Matrix};
 
 use crate::{
     comps::CompType,
@@ -14,7 +13,7 @@ use crate::{
     Credit, Node,
 };
 
-pub fn check_cycle_merge(instance: &Instance, finite: bool) -> PathProofNode {
+pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
     let pc = instance.pseudo_cycle().unwrap();
     let all_edges = instance.all_edges();
     let path_comps = instance.path_nodes().collect_vec();
@@ -128,7 +127,12 @@ impl PseudoCycle {
             .collect_vec();
 
         let base: Credit = values.iter().map(|v| v.base).sum();
-        let best_shortcut = values.iter().flat_map(|v| v.shortcuts.iter().map(|(_,v)| *v)).max().unwrap_or(Credit::zero()).max(Credit::zero());
+        let best_shortcut = values
+            .iter()
+            .flat_map(|v| v.shortcuts.iter().map(|(_, v)| *v))
+            .max()
+            .unwrap_or(Credit::zero())
+            .max(Credit::zero());
         base + best_shortcut
 
         // let mut M = Matrix::new(values.len(), path_comps.len() + 1, Credit::from_integer(0));
@@ -141,7 +145,6 @@ impl PseudoCycle {
 
         // let (max_value, _) = kuhn_munkres(&M);
         // max_value
-
     }
 
     fn comp_value(

@@ -196,14 +196,14 @@ impl Instance {
         }
     }
 
-    pub fn component_edges(&self) -> impl Iterator<Item = Edge> + '_ {
-        self.path_nodes().flat_map(|c| {
-            c.comp
-                .edges()
-                .into_iter()
-                .map(|(u, v)| Edge::new(u, c.path_idx, v, c.path_idx))
-        })
-    }
+    // pub fn component_edges(&self) -> impl Iterator<Item = Edge> + '_ {
+    //     self.path_nodes().flat_map(|c| {
+    //         c.comp
+    //             .edges()
+    //             .into_iter()
+    //             .map(|(u, v)| Edge::new(u, c.path_idx, v, c.path_idx))
+    //     })
+    // }
 
     pub fn get_profile(&self, success: bool) -> InstanceProfile {
         let comps = self.path_nodes().map(|n| n.comp.comp_type()).collect_vec();

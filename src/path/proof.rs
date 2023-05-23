@@ -2,7 +2,7 @@ use std::fmt::{Display, Write};
 use std::path::PathBuf;
 
 use itertools::Itertools;
-use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::path::instance::{InstanceContext, PathNode};
 use crate::path::{PathComp, Pidx};
@@ -309,12 +309,11 @@ impl OptEnumerator {
 #[derive(Debug, Clone)]
 enum Tactic {
     LongerPath(bool),
-    CycleMerge(bool),
+    CycleMerge,
     LocalMerge,
     Rearrangable(bool),
     Contractable,
     Pendant,
-    FilterInfinite,
     TacticsExhausted,
     Print,
 }
@@ -323,19 +322,19 @@ impl Tactic {
     fn prove(&self, stack: &mut Instance) -> PathProofNode {
         let proof = match self {
             Tactic::LongerPath(finite) => check_longer_nice_path(stack, *finite),
-            Tactic::CycleMerge(finite) => check_cycle_merge(stack, *finite),
+            Tactic::CycleMerge => check_cycle_merge(stack),
             Tactic::LocalMerge => check_local_merge(stack),
             Tactic::Rearrangable(finite) => check_path_rearrangement(stack, *finite),
             Tactic::Contractable => check_contractability(stack),
             Tactic::Pendant => check_pendant_node(stack),
-            Tactic::FilterInfinite => {
-                let rem_edges = stack.rem_edges();
-                if rem_edges.len() > 0 {
-                    PathProofNode::new_leaf("Infinite instance is true".into(), true)
-                } else {
-                    PathProofNode::new_leaf("Finite instance to be checked.".into(), false)
-                }
-            }
+            // Tactic::FilterInfinite => {
+            //     let rem_edges = stack.rem_edges();
+            //     if rem_edges.len() > 0 {
+            //         PathProofNode::new_leaf("Infinite instance is true".into(), true)
+            //     } else {
+            //         PathProofNode::new_leaf("Finite instance to be checked.".into(), false)
+            //     }
+            // }
             Tactic::TacticsExhausted => {
                 log::info!("tactics exhausted for: {}", stack);
                 PathProofNode::new_leaf("Tactics exhausted!".into(), false)
@@ -539,7 +538,7 @@ fn progress(finite: bool) -> Expression {
         any(
             Enumerator::PseudoCycle(finite),
             or(
-                expr(Tactic::CycleMerge(finite)),
+                expr(Tactic::CycleMerge),
                 any(
                     Enumerator::Rearrangments(finite),
                     or(

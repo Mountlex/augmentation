@@ -1,8 +1,7 @@
-
 use itertools::Itertools;
 
 use crate::comps::{Component, EdgeType};
-use crate::{ Graph, Node};
+use crate::{Graph, Node};
 
 pub fn hamiltonian_paths(v1: Node, v2: Node, nodes: &[Node]) -> Vec<Vec<Node>> {
     assert!(nodes.contains(&v1));
