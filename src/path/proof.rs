@@ -515,21 +515,21 @@ fn inductive_proof(options: PathProofOptions, depth: u8) -> Expression {
 }
 
 fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
-    and(
-        // finite case
-        map(
-            Mapper::ToFiniteInstance,
-            or3(
-                expr(Tactic::Print),
-                //expr(Tactic::FilterInfinite),
-                progress(true),
-                find_all_edges_and_progress(
-                    options.edge_depth,
-                    true,
-                    or(expr(Tactic::Print), expr(Tactic::TacticsExhausted(true))),
-                ),
-            ),
-        ), // infinite case
+    // and(
+    //     // finite case
+    //     map(
+    //         Mapper::ToFiniteInstance,
+    //         or3(
+    //             expr(Tactic::Print),
+    //             //expr(Tactic::FilterInfinite),
+    //             progress(true),
+    //             find_all_edges_and_progress(
+    //                 options.edge_depth,
+    //                 true,
+    //                 or(expr(Tactic::Print), expr(Tactic::TacticsExhausted(true))),
+    //             ),
+    //         ),
+    //     ), // infinite case
         all_opt(
             OptEnumerator::PathNode,
             all_sc(
@@ -542,7 +542,7 @@ fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
             ),
             or(expr(Tactic::Print), expr(Tactic::TacticsExhausted(false))),
             options.sc,
-        ),
+    //    ),
     )
 }
 
