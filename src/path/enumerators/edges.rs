@@ -157,7 +157,7 @@ fn enumerate_parts(
                         &npc,
                         nice_path.first().unwrap().0,
                         outside,
-                        false,
+                        true,
                         first.used,
                     ) {
                         let end = subpath[0].path_idx;
