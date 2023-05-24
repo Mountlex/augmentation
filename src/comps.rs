@@ -409,11 +409,19 @@ impl Component {
         }
     }
 
-    pub fn subsets_of_size(&self, size: usize) -> Vec<Vec<Node>> {
+    pub fn combinations_with_replacement(&self, size: usize) -> Vec<Vec<Node>> {
         match self {
             Component::Large(n) => vec![vec![*n; size]],
-            Component::ComplexTree(_, nodes) => nodes.iter().cloned().combinations_with_replacement(size).collect(),
-            Component::ComplexPath(_, nodes) => nodes.iter().cloned().combinations_with_replacement(size).collect(),
+            Component::ComplexTree(_, nodes) => nodes
+                .iter()
+                .cloned()
+                .combinations_with_replacement(size)
+                .collect(),
+            Component::ComplexPath(_, nodes) => nodes
+                .iter()
+                .cloned()
+                .combinations_with_replacement(size)
+                .collect(),
             _ => self
                 .nodes()
                 .to_vec()

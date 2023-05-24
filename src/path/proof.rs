@@ -33,7 +33,7 @@ pub struct InstPart {
     pub used_for_credit_gain: Vec<Node>,
     pub rem_edges: Vec<HalfAbstractEdge>,
     pub non_rem_edges: Vec<EdgeId>,
-    pub connected_nodes: Vec<Node>,
+    pub contractability_checked: Vec<Pidx>,
     pub good_edges: Vec<Edge>,
     pub good_out: Vec<Node>,
 }
@@ -48,7 +48,7 @@ impl InstPart {
             rem_edges: vec![],
             used_for_credit_gain: vec![],
             non_rem_edges: vec![],
-            connected_nodes: vec![],
+            contractability_checked: vec![],
             good_edges: vec![],
             good_out: vec![],
         }
@@ -62,7 +62,7 @@ impl InstPart {
             && self.used_for_credit_gain.is_empty()
             && self.rem_edges.is_empty()
             && self.non_rem_edges.is_empty()
-            && self.connected_nodes.is_empty()
+            && self.contractability_checked.is_empty()
             && self.good_edges.is_empty()
             && self.good_out.is_empty()
     }
@@ -76,7 +76,22 @@ impl InstPart {
             used_for_credit_gain: vec![],
             rem_edges: vec![],
             non_rem_edges: vec![],
-            connected_nodes: vec![],
+            contractability_checked: vec![],
+            good_edges: vec![],
+            good_out: vec![],
+        }
+    }
+
+    pub fn new_nice_pairs(nice_pairs: Vec<(Node, Node)>) -> InstPart {
+        InstPart {
+            path_nodes: vec![],
+            nice_pairs,
+            edges: vec![],
+            out_edges: vec![],
+            used_for_credit_gain: vec![],
+            rem_edges: vec![],
+            non_rem_edges: vec![],
+            contractability_checked: vec![],
             good_edges: vec![],
             good_out: vec![],
         }
@@ -406,7 +421,7 @@ impl Expression {
                 stack.push(element);
                 let result = expression.prove(stack);
                 stack.pop();
-                return result
+                return result;
             }
         }
     }
@@ -432,7 +447,7 @@ impl Mapper {
                 part.non_rem_edges.append(&mut rem_ids);
                 part.out_edges.append(&mut rem_sources);
 
-               StackElement::Inst(part)
+                StackElement::Inst(part)
             }
         }
     }
@@ -532,13 +547,10 @@ fn induction_step(options: PathProofOptions, step: Expression) -> Expression {
         ), // infinite case
         all_opt(
             OptEnumerator::PathNode,
-            all_sc(
-                Enumerator::NicePairs,
-                or3(
-                    expr(Tactic::Print),
-                    progress(false),
-                    find_all_edges_and_progress(options.edge_depth, false, step),
-                ),
+            or3(
+                expr(Tactic::Print),
+                progress(false),
+                find_all_edges_and_progress(options.edge_depth, false, step),
             ),
             or(expr(Tactic::Print), expr(Tactic::TacticsExhausted(false))),
             options.sc,
@@ -565,7 +577,7 @@ fn find_edge_and_progress(
 ) -> Expression {
     all_opt(
         OptEnumerator::Edges(finite),
-        all_sc(Enumerator::NicePairs, or(progress(finite), enumerator)),
+        or(progress(finite), enumerator),
         otherwise,
         true,
     )
@@ -673,12 +685,14 @@ fn compute_initial_cases(
     let mut cases = in_nodes
         .into_iter()
         .map(|in_node| {
+            // last comp
             let path_comp = PathComp {
                 in_node: Some(in_node),
                 out_node: None,
                 comp: comp.clone(),
                 used: last_node.is_used(),
                 path_idx: Pidx::Last,
+                initial_nps: comp.edges(),
             };
             let mut instance = Instance {
                 stack: vec![],

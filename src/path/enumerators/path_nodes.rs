@@ -6,7 +6,7 @@ use crate::{
         enumerators::edges::edge_enumerator,
         instance::{Instance, PathNode},
         proof::InstPart,
-        PathComp, Pidx,
+        NicePairConfig, PathComp, Pidx,
     },
     types::Edge,
     util::relabels_nodes_sequentially,
@@ -38,6 +38,7 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
         let out_nodes = if let Some(fixed) = comp.fixed_node() {
             vec![fixed] // we assume here that if comp has a fixed node it was not used for any matching hit node.
         } else {
+            // this case is only for complex
             let succ = node_idx.succ().unwrap();
             let matching_endpoints_at_new = all_edges
                 .iter()
@@ -55,8 +56,10 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
         let in_nodes = if !node_idx.is_last() {
             comp.in_nodes().to_vec()
         } else if let Some(fixed) = comp.fixed_node() {
+            // if comp is last
             vec![fixed]
         } else {
+            // only concerns complex
             comp.in_nodes().to_vec()
         };
 
@@ -80,12 +83,69 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                         .filter(move |out_node| {
                             prevalid_in_out(&comp_filter, in_node, *out_node, node_idx.is_prelast())
                         })
-                        .map(move |out_node| PathComp {
-                            comp: comp_map.clone(),
-                            in_node: Some(in_node),
-                            out_node: Some(out_node),
-                            used: node_map.is_used(),
-                            path_idx: node_idx,
+                        .flat_map(move |out_node| {
+                            let mut new_nice_pairs = comp_map.edges();
+                            let mut path_comp = PathComp {
+                                comp: comp_map.clone(),
+                                in_node: Some(in_node),
+                                out_node: Some(out_node),
+                                used: node_map.is_used(),
+                                path_idx: node_idx,
+                                initial_nps: new_nice_pairs,
+                            };
+
+                            if (comp_map.is_c4()
+                                || (comp_map.is_c5()
+                                    && !node_map.is_used()
+                                    && node_idx.is_prelast()))
+                                && !comp_map.is_adjacent(&in_node, &out_node)
+                            {
+                                // in and out must form a nice pair in comp!
+                                if comp_map.is_c4() {
+                                    path_comp.initial_nps.push((in_node, out_node));
+                                }
+
+                                if comp_map.is_c5() {
+                                    //
+                                    //    out
+                                    //   /   \
+                                    //   1   2
+                                    //   |   |
+                                    //  in - 3
+                                    //
+                                    let v1 = comp_map
+                                        .nodes()
+                                        .iter()
+                                        .find(|v| {
+                                            comp_map.is_adjacent(v, &in_node)
+                                                && comp_map.is_adjacent(v, &out_node)
+                                        })
+                                        .unwrap()
+                                        .clone();
+                                    let v2 = comp_map
+                                        .nodes()
+                                        .iter()
+                                        .find(|v| **v != v1 && comp_map.is_adjacent(v, &out_node))
+                                        .unwrap()
+                                        .clone();
+                                    let v3 = comp_map
+                                        .nodes()
+                                        .iter()
+                                        .find(|v| **v != v1 && comp_map.is_adjacent(v, &in_node))
+                                        .unwrap()
+                                        .clone();
+
+                                    path_comp.initial_nps.push((in_node, out_node));
+                                    let mut p1 = path_comp.clone();
+                                    let mut p2 = path_comp.clone();
+
+                                    p1.initial_nps.push((v3, out_node));
+                                    p2.initial_nps.push((v2, in_node));
+
+                                    return vec![p1, p2].into_iter();
+                                }
+                            }
+                            vec![path_comp].into_iter()
                         }),
                 );
                 iter
@@ -154,7 +214,7 @@ pub fn path_extension_enumerator(
                             let non_rem_edges = non_rem_edges.clone();
 
                             //comp.subsets_of_size(matching_edges.len())
-                            comp.subsets_of_size(matching_edges.len())
+                            comp.combinations_with_replacement(matching_edges.len())
                                 .into_iter()
                                 .filter(move |matched| {
                                     if source_idx.prec() == node_idx {

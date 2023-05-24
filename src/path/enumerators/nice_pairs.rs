@@ -7,87 +7,89 @@ use crate::{
 };
 
 pub fn nice_pairs_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart>> {
-    let all_edges = instance.all_edges();
-    let rem_edges = instance.rem_edges();
-    let out_edges = instance.out_edges();
+    return Box::new(vec![].into_iter());
 
-    let old_npc = instance.npc();
+    // let all_edges = instance.all_edges();
+    // let rem_edges = instance.rem_edges();
+    // let out_edges = instance.out_edges();
 
-    let connected_nodes = instance.connected_nodes().cloned().collect_vec();
+    // let old_npc = instance.npc();
 
-    let nodes_with_edges = all_edges
-        .iter()
-        .flat_map(|e| e.to_vec())
-        .chain(rem_edges.iter().map(|e| e.source))
-        .chain(out_edges.iter().cloned())
-        .collect_vec();
+    // let connected_nodes = instance.connected_nodes().cloned().collect_vec();
 
-    let mut cases: Box<dyn Iterator<Item = InstPart>> =
-        Box::new(vec![InstPart::empty()].into_iter());
+    // let nodes_with_edges = all_edges
+    //     .iter()
+    //     .flat_map(|e| e.to_vec())
+    //     .chain(rem_edges.iter().map(|e| e.source))
+    //     .chain(out_edges.iter().cloned())
+    //     .collect_vec();
 
-    let path_comps = instance.path_nodes().cloned().collect_vec();
+    // let mut cases: Box<dyn Iterator<Item = InstPart>> =
+    //     Box::new(vec![InstPart::empty()].into_iter());
 
-    for path_comp in path_comps {
-        let updated_nodes_with_edges = path_comp
-            .comp
-            .matching_nodes()
-            .iter()
-            .filter(|n| nodes_with_edges.contains(n))
-            .cloned()
-            .collect_vec();
-        let path_comp_nodes = path_comp.comp.matching_nodes();
-        let comp_conn_nodes = connected_nodes
-            .iter()
-            .filter(|n| path_comp_nodes.contains(n))
-            .cloned()
-            .collect_vec();
+    // let path_comps = instance.path_nodes().cloned().collect_vec();
 
-        let old_npc = old_npc.clone();
+    // for path_comp in path_comps {
+    //     let updated_nodes_with_edges = path_comp
+    //         .comp
+    //         .matching_nodes()
+    //         .iter()
+    //         .filter(|n| nodes_with_edges.contains(n))
+    //         .cloned()
+    //         .collect_vec();
+    //     let path_comp_nodes = path_comp.comp.matching_nodes();
+    //     let comp_conn_nodes = connected_nodes
+    //         .iter()
+    //         .filter(|n| path_comp_nodes.contains(n))
+    //         .cloned()
+    //         .collect_vec();
 
-        cases = Box::new(cases.flat_map(move |inst_part| {
-            let old_npc = old_npc.clone();
-            let updated_nodes_with_edges = updated_nodes_with_edges.clone();
+    //     let old_npc = old_npc.clone();
 
-            let iter: Box<dyn Iterator<Item = InstPart>> =
-                if comp_conn_nodes != updated_nodes_with_edges {
-                    // node is already zoomed, just update nice pairs of new incident edges
-                    let iter = comp_npcs(
-                        &path_comp,
-                        &updated_nodes_with_edges,
-                        &old_npc,
-                        &comp_conn_nodes,
-                    )
-                    .into_iter()
-                    .map(move |mut npc| {
-                        let mut inst_part_clone = inst_part.clone();
+    //     cases = Box::new(cases.flat_map(move |inst_part| {
+    //         let old_npc = old_npc.clone();
+    //         let updated_nodes_with_edges = updated_nodes_with_edges.clone();
 
-                        inst_part_clone.nice_pairs.append(&mut npc.nice_pairs);
-                        inst_part_clone.nice_pairs.sort();
-                        inst_part_clone.nice_pairs.dedup();
+    //         let iter: Box<dyn Iterator<Item = InstPart>> =
+    //             if comp_conn_nodes != updated_nodes_with_edges {
+    //                 // node is already zoomed, just update nice pairs of new incident edges
+    //                 let iter = comp_npcs(
+    //                     &path_comp,
+    //                     &updated_nodes_with_edges,
+    //                     &old_npc,
+    //                     &comp_conn_nodes,
+    //                 )
+    //                 .into_iter()
+    //                 .map(move |mut npc| {
+    //                     let mut inst_part_clone = inst_part.clone();
 
-                        inst_part_clone
-                            .connected_nodes
-                            .append(&mut updated_nodes_with_edges.clone());
-                        inst_part_clone.connected_nodes.sort();
-                        inst_part_clone.connected_nodes.dedup();
+    //                     inst_part_clone.nice_pairs.append(&mut npc.nice_pairs);
+    //                     inst_part_clone.nice_pairs.sort();
+    //                     inst_part_clone.nice_pairs.dedup();
 
-                        inst_part_clone
-                    });
-                    Box::new(iter)
-                } else {
-                    Box::new(vec![inst_part].into_iter())
-                };
-            iter
-        }));
-    }
+    //                     inst_part_clone
+    //                         .connected_nodes
+    //                         .append(&mut updated_nodes_with_edges.clone());
+    //                     inst_part_clone.connected_nodes.sort();
+    //                     inst_part_clone.connected_nodes.dedup();
 
-    let cases = Box::new(cases.map(move |mut part| {
-        let nice_pairs = vec![old_npc.nice_pairs.clone(), part.nice_pairs.clone()].concat();
-        part.nice_pairs = nice_pairs.into_iter().unique().collect_vec();
-        part
-    }));
+    //                     inst_part_clone
+    //                 });
+    //                 Box::new(iter)
+    //             } else {
+    //                 Box::new(vec![inst_part].into_iter())
+    //             };
+    //         iter
+    //     }));
+    // }
 
-    Box::new(cases)
+    // let cases = Box::new(cases.map(move |mut part| {
+    //     let nice_pairs = vec![old_npc.nice_pairs.clone(), part.nice_pairs.clone()].concat();
+    //     part.nice_pairs = nice_pairs.into_iter().unique().collect_vec();
+    //     part
+    // }));
+
+    // Box::new(cases)
 }
 
 // Compute all possible valid nice pair configurations
@@ -135,7 +137,6 @@ fn comp_npcs(
             //         .push((node.in_node.unwrap(), node.out_node.unwrap()))
             // }
             // vec![npc]
-
 
             nodes
                 .iter()

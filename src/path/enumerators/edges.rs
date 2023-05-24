@@ -258,8 +258,7 @@ fn enumerate_parts(
 
                             if !all_other_nodes.is_empty() {
                                 let iter =
-                                    edge_iterator(cases.clone(), all_other_nodes, false, !finite)
-                                        .unwrap();
+                                    edge_iterator(cases.clone(), all_other_nodes, false, !finite);
 
                                 let iter = to_cases_with_edge_cost(
                                     iter,
@@ -318,11 +317,23 @@ fn enumerate_parts(
     } else {
         path_comps.iter().take(len - 1).collect_vec()
     };
+    let contractability_checked = instance.contractability_checked().collect_vec();
     for path_comp in iter {
-        let idx = path_comp.path_idx;
-        if let Some(iter) = handle_contractable_components(path_comp, instance, finite) {
-            let iter = to_cases(iter, nodes_to_pidx, instance);
-            return Some((iter, format!("Contractablility of {}", idx)));
+        if !(path_comp.comp.is_c4()
+            || path_comp.comp.is_large()
+            || (path_comp.comp.is_c5() && !path_comp.used && path_comp.path_idx.is_prelast()))
+            && !contractability_checked.contains(&&path_comp.path_idx)
+        {
+            if let Some(iter) =
+                handle_contractable_components(path_comp, instance, finite, nodes_to_pidx.clone())
+            {
+                let idx = path_comp.path_idx;
+                let iter = Box::new(iter.map(move |mut part| {
+                    part.contractability_checked.push(idx);
+                    part
+                }));
+                return Some((iter, format!("Contractablility of {}", idx)));
+            }
         }
     }
 
@@ -502,20 +513,18 @@ fn handle_contractable_components(
     path_comp: &PathComp,
     instance: &Instance,
     finite: bool,
-) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
+    nodes_to_pidx: Vec<Option<Pidx>>,
+) -> Option<Box<dyn Iterator<Item = InstPart>>> {
     let comp = &path_comp.comp;
 
     let all_edges = instance.all_edges();
     let outside = instance.out_edges();
     let path_comps = instance.path_nodes().collect_vec();
     let rem_edges = instance.rem_edges();
-    let npc = instance.npc();
-
-    if comp.is_complex() || comp.is_large() || comp.is_c3() || comp.is_c4() {
-        return None;
-    }
 
     let nodes = comp.matching_nodes();
+
+    // nodes which are incident to some non-component edge
     let used_nodes = nodes
         .iter()
         .filter(|n| {
@@ -527,10 +536,27 @@ fn handle_contractable_components(
         })
         .cloned()
         .collect_vec();
+
+    // free_nodes = nodes - used_nodes
     let free_nodes = nodes
         .iter()
         .filter(|n| !used_nodes.contains(n))
         .cloned()
+        .collect_vec();
+
+    if free_nodes.len() <= 1 {
+        // Not contractable
+        return None;
+    }
+    if comp.is_c6() && free_nodes.len() <= 2 {
+        // Not contractable
+        return None;
+    }
+
+    let complement = path_comps
+        .iter()
+        .filter(|p| p.path_idx != path_comp.path_idx)
+        .flat_map(|p| p.comp.matching_nodes().to_vec())
         .collect_vec();
 
     let num_edges_between_free_nodes = comp
@@ -542,32 +568,189 @@ fn handle_contractable_components(
     let opt_lb = free_nodes.len() * 2 - num_edges_between_free_nodes;
 
     if opt_lb * 5 >= comp.graph().node_count() * 4 {
-        let chord_implies_absent_np = free_nodes.iter().combinations(2).any(|free_edge| {
-            used_nodes
+        if comp.is_c5() {
+            assert_eq!(free_nodes.len(), 2);
+            assert!(!comp.is_adjacent(&free_nodes[0], &free_nodes[1]));
+
+            //
+            //     v3
+            //   /    \
+            //  f1    f2
+            //   |    |
+            //  v1 -- v2
+            //
+            let f1 = free_nodes[0];
+            let f2 = free_nodes[1];
+            let v3 = comp
+                .nodes()
+                .iter()
+                .find(|v| comp.is_adjacent(v, &f1) && comp.is_adjacent(v, &f2))
+                .unwrap()
+                .clone();
+            let v1 = comp
+                .nodes()
+                .iter()
+                .find(|v| **v != v3 && comp.is_adjacent(v, &f1))
+                .unwrap()
+                .clone();
+            let v2 = comp
+                .nodes()
+                .iter()
+                .find(|v| **v != v3 && comp.is_adjacent(v, &f2))
+                .unwrap()
+                .clone();
+
+            // Case a) new nice pairs
+            let case_a = vec![InstPart::new_nice_pairs(vec![(v1, v3), (v2, v3)])];
+
+            // Case b) edges from f1 and f2
+            let case_b = to_cases(
+                edge_iterator(free_nodes, complement, true, !finite),
+                nodes_to_pidx,
+                instance,
+            );
+
+            return Some(Box::new(case_a.into_iter().chain(case_b)));
+        } else if comp.is_c6() {
+            assert_eq!(free_nodes.len(), 3);
+            let f1 = free_nodes[0];
+            let f2 = free_nodes[1];
+            let f3 = free_nodes[2];
+
+            if !comp.is_adjacent(&f1, &f2)
+                && !comp.is_adjacent(&f1, &f3)
+                && !comp.is_adjacent(&f2, &f3)
+            {
+                //
+                //     v1
+                //   /    \
+                //  f1    f2
+                //   |    |
+                //  v3    v2
+                //   \    /
+                //     f3
+                let v1 = comp
+                    .nodes()
+                    .iter()
+                    .find(|v| comp.is_adjacent(v, &f1) && comp.is_adjacent(v, &f2))
+                    .unwrap()
+                    .clone();
+                let v2 = comp
+                    .nodes()
+                    .iter()
+                    .find(|v| comp.is_adjacent(v, &f2) && comp.is_adjacent(v, &f3))
+                    .unwrap()
+                    .clone();
+                let v3 = comp
+                    .nodes()
+                    .iter()
+                    .find(|v| comp.is_adjacent(v, &f1) && comp.is_adjacent(v, &f3))
+                    .unwrap()
+                    .clone();
+
+                // Case a) new nice pairs
+                let case_a = vec![InstPart::new_nice_pairs(vec![(v1, v3), (v2, v3), (v1, v2)])];
+
+                // Case b) edges from f1 and f2 and f3
+                let case_b = to_cases(
+                    edge_iterator(free_nodes, complement, true, !finite),
+                    nodes_to_pidx,
+                    instance,
+                );
+
+                return Some(Box::new(case_a.into_iter().chain(case_b)));
+            }
+
+            if free_nodes
                 .iter()
                 .combinations(2)
-                .filter(|m| !npc.is_nice_pair(*m[0], *m[1]))
-                .any(|m| {
-                    hamiltonian_paths(*m[0], *m[1], comp.nodes())
-                        .iter()
-                        .any(|path| {
-                            path.windows(2).all(|e| {
-                                comp.is_adjacent(&e[0], &e[1])
-                                    || (*free_edge[0] == e[0] && *free_edge[1] == e[1])
-                                    || (*free_edge[1] == e[0] && *free_edge[0] == e[1])
-                            })
-                        })
-                })
-        });
+                .filter(|c| comp.is_adjacent(c[0], c[1]))
+                .count()
+                > 1
+            {
+                // Here we do nothing
+                return None;
+            }
 
-        if chord_implies_absent_np {
-            let complement = path_comps
+            // This case remains:
+
+            //     v1
+            //   /    \
+            //  f2    v2
+            //   |    |
+            //  f1    f3
+            //   \    /
+            //     v3
+
+            // Case a) new nice pairs between v1,v2,v3
+            let case_a = vec![InstPart::new_nice_pairs(
+                used_nodes
+                    .iter()
+                    .combinations(2)
+                    .map(|w| (*w[0], *w[1]))
+                    .collect_vec(),
+            )];
+
+            // Case b) edges from f1 and f2 and f3
+            let case_b = to_cases(
+                edge_iterator(free_nodes, complement, true, !finite),
+                nodes_to_pidx,
+                instance,
+            );
+
+            return Some(Box::new(case_a.into_iter().chain(case_b)));
+        } else if comp.is_c7() {
+            let num_cords =
+                (opt_lb as f64 - comp.graph().node_count() as f64 * (4.0 / 5.0)).floor() as usize;
+            // 1 <= num_cors <= 2
+
+            let all_possible_cords = free_nodes.iter().combinations(2).collect_vec();
+
+            let np_configs = all_possible_cords
                 .iter()
-                .filter(|p| p.path_idx != path_comp.path_idx)
-                .flat_map(|p| p.comp.matching_nodes().to_vec())
+                .combinations(num_cords)
+                .map(|cords| {
+                    let mut induced_nps = used_nodes
+                        .iter()
+                        .combinations(2)
+                        .filter(|m| !comp.is_adjacent(m[0], m[1]))
+                        .filter(|m| {
+                            // m is np if hamiltonian path exists
+                            hamiltonian_paths(*m[0], *m[1], comp.nodes())
+                                .iter()
+                                .any(|path| {
+                                    path.windows(2).all(|e| {
+                                        comp.is_adjacent(&e[0], &e[1])
+                                            || cords.iter().any(|cord| {
+                                                (*cord[0] == e[0] && *cord[1] == e[1])
+                                                    || (*cord[1] == e[0] && *cord[0] == e[1])
+                                            })
+                                    })
+                                })
+                        })
+                        .map(|m| (*m[0], *m[1]))
+                        .collect_vec();
+                    induced_nps.sort();
+                    induced_nps
+                })
                 .collect_vec();
 
-            return edge_iterator(free_nodes, complement, true, !finite);
+            // TODO we could throw some out?!
+
+            // Case a) new nice pair configs
+            let case_a = np_configs
+                .into_iter()
+                .map(|nps| InstPart::new_nice_pairs(nps))
+                .collect_vec();
+
+            // Case b) edges from f1 and f2 and f3
+            let case_b = to_cases(
+                edge_iterator(free_nodes, complement, true, !finite),
+                nodes_to_pidx,
+                instance,
+            );
+
+            return Some(Box::new(case_a.into_iter().chain(case_b)));
         }
     }
 
@@ -690,7 +873,7 @@ fn ensure_k_matching(
             })
             .collect_vec();
 
-        return edge_iterator(free_set, free_complement, true, !finite);
+        return Some(edge_iterator(free_set, free_complement, true, !finite));
     }
 
     None
@@ -701,7 +884,7 @@ fn edge_iterator(
     hit_set: Vec<Node>,
     with_outside: bool,
     with_rem: bool,
-) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
+) -> Box<dyn Iterator<Item = (Node, Hit)>> {
     let mut hits = hit_set.into_iter().map(Hit::Node).collect_vec();
     if with_outside {
         hits.push(Hit::Outside);
@@ -711,7 +894,7 @@ fn edge_iterator(
     }
 
     let iter = EdgeIterator::new(node_set, hits);
-    Some(Box::new(iter))
+    Box::new(iter)
 }
 
 #[derive(Clone, Copy)]

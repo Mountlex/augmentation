@@ -21,7 +21,6 @@ pub fn enumerate_rearrangements(
         return Box::new(std::iter::empty());
     }
 
-
     if !finite {
         // find path index of newest node in cycle
         // We know by the precondition that all previous nodes in the path are also in this cycle

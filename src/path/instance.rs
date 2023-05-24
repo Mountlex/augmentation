@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     extension::Extension, proof::InstPart, pseudo_cycle::PseudoCycle, EdgeId, HalfAbstractEdge,
-    NicePairConfig, PathComp,
+    NicePairConfig, PathComp, Pidx,
 };
 
 #[derive(Clone, Debug)]
@@ -53,17 +53,30 @@ impl Instance {
     }
 
     pub fn npc(&self) -> NicePairConfig {
-        if let Some(part) = self
+        // TODO
+        let nice_pairs = self
             .inst_parts()
-            .filter(|part| !part.nice_pairs.is_empty())
-            .last()
-        {
-            NicePairConfig {
-                nice_pairs: part.nice_pairs.clone(),
-            }
-        } else {
-            NicePairConfig::empty()
-        }
+            .flat_map(|part| {
+                let initial_nps = part
+                    .path_nodes
+                    .iter()
+                    .flat_map(|c| c.initial_nps.clone())
+                    .collect_vec();
+                vec![initial_nps, part.nice_pairs.clone()].concat()
+            })
+            .collect_vec();
+        NicePairConfig { nice_pairs }
+        // if let Some(part) = self
+        //     .inst_parts()
+        //     .filter(|part| !part.nice_pairs.is_empty())
+        //     .last()
+        // {
+        //     NicePairConfig {
+        //         nice_pairs: part.nice_pairs.clone(),
+        //     }
+        // } else {
+        //     NicePairConfig::empty()
+        // }
     }
 
     fn implied_edges(&self) -> impl Iterator<Item = &'_ Edge> {
@@ -217,9 +230,9 @@ impl Instance {
         self.inst_parts().flat_map(|part| part.path_nodes.iter())
     }
 
-    pub fn connected_nodes(&self) -> impl Iterator<Item = &'_ Node> {
+    pub fn contractability_checked(&self) -> impl Iterator<Item = &'_ Pidx> {
         self.inst_parts()
-            .flat_map(|part| part.connected_nodes.iter())
+            .flat_map(|part| part.contractability_checked.iter())
     }
 }
 

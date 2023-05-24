@@ -30,6 +30,7 @@ pub struct PathComp {
     out_node: Option<Node>,
     used: bool,
     path_idx: Pidx,
+    initial_nps: Vec<(Node, Node)>,
 }
 
 impl Display for PathComp {

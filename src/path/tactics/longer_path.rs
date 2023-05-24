@@ -65,7 +65,6 @@ pub fn check_longer_nice_path(instance: &Instance, finite: bool) -> PathProofNod
     let last_comp_nodes = last_comp.comp.matching_nodes();
 
     for outside_hit in all_outside.iter().filter(|n| last_comp_nodes.contains(n)) {
-
         if valid_in_out_npc(
             &last_comp.comp,
             &npc,
