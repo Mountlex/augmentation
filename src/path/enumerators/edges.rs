@@ -810,15 +810,14 @@ fn handle_contractable_components(
             let iter = edge_iterator(free_nodes.clone(), complement.clone(), true, !finite);
             let comp = comp.clone();
             let iter = iter.flat_map(move |(node, hit)| {
-                if free_nodes
-                    .iter()
-                    .filter(|f| comp.is_adjacent(f, &node))
-                    .count()
-                    == 1
-                    && num_cords == 2
-                // we need this second edge only if opt lower bound was 7 before
+                if free_nodes.len() - 1 == 3
+                    && free_nodes
+                        .iter()
+                        .filter(|f| **f != node)
+                        .combinations(2)
+                        .all(|fs| !comp.is_adjacent(fs[0], fs[1]))
                 {
-                    // This is the case where a new edge is enumerated, which is incident to exactly one used node
+                    // the remaining free nodes are pairwise not adjacent.
                     // in this case, enumerating this edge is not enough to break contractability
                     let other_free_nodes = free_nodes
                         .iter()
