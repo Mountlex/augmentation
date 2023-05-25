@@ -319,6 +319,7 @@ fn enumerate_parts(
     };
     let contractability_checked = instance.contractability_checked().collect_vec();
     for path_comp in iter {
+        // TODO filter this differently
         if !(path_comp.comp.is_c4()
             || path_comp.comp.is_large()
             || (path_comp.comp.is_c5()
