@@ -679,22 +679,43 @@ fn handle_contractable_components(
 
             // This case remains:
 
-            //     v1
-            //   /    \
-            //  f2    v2
-            //   |    |
-            //  f1    f3
-            //   \    /
-            //     v3
+            //      v1
+            //   /      \
+            // f2/f1    v2
+            //   |       |
+            // f1/f2    f3
+            //   \      /
+            //      v3
+
+            let adj = free_nodes.iter().combinations(2).find(|adj| comp.is_adjacent(adj[0], adj[1])).unwrap();
+            let f1 = *adj[0];
+            let f2 = *adj[1];
+            let f3 = *free_nodes.iter().find(|f| !adj.contains(f)).unwrap();
+            let v3 = comp
+            .nodes()
+            .iter()
+            .find(|v| comp.is_adjacent(v, &f3) && (comp.is_adjacent(v, &f1) || comp.is_adjacent(v, &f2)))
+            .unwrap()
+            .clone();
+            let v1 = comp
+            .nodes()
+            .iter()
+            .find(|v| !comp.is_adjacent(v, &f3) && (comp.is_adjacent(v, &f1) || comp.is_adjacent(v, &f2)))
+            .unwrap()
+            .clone();
+            let v2 = comp
+                .nodes()
+                .iter()
+                .find(|v| comp.is_adjacent(v, &v1) && comp.is_adjacent(v, &f3))
+                .unwrap()
+                .clone();
+        
 
             // Case a) new nice pairs between v1,v2,v3
-            let case_a = vec![InstPart::new_nice_pairs(
-                used_nodes
-                    .iter()
-                    .combinations(2)
-                    .map(|w| (*w[0], *w[1]))
-                    .collect_vec(),
-            )];
+            let case_a = vec![
+                InstPart::new_nice_pairs(vec![(v1,v3)]),
+                InstPart::new_nice_pairs(vec![(v2,v3)]),
+            ];
 
             // Case b) edges from f1 and f2 and f3
             let case_b = to_cases(
@@ -721,7 +742,7 @@ fn handle_contractable_components(
                 .iter()
                 .combinations(num_cords)
                 .map(|cords| {
-                    let mut induced_nps = used_nodes
+                    let mut induced_nps = nodes
                         .iter()
                         .combinations(2)
                         .filter(|m| !comp.is_adjacent(m[0], m[1]))
@@ -741,7 +762,8 @@ fn handle_contractable_components(
                         })
                         .map(|m| (*m[0], *m[1]))
                         .collect_vec();
-                    induced_nps.sort();
+                    // TODO 
+                    //induced_nps.sort();
                     induced_nps
                 })
                 .collect_vec();
