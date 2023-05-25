@@ -443,6 +443,14 @@ fn compute_good_edges(
     Box::new(rem_parts.into_iter())
 }
 
+fn to_cases_mul(
+    iter: Box<dyn Iterator<Item = Vec<(Node, Hit)>>>,
+    nodes_to_pidx: Vec<Option<Pidx>>,
+    instance: &Instance,
+) -> Box<dyn Iterator<Item = InstPart>> {
+    to_cases_with_edge_cost_mul(iter, nodes_to_pidx, instance, Credit::from_integer(1))
+}
+
 fn to_cases(
     iter: Box<dyn Iterator<Item = (Node, Hit)>>,
     nodes_to_pidx: Vec<Option<Pidx>>,
@@ -457,6 +465,16 @@ fn to_cases_with_edge_cost(
     instance: &Instance,
     cost: Credit,
 ) -> Box<dyn Iterator<Item = InstPart>> {
+    let iter = Box::new(iter.map(|h| vec![h]));
+    to_cases_with_edge_cost_mul(iter, nodes_to_pidx, instance, cost)
+}
+
+fn to_cases_with_edge_cost_mul(
+    iter: Box<dyn Iterator<Item = Vec<(Node, Hit)>>>,
+    nodes_to_pidx: Vec<Option<Pidx>>,
+    instance: &Instance,
+    cost: Credit,
+) -> Box<dyn Iterator<Item = InstPart>> {
     let all_edges = instance.all_edges();
 
     let good_edges = instance.good_edges().into_iter().cloned().collect_vec();
@@ -464,37 +482,40 @@ fn to_cases_with_edge_cost(
 
     let new_rem_id = instance.new_rem_id();
 
-    let iter = Box::new(iter.flat_map(move |(node, hit)| {
+    let iter = Box::new(iter.flat_map(move |new_edges| {
         let mut part = InstPart::empty();
 
-        match hit {
-            Hit::Outside => part.out_edges.push(node),
-            Hit::RemPath => {
-                part.rem_edges.push(HalfAbstractEdge {
-                    source: node,
-                    source_idx: nodes_to_pidx[node.get_id() as usize].unwrap(),
-                    cost,
-                    matching_with: vec![], // TODO
-                    id: new_rem_id,
-                });
-            }
-            Hit::Node(hit_node) => {
-                if nodes_to_pidx[node.get_id() as usize].unwrap()
-                    != nodes_to_pidx[hit_node.get_id() as usize].unwrap()
-                {
-                    let edge = Edge::with_cost(
-                        node,
-                        nodes_to_pidx[node.get_id() as usize].unwrap(),
-                        hit_node,
-                        nodes_to_pidx[hit_node.get_id() as usize].unwrap(),
+        for (node, hit) in new_edges {
+            match hit {
+                Hit::Outside => part.out_edges.push(node),
+                Hit::RemPath => {
+                    part.rem_edges.push(HalfAbstractEdge {
+                        source: node,
+                        source_idx: nodes_to_pidx[node.get_id() as usize].unwrap(),
                         cost,
-                    );
-                    if !all_edges.contains(&edge) {
-                        part.edges.push(edge);
+                        matching_with: vec![], // TODO
+                        id: new_rem_id,
+                    });
+                }
+                Hit::Node(hit_node) => {
+                    if nodes_to_pidx[node.get_id() as usize].unwrap()
+                        != nodes_to_pidx[hit_node.get_id() as usize].unwrap()
+                    {
+                        let edge = Edge::with_cost(
+                            node,
+                            nodes_to_pidx[node.get_id() as usize].unwrap(),
+                            hit_node,
+                            nodes_to_pidx[hit_node.get_id() as usize].unwrap(),
+                            cost,
+                        );
+                        if !all_edges.contains(&edge) {
+                            part.edges.push(edge);
+                        }
                     }
                 }
             }
         }
+
         if part.is_empty() {
             None
         } else {
@@ -505,9 +526,10 @@ fn to_cases_with_edge_cost(
     // Filter: consider only cases where edge are _not_ already good.
     Box::new(iter.filter(move |part| {
         if !part.edges.is_empty() {
-            !good_edges.contains(part.edges.first().unwrap())
+            part.edges.iter().all(|edge| !good_edges.contains(edge))
+            // !good_edges.contains(part.edges.first().unwrap())
         } else if !part.out_edges.is_empty() {
-            !good_out.contains(part.out_edges.first().unwrap())
+            part.out_edges.iter().all(|edge| !good_out.contains(edge))
         } else {
             true
         }
@@ -687,34 +709,43 @@ fn handle_contractable_components(
             //   \      /
             //      v3
 
-            let adj = free_nodes.iter().combinations(2).find(|adj| comp.is_adjacent(adj[0], adj[1])).unwrap();
+            let adj = free_nodes
+                .iter()
+                .combinations(2)
+                .find(|adj| comp.is_adjacent(adj[0], adj[1]))
+                .unwrap();
             let f1 = *adj[0];
             let f2 = *adj[1];
             let f3 = *free_nodes.iter().find(|f| !adj.contains(f)).unwrap();
             let v3 = comp
-            .nodes()
-            .iter()
-            .find(|v| comp.is_adjacent(v, &f3) && (comp.is_adjacent(v, &f1) || comp.is_adjacent(v, &f2)))
-            .unwrap()
-            .clone();
+                .nodes()
+                .iter()
+                .find(|v| {
+                    comp.is_adjacent(v, &f3)
+                        && (comp.is_adjacent(v, &f1) || comp.is_adjacent(v, &f2))
+                })
+                .unwrap()
+                .clone();
             let v1 = comp
-            .nodes()
-            .iter()
-            .find(|v| !comp.is_adjacent(v, &f3) && (comp.is_adjacent(v, &f1) || comp.is_adjacent(v, &f2)))
-            .unwrap()
-            .clone();
+                .nodes()
+                .iter()
+                .find(|v| {
+                    !comp.is_adjacent(v, &f3)
+                        && (comp.is_adjacent(v, &f1) || comp.is_adjacent(v, &f2))
+                })
+                .unwrap()
+                .clone();
             let v2 = comp
                 .nodes()
                 .iter()
                 .find(|v| comp.is_adjacent(v, &v1) && comp.is_adjacent(v, &f3))
                 .unwrap()
                 .clone();
-        
 
             // Case a) new nice pairs between v1,v2,v3
             let case_a = vec![
-                InstPart::new_nice_pairs(vec![(v1,v3)]),
-                InstPart::new_nice_pairs(vec![(v2,v3)]),
+                InstPart::new_nice_pairs(vec![(v1, v3)]),
+                InstPart::new_nice_pairs(vec![(v2, v3)]),
             ];
 
             // Case b) edges from f1 and f2 and f3
@@ -768,8 +799,6 @@ fn handle_contractable_components(
                 .unique()
                 .collect_vec();
 
-            // TODO we could throw some out?!
-
             // Case a) new nice pair configs
             let case_a = np_configs
                 .into_iter()
@@ -777,11 +806,31 @@ fn handle_contractable_components(
                 .collect_vec();
 
             // Case b) edges from free nodes
-            let case_b = to_cases(
-                edge_iterator(free_nodes, complement, true, !finite),
-                nodes_to_pidx,
-                instance,
-            );
+            let iter = edge_iterator(free_nodes.clone(), complement.clone(), true, !finite);
+            let comp = comp.clone();
+            let iter = iter.flat_map(move |(node, hit)| {
+                if free_nodes
+                    .iter()
+                    .filter(|f| comp.is_adjacent(f, &node))
+                    .count()
+                    == 1
+                {
+                    // This is the case where a new edge is enumerated, which is incident to exactly one used node
+                    // in this case, enumerating this edge is not enough to break contractability
+                    let other_free_nodes = free_nodes
+                        .iter()
+                        .filter(|f| f != &&node)
+                        .cloned()
+                        .collect_vec();
+                    return edge_iterator(other_free_nodes, complement.clone(), true, !finite)
+                        .map(|h| vec![(node, hit), h])
+                        .collect_vec();
+                } else {
+                    return vec![vec![(node, hit)]];
+                }
+            });
+            let  iter = Box::new(iter);
+            let case_b = to_cases_mul(iter, nodes_to_pidx, instance);
 
             return Some(Box::new(case_a.into_iter().chain(case_b)));
         }
