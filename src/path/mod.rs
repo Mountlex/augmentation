@@ -62,12 +62,13 @@ impl Display for PathComp {
             ),
             (Some(in_n), Some(out_n)) => write!(
                 f,
-                "[{}, in={}, out={}, idx={}{}]",
+                "[{}, in={}, out={}, idx={}{}, np={}]",
                 self.comp.short_name(),
                 in_n,
                 out_n,
                 self.path_idx,
-                used
+                self.used,
+                self.initial_nps.iter().filter(|(u,v)| !self.comp.is_adjacent(u, v)).map(|(u,v)| format!("({},{})",u,v)).join(",")
             ),
         }
     }

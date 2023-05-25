@@ -321,8 +321,8 @@ fn enumerate_parts(
     for path_comp in iter {
         if !(path_comp.comp.is_c4()
             || path_comp.comp.is_large()
-            || (path_comp.comp.is_c5() && !path_comp.used && path_comp.path_idx.is_prelast()))
-            && !contractability_checked.contains(&&path_comp.path_idx)
+            || (path_comp.comp.is_c5() && !path_comp.used && path_comp.path_idx.is_prelast() && !path_comp.comp.is_adjacent(&path_comp.in_node.unwrap(), &path_comp.out_node.unwrap())))
+            && (!contractability_checked.contains(&&path_comp.path_idx) || path_comp.comp.is_c7())
         {
             if let Some(iter) =
                 handle_contractable_components(path_comp, instance, finite, nodes_to_pidx.clone())

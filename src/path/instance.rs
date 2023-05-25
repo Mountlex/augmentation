@@ -268,13 +268,15 @@ impl Display for Instance {
         let all_edges = self.all_edges();
         let outside = self.out_edges();
         let rem_edges = self.rem_edges();
+        let added_np = self.stack.iter().flat_map(|part| part.as_inst_part()).flat_map(|part| part.nice_pairs.clone()).collect_vec();
         write!(
             f,
-            "Instance: [{}] E=[{}] O=[{}] R=[{}]",
+            "Instance: [{}] E=[{}] O=[{}] R=[{}] NP=[{}]",
             path_comps.join(", "),
             all_edges.iter().join(","),
             outside.iter().join(","),
-            rem_edges.iter().join(",")
+            rem_edges.iter().join(","),
+            added_np.iter().map(|(u,v)| format!("({},{})",u,v)).join(","),
         )
     }
 }
