@@ -68,7 +68,11 @@ impl Display for PathComp {
                 out_n,
                 self.path_idx,
                 self.used,
-                self.initial_nps.iter().filter(|(u,v)| !self.comp.is_adjacent(u, v)).map(|(u,v)| format!("({},{})",u,v)).join(",")
+                self.initial_nps
+                    .iter()
+                    .filter(|(u, v)| !self.comp.is_adjacent(u, v))
+                    .map(|(u, v)| format!("({},{})", u, v))
+                    .join(",")
             ),
         }
     }
