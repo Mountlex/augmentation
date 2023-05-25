@@ -813,7 +813,7 @@ fn handle_contractable_components(
                     .iter()
                     .filter(|f| comp.is_adjacent(f, &node))
                     .count()
-                    == 1
+                    == 1 && num_cords == 2
                 {
                     // This is the case where a new edge is enumerated, which is incident to exactly one used node
                     // in this case, enumerating this edge is not enough to break contractability
