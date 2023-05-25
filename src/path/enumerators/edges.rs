@@ -327,7 +327,7 @@ fn enumerate_parts(
                 && !path_comp
                     .comp
                     .is_adjacent(&path_comp.in_node.unwrap(), &path_comp.out_node.unwrap())))
-            && (!contractability_checked.contains(&&path_comp.path_idx) || path_comp.comp.is_c7())
+            && (!contractability_checked.contains(&&path_comp.path_idx))
         {
             if let Some(iter) =
                 handle_contractable_components(path_comp, instance, finite, nodes_to_pidx.clone())
