@@ -321,7 +321,12 @@ fn enumerate_parts(
     for path_comp in iter {
         if !(path_comp.comp.is_c4()
             || path_comp.comp.is_large()
-            || (path_comp.comp.is_c5() && !path_comp.used && path_comp.path_idx.is_prelast() && !path_comp.comp.is_adjacent(&path_comp.in_node.unwrap(), &path_comp.out_node.unwrap())))
+            || (path_comp.comp.is_c5()
+                && !path_comp.used
+                && path_comp.path_idx.is_prelast()
+                && !path_comp
+                    .comp
+                    .is_adjacent(&path_comp.in_node.unwrap(), &path_comp.out_node.unwrap())))
             && (!contractability_checked.contains(&&path_comp.path_idx) || path_comp.comp.is_c7())
         {
             if let Some(iter) =
@@ -703,8 +708,14 @@ fn handle_contractable_components(
             let num_cords =
                 (opt_lb as f64 - comp.graph().node_count() as f64 * (4.0 / 5.0)).floor() as usize;
             // 1 <= num_cors <= 2
+            assert!(num_cords <= 2);
+            assert!(num_cords >= 1);
 
-            let all_possible_cords = free_nodes.iter().combinations(2).collect_vec();
+            let all_possible_cords = free_nodes
+                .iter()
+                .combinations(2)
+                .filter(|c| !comp.is_adjacent(c[0], c[1]))
+                .collect_vec();
 
             let np_configs = all_possible_cords
                 .iter()
@@ -743,7 +754,7 @@ fn handle_contractable_components(
                 .map(|nps| InstPart::new_nice_pairs(nps))
                 .collect_vec();
 
-            // Case b) edges from f1 and f2 and f3
+            // Case b) edges from free nodes
             let case_b = to_cases(
                 edge_iterator(free_nodes, complement, true, !finite),
                 nodes_to_pidx,
