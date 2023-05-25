@@ -763,9 +763,10 @@ fn handle_contractable_components(
                         .map(|m| (*m[0], *m[1]))
                         .collect_vec();
                     // TODO 
-                    //induced_nps.sort();
+                    induced_nps.sort();
                     induced_nps
                 })
+                .unique()
                 .collect_vec();
 
             // TODO we could throw some out?!
