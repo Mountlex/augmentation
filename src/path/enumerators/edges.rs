@@ -1,13 +1,12 @@
 use itertools::Itertools;
 
 use crate::path::extension::{Extension, InOutNode};
+use crate::path::path_definition::valid_in_out_npc;
+use crate::util::{product_of_first,hamiltonian_paths};
 use crate::path::{instance::InstPart, instance::Instance};
 use crate::{
     path::{
-        enumerators::pseudo_cycles::product_of_first,
-        proof::check_progress,
-        tactics::cycle_rearrange::{check_fixed_extension_feasible, valid_in_out_npc},
-        utils::hamiltonian_paths,
+        proof::check_progress, tactics::check_fixed_extension_feasible,
         HalfAbstractEdge, PathComp, Pidx,
     },
     types::Edge,
@@ -494,7 +493,6 @@ fn to_cases_with_edge_cost_mul(
                         source: node,
                         source_idx: nodes_to_pidx[node.get_id() as usize].unwrap(),
                         cost,
-                        matching_with: vec![], // TODO
                         id: new_rem_id,
                     });
                 }

@@ -1,11 +1,12 @@
-use itertools::{iproduct, Itertools};
+use itertools::Itertools;
 
 use crate::{
     path::{
         instance::Instance,
         pseudo_cycle::{CycleComp, PseudoCycle},
-        EdgeId, HalfAbstractEdge, PathComp,
+        EdgeId, HalfAbstractEdge, PathComp, 
     },
+    util::product_of_first,
     types::Edge,
     Credit, Node,
 };
@@ -24,7 +25,6 @@ pub fn enumerate_pseudo_cycles(
         source_idx: last_comp.path_idx,
         cost: Credit::from_integer(1),
         id: EdgeId(0),
-        matching_with: vec![],
     });
 
     if path_comps.len() < 3 {
@@ -46,88 +46,6 @@ pub fn enumerate_pseudo_cycles(
     iter
 }
 
-pub fn product_of_first<T: Clone + Copy + 'static>(
-    mut edges: Vec<Vec<T>>,
-) -> Box<dyn Iterator<Item = Vec<T>>> {
-    let length = edges.len();
-    if length == 8 {
-        let edges0 = edges.remove(0);
-        let edges1 = edges.remove(0);
-        let edges2 = edges.remove(0);
-        let edges3 = edges.remove(0);
-        let edges4 = edges.remove(0);
-        let edges5 = edges.remove(0);
-        let edges6 = edges.remove(0);
-        let edges7 = edges.remove(0);
-
-        Box::new(
-            iproduct!(edges0, edges1, edges2, edges3, edges4, edges5, edges6, edges7)
-                .map(|(e1, e2, e3, e4, e5, e6, e7, e8)| vec![e1, e2, e3, e4, e5, e6, e7, e8]),
-        )
-    } else if length == 7 {
-        let edges0 = edges.remove(0);
-        let edges1 = edges.remove(0);
-        let edges2 = edges.remove(0);
-        let edges3 = edges.remove(0);
-        let edges4 = edges.remove(0);
-        let edges5 = edges.remove(0);
-        let edges6 = edges.remove(0);
-
-        Box::new(
-            iproduct!(edges0, edges1, edges2, edges3, edges4, edges5, edges6)
-                .map(|(e1, e2, e3, e4, e5, e6, e7)| vec![e1, e2, e3, e4, e5, e6, e7]),
-        )
-    } else if length == 6 {
-        let edges0 = edges.remove(0);
-        let edges1 = edges.remove(0);
-        let edges2 = edges.remove(0);
-        let edges3 = edges.remove(0);
-        let edges4 = edges.remove(0);
-        let edges5 = edges.remove(0);
-
-        Box::new(
-            iproduct!(edges0, edges1, edges2, edges3, edges4, edges5)
-                .map(|(e1, e2, e3, e4, e5, e6)| vec![e1, e2, e3, e4, e5, e6]),
-        )
-    } else if length == 5 {
-        let edges0 = edges.remove(0);
-        let edges1 = edges.remove(0);
-        let edges2 = edges.remove(0);
-        let edges3 = edges.remove(0);
-        let edges4 = edges.remove(0);
-
-        Box::new(
-            iproduct!(edges0, edges1, edges2, edges3, edges4)
-                .map(|(e1, e2, e3, e4, e5)| vec![e1, e2, e3, e4, e5]),
-        )
-    } else if length == 4 {
-        let edges0 = edges.remove(0);
-        let edges1 = edges.remove(0);
-        let edges2 = edges.remove(0);
-        let edges3 = edges.remove(0);
-
-        Box::new(
-            iproduct!(edges0, edges1, edges2, edges3).map(|(e1, e2, e3, e4)| vec![e1, e2, e3, e4]),
-        )
-    } else if length == 3 {
-        let edges0 = edges.remove(0);
-        let edges1 = edges.remove(0);
-        let edges2 = edges.remove(0);
-
-        Box::new(iproduct!(edges0, edges1, edges2).map(|(e1, e2, e3)| vec![e1, e2, e3]))
-    } else if length == 2 {
-        let edges0 = edges.remove(0);
-        let edges1 = edges.remove(0);
-
-        Box::new(iproduct!(edges0, edges1).map(|(e1, e2)| vec![e1, e2]))
-    } else if length == 1 {
-        let edges0 = edges.remove(0);
-
-        Box::new(iproduct!(edges0).map(|e1| vec![e1]))
-    } else {
-        panic!("Pseudo Cycle Enumeration: length {} not supported!", length)
-    }
-}
 
 pub fn edges_between(
     edges: &[Edge],

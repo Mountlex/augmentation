@@ -6,10 +6,11 @@ use crate::{
     comps::{CompType, Component},
     types::Edge,
     Credit, CreditInv, Node,
+    logic::InstanceTrait,
 };
 
 use super::{
-    extension::Extension, logic::InstanceTrait, pseudo_cycle::PseudoCycle, EdgeId,
+    extension::Extension, pseudo_cycle::PseudoCycle, EdgeId,
     HalfAbstractEdge, NicePairConfig, PathComp, Pidx,
 };
 
@@ -145,6 +146,7 @@ pub struct Instance {
 
 impl InstanceTrait for Instance {
     type StackElement = StackElement;
+    type Payload = ();
 
     fn item_msg(&self, item: &Self::StackElement, enum_msg: &str) -> String {
         match item {

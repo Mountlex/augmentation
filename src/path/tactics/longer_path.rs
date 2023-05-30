@@ -3,14 +3,15 @@ use std::fmt::Write;
 use itertools::Itertools;
 
 use crate::{
-    path::{enumerators::pseudo_cycles::product_of_first, instance::Instance, Pidx},
+    path::{instance::Instance, Pidx},
     path::{
         extension::{Extension, InOutNode},
-        PathProofNode,
+        PathProofNode, path_definition::valid_in_out_npc, 
     },
+    util::product_of_first
 };
 
-use super::cycle_rearrange::{check_fixed_extension_feasible, valid_in_out_npc};
+use super::cycle_rearrange::check_fixed_extension_feasible;
 
 // checked
 

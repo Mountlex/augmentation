@@ -1,64 +1,13 @@
 use itertools::Itertools;
 use std::fmt::Debug;
 
-use super::PathProofNode;
+use crate::proof_tree::ProofNode;
 
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
-#[derive(Debug, Clone)]
-pub enum Expression<E, OE, T, M> {
-    Quantor(Quantor<E, OE, T, M>),
-    Tactic(T),
-    Or(Box<Expression<E, OE, T, M>>, Box<Expression<E, OE, T, M>>),
-    And(Box<Expression<E, OE, T, M>>, Box<Expression<E, OE, T, M>>),
-    Map(M, Box<Expression<E, OE, T, M>>),
-}
-
-impl<
-        I: InstanceTrait,
-        E: EnumeratorTrait<Inst = I>,
-        OE: OptEnumeratorTrait<Inst = I>,
-        T: TacticTrait<Inst = I>,
-        M: MapperTrait<Inst = I>,
-    > Expression<E, OE, T, M>
-{
-    pub fn prove(&self, stack: &mut I) -> PathProofNode {
-        match self {
-            Expression::Quantor(q) => q.prove(stack),
-            Expression::Tactic(t) => t.prove(stack),
-            Expression::Or(f1, f2) => {
-                let mut proof1 = f1.prove(stack);
-                proof1.eval();
-                if proof1.success() {
-                    proof1
-                } else {
-                    let proof2 = f2.prove(stack);
-                    PathProofNode::new_or(proof1, proof2)
-                }
-            }
-            Expression::And(f1, f2) => {
-                let mut proof1 = f1.prove(stack);
-                proof1.eval();
-                if !proof1.success() {
-                    proof1
-                } else {
-                    let proof2 = f2.prove(stack);
-                    PathProofNode::new_and(proof1, proof2)
-                }
-            }
-            Expression::Map(mapper, expression) => {
-                let element = mapper.stack_element(stack);
-                stack.push(element);
-                let result = expression.prove(stack);
-                stack.pop();
-                result
-            }
-        }
-    }
-}
-
 pub trait InstanceTrait: Clone + Send + Sync {
     type StackElement: Sized + Clone + Debug + Send + Sync;
+    type Payload: Sized + Clone + Debug + Send + Sync;
 
     fn item_msg(&self, item: &Self::StackElement, enum_msg: &str) -> String;
 
@@ -94,12 +43,64 @@ pub trait EnumeratorTrait: Clone + Send + Sync {
 pub trait TacticTrait: Clone + Send + Sync {
     type Inst: InstanceTrait;
 
-    fn prove(&self, stack: &mut Self::Inst) -> PathProofNode;
+    fn prove(&self, stack: &mut Self::Inst) -> ProofNode<<Self::Inst as InstanceTrait>::Payload>;
 }
 
 pub trait MapperTrait: Clone + Send + Sync {
     type Inst: InstanceTrait;
     fn stack_element(&self, stack: &Self::Inst) -> <Self::Inst as InstanceTrait>::StackElement;
+}
+
+#[derive(Debug, Clone)]
+pub enum Expression<E, OE, T, M> {
+    Quantor(Quantor<E, OE, T, M>),
+    Tactic(T),
+    Or(Box<Expression<E, OE, T, M>>, Box<Expression<E, OE, T, M>>),
+    And(Box<Expression<E, OE, T, M>>, Box<Expression<E, OE, T, M>>),
+    Map(M, Box<Expression<E, OE, T, M>>),
+}
+
+impl<I, E, OE, T, M> Expression<E, OE, T, M>
+where
+    I: InstanceTrait,
+    E: EnumeratorTrait<Inst = I>,
+    OE: OptEnumeratorTrait<Inst = I>,
+    T: TacticTrait<Inst = I>,
+    M: MapperTrait<Inst = I>,
+{
+    pub fn prove(&self, stack: &mut I) -> ProofNode<I::Payload> {
+        match self {
+            Expression::Quantor(q) => q.prove(stack),
+            Expression::Tactic(t) => t.prove(stack),
+            Expression::Or(f1, f2) => {
+                let mut proof1 = f1.prove(stack);
+                proof1.eval();
+                if proof1.success() {
+                    proof1
+                } else {
+                    let proof2 = f2.prove(stack);
+                    ProofNode::new_or(proof1, proof2)
+                }
+            }
+            Expression::And(f1, f2) => {
+                let mut proof1 = f1.prove(stack);
+                proof1.eval();
+                if !proof1.success() {
+                    proof1
+                } else {
+                    let proof2 = f2.prove(stack);
+                    ProofNode::new_and(proof1, proof2)
+                }
+            }
+            Expression::Map(mapper, expression) => {
+                let element = mapper.stack_element(stack);
+                stack.push(element);
+                let result = expression.prove(stack);
+                stack.pop();
+                result
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -137,7 +138,7 @@ impl<
         }
     }
 
-    fn prove(&self, stack: &mut I) -> PathProofNode {
+    fn prove(&self, stack: &mut I) -> ProofNode<I::Payload> {
         let mut enum_msg = String::new();
         let (case_iterator, otherwise) = match self {
             Quantor::All(e, _, _sc) => (Some(e.get_iter(stack)), None),
@@ -155,23 +156,23 @@ impl<
 
         if let Some(case_iterator) = case_iterator {
             let mut proof = match self {
-                Quantor::All(e, _, _) => PathProofNode::new_all(e.msg().to_string()),
-                Quantor::AllOpt(e, _, _, _) => PathProofNode::new_all(e.msg().to_string()),
-                Quantor::AllOptPar(e, _, _, _) => PathProofNode::new_all(e.msg().to_string()),
-                Quantor::Any(e, _) => PathProofNode::new_any(e.msg().to_string()),
+                Quantor::All(e, _, _) => ProofNode::new_all(e.msg().to_string()),
+                Quantor::AllOpt(e, _, _, _) => ProofNode::new_all(e.msg().to_string()),
+                Quantor::AllOptPar(e, _, _, _) => ProofNode::new_all(e.msg().to_string()),
+                Quantor::Any(e, _) => ProofNode::new_any(e.msg().to_string()),
             };
 
             //if false {
             if let Quantor::AllOptPar(_, _, _, _) = self {
                 let cases = case_iterator.collect_vec();
-                let nodes: Vec<PathProofNode> = cases
+                let nodes: Vec<_> = cases
                     .into_par_iter()
                     .map(|case| {
                         let item_msg = stack.item_msg(&case, &enum_msg);
                         let mut stack = stack.clone();
                         stack.push(case);
                         let mut proof_item = self.formula().prove(&mut stack);
-                        proof_item = PathProofNode::new_info(item_msg, proof_item);
+                        proof_item = ProofNode::new_info(item_msg, proof_item);
                         let _outcome = proof_item.eval();
 
                         // if let Quantor::AllOpt(OptEnumerator::PathNode, _, _, _) = self {
@@ -189,7 +190,7 @@ impl<
                     let item_msg = stack.item_msg(&case, &enum_msg);
                     stack.push(case);
                     let mut proof_item = self.formula().prove(stack);
-                    proof_item = PathProofNode::new_info(item_msg, proof_item);
+                    proof_item = ProofNode::new_info(item_msg, proof_item);
                     let outcome = proof_item.eval();
 
                     // if let Quantor::AllOpt(OptEnumerator::PathNode, _, _, _) = self {

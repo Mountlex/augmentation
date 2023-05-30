@@ -1,12 +1,10 @@
 mod enumerators;
 mod extension;
 mod instance;
-mod logic;
 mod proof;
 mod pseudo_cycle;
 mod tactics;
-mod util;
-mod utils;
+mod path_definition;
 
 use std::{cmp::Ordering, fmt::Display};
 
@@ -14,15 +12,17 @@ use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 pub use proof::PathProofOptions;
 
+use crate::logic::InstanceTrait;
 use crate::proof_tree::ProofNode;
 use crate::Credit;
 use crate::Node;
 
 use crate::comps::*;
 
-use self::instance::InstanceProfile;
+use self::instance::Instance;
 
-pub type PathProofNode = ProofNode<InstanceProfile>;
+
+pub type PathProofNode = ProofNode<<Instance as InstanceTrait>::Payload>;
 
 #[derive(Clone, Debug)]
 pub struct PathComp {
@@ -104,7 +104,6 @@ pub struct HalfAbstractEdge {
     source: Node,
     source_idx: Pidx,
     id: EdgeId,
-    matching_with: Vec<EdgeId>,
     cost: Credit,
 }
 
@@ -135,9 +134,7 @@ impl Display for NicePairConfig {
 }
 
 impl NicePairConfig {
-    pub fn empty() -> Self {
-        NicePairConfig { nice_pairs: vec![] }
-    }
+    
 
     pub fn is_nice_pair(&self, u: Node, v: Node) -> bool {
         self.nice_pairs

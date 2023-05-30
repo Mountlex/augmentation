@@ -1,167 +1,22 @@
 use std::fmt::Write;
 use std::path::PathBuf;
+use chrono::prelude::*;
 
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::path::instance::{InstanceContext, PathNode};
-use crate::path::{PathComp, Pidx};
-use crate::{comps::Component, path::PathProofNode, CreditInv};
+use crate::path::{PathComp, Pidx, PathProofNode};
+use crate::{comps::Component,  CreditInv};
 
-use super::enumerators::edges::edge_enumerator;
-use super::enumerators::path_nodes::{path_comp_enumerator, path_extension_enumerator};
-use super::enumerators::pseudo_cycles::enumerate_pseudo_cycles;
-use super::enumerators::rearrangements::enumerate_rearrangements;
+use super::enumerators::{Enumerator, OptEnumerator, path_comp_enumerator};
 use super::instance::{InstPart, Instance, StackElement};
-use super::logic::*;
-use super::tactics::contract::check_contractability;
-use super::tactics::cycle_merge::check_cycle_merge;
-use super::tactics::cycle_rearrange::check_path_rearrangement;
-use super::tactics::local_merge::check_local_merge;
-use super::tactics::longer_path::check_longer_nice_path;
-use super::tactics::pendant_rewire::check_pendant_node;
+use crate::logic::*;
+use super::tactics::Tactic;
+
 
 type ProofExpr = Expression<Enumerator, OptEnumerator, Tactic, Mapper>;
 
-#[derive(Clone, Debug)]
-enum Enumerator {
-    //NicePairs,
-    PseudoCycle(bool),
-    Rearrangments(bool),
-}
-
-impl EnumeratorTrait for Enumerator {
-    type Inst = Instance;
-
-    fn msg(&self) -> &str {
-        match self {
-            //Enumerator::PathNodes => "Enumerate new path node",
-            //Enumerator::NicePairs => "Enumerate nice pairs",
-            Enumerator::PseudoCycle(_) => "Enumerate pseudo cycles",
-            Enumerator::Rearrangments(_) => "Enumerate rearrangements",
-        }
-    }
-
-    fn get_iter(
-        &self,
-        stack: &Instance,
-    ) -> Box<dyn Iterator<Item = <Instance as InstanceTrait>::StackElement>> {
-        match self {
-            // Enumerator::PathNodes => {
-            //     Box::new(path_extension_enumerator(stack).map(StackElement::Inst))
-            // }
-            //Enumerator::NicePairs => Box::new(nice_pairs_enumerator(stack).map(StackElement::Inst)),
-            Enumerator::PseudoCycle(finite) => {
-                Box::new(enumerate_pseudo_cycles(stack, *finite).map(StackElement::PseudoCycle))
-            }
-
-            Enumerator::Rearrangments(finite) => {
-                Box::new(enumerate_rearrangements(stack, *finite).map(StackElement::Rearrangement))
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum OptEnumerator {
-    Edges(bool),
-    PathNode,
-}
-
-impl OptEnumeratorTrait for OptEnumerator {
-    type Inst = Instance;
-
-    fn msg(&self) -> &str {
-        match self {
-            OptEnumerator::Edges(_) => "Enumerate edges",
-            OptEnumerator::PathNode => "Enumerate path node",
-        }
-    }
-
-    fn try_iter(
-        &self,
-        instance: &mut Instance,
-    ) -> Option<(Box<dyn Iterator<Item = StackElement>>, String)> {
-        let result = match self {
-            OptEnumerator::Edges(finite) => edge_enumerator(instance, *finite),
-            OptEnumerator::PathNode => path_extension_enumerator(instance),
-        };
-
-        if let Some((case_iter, msg)) = result {
-            Some((Box::new(case_iter.map(StackElement::Inst)), msg))
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum Tactic {
-    LongerPath(bool),
-    CycleMerge,
-    LocalMerge,
-    Rearrangable(bool),
-    Contractable,
-    Pendant,
-    TacticsExhausted(bool),
-}
-
-impl TacticTrait for Tactic {
-    type Inst = Instance;
-
-    fn prove(&self, stack: &mut Instance) -> PathProofNode {
-        let proof = match self {
-            Tactic::LongerPath(finite) => check_longer_nice_path(stack, *finite),
-            Tactic::CycleMerge => check_cycle_merge(stack),
-            Tactic::LocalMerge => check_local_merge(stack),
-            Tactic::Rearrangable(finite) => check_path_rearrangement(stack, *finite),
-            Tactic::Contractable => check_contractability(stack),
-            Tactic::Pendant => check_pendant_node(stack),
-            Tactic::TacticsExhausted(finite) => {
-                let all_edges = stack.all_edges();
-                let outside = stack.out_edges();
-                let path_comps = stack.path_nodes().collect_vec();
-                let rem_edges = stack.rem_edges();
-
-                //  println!("{}", stack.get_profile(true));
-
-                let msg = format!(
-                    "Instance: [{}][{}][{}][{}]",
-                    path_comps.iter().join(", "),
-                    all_edges.iter().join(","),
-                    outside.iter().join(","),
-                    rem_edges.iter().join(",")
-                );
-
-                if *finite {
-                    log::info!("tactics (finite) exhausted for: {}", msg);
-                    PathProofNode::new_leaf("Tactics (finite) exhausted!".into(), false)
-                } else {
-                    log::info!("tactics exhausted for: {}", msg);
-                    PathProofNode::new_leaf("Tactics exhausted!".into(), false)
-                }
-            } // Tactic::Print => {
-              //     let all_edges = stack.all_edges();
-              //     let outside = stack.out_edges();
-              //     let path_comps = stack.path_nodes().collect_vec();
-              //     let rem_edges = stack.rem_edges();
-
-              //     //  println!("{}", stack.get_profile(true));
-
-              //     let msg = format!(
-              //         "Instance: [{}][{}][{}][{}]",
-              //         path_comps.iter().join(", "),
-              //         all_edges.iter().join(","),
-              //         outside.iter().join(","),
-              //         rem_edges.iter().join(",")
-              //     );
-
-              //     PathProofNode::new_leaf(msg, false)
-              // }
-        };
-        proof
-    }
-}
 
 #[derive(Clone, Debug)]
 enum Mapper {
@@ -361,7 +216,6 @@ fn compute_initial_cases(
     cases
 }
 
-use chrono::prelude::*;
 
 fn prove_last_node(
     nodes: Vec<PathNode>,

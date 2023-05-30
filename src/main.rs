@@ -9,19 +9,15 @@ use num_rational::Rational64;
 use path::{prove_nice_path_progress, PathProofOptions};
 
 use comps::*;
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use tree::prove_tree_case;
 
-mod bridges;
 mod util;
 //mod contract;
 //mod local_merge;
 mod comps;
 mod credit;
 mod path;
-mod proof_logic;
 mod proof_tree;
-mod tree;
+mod logic;
 mod types;
 
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Hash)]
@@ -97,7 +93,7 @@ pub type Graph = petgraph::graphmap::UnGraphMap<Node, EdgeType>;
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 enum Cli {
-    Tree(Tree),
+    //Tree(Tree),
     Path(Path),
 }
 
@@ -163,65 +159,65 @@ fn main() -> anyhow::Result<()> {
     setup_logging(false)?;
 
     match cli {
-        Cli::Tree(local) => prove_local(local),
+        //Cli::Tree(local) => prove_local(local),
         Cli::Path(path) => prove_path(path),
     }
 
     Ok(())
 }
 
-fn prove_local(tree: Tree) {
-    let inv = CreditInv::new(Credit::new(tree.c_numer, tree.c_demon));
+// fn prove_local(tree: Tree) {
+//     let inv = CreditInv::new(Credit::new(tree.c_numer, tree.c_demon));
 
-    let leaf_comps = vec![large(), complex_tree(), complex_path()];
+//     let leaf_comps = vec![large(), complex_tree(), complex_path()];
 
-    let comps = if inv.c < Credit::new(2, 7) {
-        vec![
-            large(),
-            complex_tree(),
-            complex_path(),
-            c3(),
-            c4(),
-            c5(),
-            c6(),
-            c7(),
-        ]
-    } else {
-        vec![
-            large(),
-            complex_tree(),
-            complex_path(),
-            c3(),
-            c4(),
-            c5(),
-            c6(),
-        ]
-    };
+//     let comps = if inv.c < Credit::new(2, 7) {
+//         vec![
+//             large(),
+//             complex_tree(),
+//             complex_path(),
+//             c3(),
+//             c4(),
+//             c5(),
+//             c6(),
+//             c7(),
+//         ]
+//     } else {
+//         vec![
+//             large(),
+//             complex_tree(),
+//             complex_path(),
+//             c3(),
+//             c4(),
+//             c5(),
+//             c6(),
+//         ]
+//     };
 
-    if tree.parallel {
-        leaf_comps.into_par_iter().for_each(|leaf_comp| {
-            prove_tree_case(
-                comps.clone(),
-                leaf_comp,
-                &inv,
-                tree.output_dir.clone(),
-                tree.output_depth,
-                tree.sc,
-            )
-        });
-    } else {
-        for leaf_comp in leaf_comps {
-            prove_tree_case(
-                comps.clone(),
-                leaf_comp,
-                &inv,
-                tree.output_dir.clone(),
-                tree.output_depth,
-                tree.sc,
-            )
-        }
-    }
-}
+//     if tree.parallel {
+//         leaf_comps.into_par_iter().for_each(|leaf_comp| {
+//             prove_tree_case(
+//                 comps.clone(),
+//                 leaf_comp,
+//                 &inv,
+//                 tree.output_dir.clone(),
+//                 tree.output_depth,
+//                 tree.sc,
+//             )
+//         });
+//     } else {
+//         for leaf_comp in leaf_comps {
+//             prove_tree_case(
+//                 comps.clone(),
+//                 leaf_comp,
+//                 &inv,
+//                 tree.output_dir.clone(),
+//                 tree.output_depth,
+//                 tree.sc,
+//             )
+//         }
+//     }
+// }
 
 fn prove_path(path: Path) {
     let inv = CreditInv::new(Rational64::new(path.c_numer, path.c_demon).into());

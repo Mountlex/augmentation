@@ -1,10 +1,9 @@
 use itertools::Itertools;
 
 use crate::{
-    comps::{CompType, Component},
-    path::{extension::Extension, PathProofNode, Pidx},
+    comps::CompType,
+    path::{extension::Extension, PathProofNode, Pidx, path_definition::valid_in_out_npc},
     path::{instance::Instance, NicePairConfig, PathComp},
-    Node,
 };
 
 // checked
@@ -136,23 +135,3 @@ pub fn check_fixed_extension_feasible(
     PathProofNode::new_leaf("Feasible path".into(), true)
 }
 
-pub fn valid_in_out_npc(
-    c: &Component,
-    npc: &NicePairConfig,
-    new_in: Node,
-    new_out: Node,
-    prelast: bool,
-    used: bool,
-) -> bool {
-    if c.is_c3() || c.is_c4() {
-        npc.is_nice_pair(new_in, new_out)
-    } else if c.is_c5() && prelast && used {
-        new_in != new_out
-    } else if c.is_c5() && prelast && !used {
-        npc.is_nice_pair(new_in, new_out)
-    } else if c.is_complex() {
-        new_in != new_out || new_in.is_comp()
-    } else {
-        true
-    }
-}
