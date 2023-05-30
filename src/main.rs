@@ -139,11 +139,8 @@ struct Path {
     #[clap(short, long)]
     sc: bool,
 
-    #[clap(short = 'n', long = "node_depth", default_value = "3")]
-    node_depth: u8,
-
-    #[clap(short = 'e', long = "edge_depth", default_value = "5")]
-    edge_depth: u8,
+    #[clap(short = 'm', long = "max_depth", default_value = "20")]
+    max_depth: u8,
 
     #[clap(short = 'i', long = "initial_depth", default_value = "1")]
     initial_depth: u8,
@@ -266,9 +263,8 @@ fn prove_path(path: Path) {
         path.output_dir,
         path.output_depth,
         PathProofOptions {
-            edge_depth: path.edge_depth,
-            node_depth: path.node_depth,
-            initial_depth: path.initial_depth,
+            max_depth: path.max_depth,
+            initial_node_depth: path.initial_depth,
             sc: path.sc,
         },
         path.parallel,

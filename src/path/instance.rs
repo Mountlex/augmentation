@@ -9,9 +9,133 @@ use crate::{
 };
 
 use super::{
-    extension::Extension, proof::InstPart, pseudo_cycle::PseudoCycle, EdgeId, HalfAbstractEdge,
-    NicePairConfig, PathComp, Pidx,
+    extension::Extension,  pseudo_cycle::PseudoCycle, EdgeId, HalfAbstractEdge,
+    NicePairConfig, PathComp, Pidx, logic::InstanceTrait,
 };
+
+#[derive(Clone, Debug)]
+pub struct InstPart {
+    pub path_nodes: Vec<PathComp>,
+    pub nice_pairs: Vec<(Node, Node)>,
+    pub edges: Vec<Edge>,
+    pub out_edges: Vec<Node>,
+    pub used_for_credit_gain: Vec<Node>,
+    pub rem_edges: Vec<HalfAbstractEdge>,
+    pub non_rem_edges: Vec<EdgeId>,
+    pub contractability_checked: Vec<Pidx>,
+    pub good_edges: Vec<Edge>,
+    pub good_out: Vec<Node>,
+}
+
+impl InstPart {
+    pub fn empty() -> InstPart {
+        InstPart {
+            path_nodes: vec![],
+            nice_pairs: vec![],
+            edges: vec![],
+            out_edges: vec![],
+            rem_edges: vec![],
+            used_for_credit_gain: vec![],
+            non_rem_edges: vec![],
+            contractability_checked: vec![],
+            good_edges: vec![],
+            good_out: vec![],
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.path_nodes.is_empty()
+            && self.nice_pairs.is_empty()
+            && self.edges.is_empty()
+            && self.out_edges.is_empty()
+            && self.used_for_credit_gain.is_empty()
+            && self.rem_edges.is_empty()
+            && self.non_rem_edges.is_empty()
+            && self.contractability_checked.is_empty()
+            && self.good_edges.is_empty()
+            && self.good_out.is_empty()
+    }
+
+    pub fn new_path_comp(path_comp: PathComp) -> InstPart {
+        InstPart {
+            path_nodes: vec![path_comp],
+            nice_pairs: vec![],
+            edges: vec![],
+            out_edges: vec![],
+            used_for_credit_gain: vec![],
+            rem_edges: vec![],
+            non_rem_edges: vec![],
+            contractability_checked: vec![],
+            good_edges: vec![],
+            good_out: vec![],
+        }
+    }
+
+    pub fn new_nice_pairs(nice_pairs: Vec<(Node, Node)>) -> InstPart {
+        InstPart {
+            path_nodes: vec![],
+            nice_pairs,
+            edges: vec![],
+            out_edges: vec![],
+            used_for_credit_gain: vec![],
+            rem_edges: vec![],
+            non_rem_edges: vec![],
+            contractability_checked: vec![],
+            good_edges: vec![],
+            good_out: vec![],
+        }
+    }
+}
+
+impl Display for InstPart {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Inst [")?;
+        if !self.path_nodes.is_empty() {
+            write!(f, "PathComps: ")?;
+            write!(f, "{}", self.path_nodes.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.edges.is_empty() {
+            write!(f, "Edges: ")?;
+            write!(f, "{}", self.edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.nice_pairs.is_empty() {
+            write!(f, "NicePairs: ")?;
+            write!(
+                f,
+                "{:?}",
+                self.nice_pairs
+                    .iter()
+                    .map(|n| format!("{:?}", n))
+                    .join(", ")
+            )?;
+            write!(f, ", ")?;
+        }
+        if !self.out_edges.is_empty() {
+            write!(f, "Outside: ")?;
+            write!(f, "{}", self.out_edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.used_for_credit_gain.is_empty() {
+            write!(f, "Used for credit gain: ")?;
+            write!(f, "{}", self.used_for_credit_gain.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.rem_edges.is_empty() {
+            write!(f, "Rem: ")?;
+            write!(f, "{}", self.rem_edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+        if !self.non_rem_edges.is_empty() {
+            write!(f, "Non-Rem-Ids: ")?;
+            write!(f, "{}", self.non_rem_edges.iter().join(", "))?;
+            write!(f, ", ")?;
+        }
+
+        write!(f, "]")
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Instance {
@@ -19,14 +143,28 @@ pub struct Instance {
     pub context: InstanceContext,
 }
 
-impl Instance {
-    pub fn push(&mut self, ele: StackElement) {
+impl InstanceTrait for Instance {
+    type StackElement = StackElement;
+
+    fn item_msg(&self, item: &Self::StackElement, enum_msg: &str) -> String {
+        match item {
+                        StackElement::Inst(_) => format!("part {}", enum_msg),
+                        StackElement::PseudoCycle(_) => format!("pc {}", enum_msg),
+                        StackElement::Rearrangement(_) => format!("rearr {}", enum_msg),
+                    }
+    }
+
+    fn push(&mut self, ele: StackElement) {
         self.stack.push(ele);
     }
 
-    pub fn pop(&mut self) {
+    fn pop(&mut self) {
         self.stack.pop().unwrap();
     }
+}
+
+impl Instance {
+    
 
     pub fn top_mut(&mut self) -> Option<&mut InstPart> {
         self.stack.last_mut().and_then(|last| match last {

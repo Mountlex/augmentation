@@ -4,9 +4,8 @@ use crate::{
     comps::Component,
     path::{
         enumerators::edges::edge_enumerator,
-        instance::{Instance, PathNode},
-        proof::InstPart,
-        NicePairConfig, PathComp, Pidx,
+        instance::{Instance, InstPart, PathNode},
+        PathComp, Pidx,
     },
     types::Edge,
     util::relabels_nodes_sequentially,

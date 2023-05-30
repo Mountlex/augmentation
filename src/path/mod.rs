@@ -6,6 +6,7 @@ mod pseudo_cycle;
 mod tactics;
 mod util;
 mod utils;
+mod logic;
 
 use std::{cmp::Ordering, fmt::Display};
 
