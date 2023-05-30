@@ -17,17 +17,60 @@ pub fn edge_enumerator(
     instance: &mut Instance,
     finite: bool,
 ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
-    let res = enumerate_parts(instance, finite);
+    let path_comps = instance.path_nodes().collect_vec();
 
-    //return res;
+    let mut nodes_to_pidx: Vec<Option<Pidx>> = vec![None; path_comps.len() * 20];
+    for path_comp in &path_comps {
+        for node in path_comp.comp.matching_nodes() {
+            nodes_to_pidx[node.get_id() as usize] = Some(path_comp.path_idx);
+        }
+    }
 
-    res.as_ref()?;
+    let res = eval(
+        instance,
+        &nodes_to_pidx,
+        finite,
+        vec![
+            Box::new(check_gainful_edges),
+            Box::new(check_comp_three_matching),
+            Box::new(check_three_matching),
+            Box::new(check_four_matching),
+            Box::new(check_comp_contractability),
+        ],
+    );
 
-    let (iter, name) = res.unwrap();
-    let cases = iter.collect_vec();
-    let iter = compute_good_edges(instance, finite, Box::new(cases.into_iter()));
+    if let Some((iter, name)) = res {
+        let cases = iter.collect_vec();
+        let iter = compute_good_edges(instance, finite, Box::new(cases.into_iter()));
 
-    Some((iter, name))
+        Some((iter, name))
+    } else {
+        None
+    }
+}
+
+fn eval(
+    instance: &Instance,
+    nodes_to_pidx: &Vec<Option<Pidx>>,
+    finite: bool,
+    funcs: Vec<
+        Box<
+            dyn Fn(
+                &Instance,
+                &Vec<Option<Pidx>>,
+                bool,
+            ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)>,
+        >,
+    >,
+) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
+    for f in funcs {
+        let res = f(instance, nodes_to_pidx, finite);
+        if res.is_some() {
+            return res;
+        }
+    }
+
+    None
 }
 
 // struct InstanceInfo {
@@ -39,42 +82,13 @@ pub fn edge_enumerator(
 //     nodes_to_pidx: Vec<Option<Pidx>>,
 // }
 
-fn enumerate_parts(
+fn check_comp_three_matching(
     instance: &Instance,
+    nodes_to_pidx: &Vec<Option<Pidx>>,
     finite: bool,
 ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
-    let path_comps = instance.path_nodes().cloned().collect_vec();
-    let old_path_len = path_comps.len();
-    let outside_edges = instance.out_edges();
-    let all_edges = instance.all_edges();
-    let npc = instance.npc();
-    let outside_used_for_gain = instance.used_for_credit_gain();
-
-    let mut nodes_to_pidx: Vec<Option<Pidx>> = vec![None; old_path_len * 20];
-    for path_comp in &path_comps {
-        for node in path_comp.comp.matching_nodes() {
-            nodes_to_pidx[node.get_id() as usize] = Some(path_comp.path_idx);
-        }
-    }
-
-    // Prio 1: Last comp gets 3-matching
-    let last_nodes = path_comps.first().unwrap().comp.matching_nodes().to_vec();
-    let other_nodes = path_comps
-        .iter()
-        .skip(1)
-        .flat_map(|p| p.comp.matching_nodes().to_vec())
-        .collect_vec();
-    if let Some(iter) = ensure_three_matching(last_nodes, other_nodes, instance, finite) {
-        return Some((
-            to_cases(iter, nodes_to_pidx, instance),
-            "3-Matching of last pathnode.".to_string(),
-        ));
-    }
-
-    // Prio 2: Single 3-matchings
+    let path_comps = instance.path_nodes().collect_vec();
     let len = path_comps.len();
-    //let mut path_comps = path_comps.into_iter().take(len - 1).collect_vec();
-    //path_comps.sort_by_key(|p| p.comp.matching_nodes().len());
     let iter = if finite {
         path_comps.iter().collect_vec()
     } else {
@@ -93,8 +107,16 @@ fn enumerate_parts(
             return Some((iter, format!("3-Matching of {}", idx)));
         }
     }
+    None
+}
 
-    // Prio 3: Larger comps
+fn check_three_matching(
+    instance: &Instance,
+    nodes_to_pidx: &Vec<Option<Pidx>>,
+    finite: bool,
+) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
+    let path_comps = instance.path_nodes().collect_vec();
+    let len = path_comps.len();
     for s in 2..=len - 1 {
         let comp_nodes = path_comps
             .iter()
@@ -112,7 +134,20 @@ fn enumerate_parts(
         }
     }
 
-    // Prio 3.5.1: Gainful outside edges
+    None
+}
+
+fn check_gainful_edges(
+    instance: &Instance,
+    nodes_to_pidx: &Vec<Option<Pidx>>,
+    finite: bool,
+) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
+    let path_comps = instance.path_nodes().cloned().collect_vec();
+    let outside_edges = instance.out_edges();
+    let all_edges = instance.all_edges();
+    let npc = instance.npc();
+    let outside_used_for_gain = instance.used_for_credit_gain();
+
     for &outside in outside_edges
         .iter()
         .filter(|e| !outside_used_for_gain.contains(e))
@@ -283,7 +318,17 @@ fn enumerate_parts(
         }
     }
 
-    // Prio 3.5: 4-matching
+    None
+}
+
+fn check_four_matching(
+    instance: &Instance,
+    nodes_to_pidx: &Vec<Option<Pidx>>,
+    finite: bool,
+) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
+    let path_comps = instance.path_nodes().collect_vec();
+    let len = path_comps.len();
+
     for s in 2..=len - 1 {
         let comp_nodes = path_comps
             .iter()
@@ -310,7 +355,17 @@ fn enumerate_parts(
         }
     }
 
-    // // Prio 4: Edges due to contractablility
+    None
+}
+
+fn check_comp_contractability(
+    instance: &Instance,
+    nodes_to_pidx: &Vec<Option<Pidx>>,
+    finite: bool,
+) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
+    let path_comps = instance.path_nodes().collect_vec();
+    let len = path_comps.len();
+
     let iter = if finite {
         path_comps.iter().collect_vec()
     } else {
@@ -342,79 +397,88 @@ fn enumerate_parts(
         }
     }
 
-    // Prio 5: Larger contractable comps
-    // let all_edges = instance.all_edges();
-    // let relevant_comps = path_comps
-    //     .iter()
-    //     .filter(|c| c.comp.is_c3() || c.comp.is_c4() || c.comp.is_c5() || c.comp.is_c6())
-    //     .cloned()
-    //     .collect_vec();
-    // for i in 3..=3 {
-    //     // println!("Instance: {}", instance);
-    //     for pc in pseudo_cycles_of_length(
-    //         relevant_comps.clone(),
-    //         None,
-    //         all_edges.clone(),
-    //         vec![],
-    //         i,
-    //         false,
-    //     ) {
-    //         //  println!("{}", pc);
-    //         let mut vertices_sets = vec![vec![]];
-    //         for (n1, c, n2) in pc.cycle {
-    //             let idx = c.to_idx();
-    //             let comp = relevant_comps
-    //                 .iter()
-    //                 .find(|comp| comp.path_idx == idx)
-    //                 .unwrap();
-    //             if n1 == n2 {
-    //                 vertices_sets.iter_mut().for_each(|set| set.push(n1));
-    //             } else if comp.comp.is_adjacent(&n1, &n2) {
-    //                 vertices_sets.iter_mut().for_each(|set| {
-    //                     set.append(&mut comp.comp.nodes().iter().cloned().collect_vec())
-    //                 });
-    //             } else {
-    //                 let (p1, p2) = comp.comp.paths_between(&n1, &n2);
-    //                 // println!("set {:?}, p1 {:?}, p2 {:?}", vertices_sets, p1, p2);
-    //                 vertices_sets = vertices_sets
-    //                     .into_iter()
-    //                     .flat_map(|set| {
-    //                         vec![
-    //                             vec![set.clone(), p1.clone()].concat(),
-    //                             vec![set, p2.clone()].concat(),
-    //                         ]
-    //                     })
-    //                     .collect_vec();
-    //             }
-    //         }
-
-    //         for set in vertices_sets {
-    //             if let Some(good_verts) = is_contractible(&set, instance) {
-    //                 // G[set] is contractible
-    //                 let all_nodes = instance
-    //                     .path_nodes()
-    //                     .flat_map(|c| c.comp.matching_nodes())
-    //                     .filter(|n| !set.contains(n) || good_verts.contains(n))
-    //                     .cloned()
-    //                     .collect_vec();
-
-    //                 // We now enumerate all edges which potentially resolve the contractability. Those are between the good vertices and
-    //                 // (all vertices / bad vertices) (including good vertices)
-    //                 let iter = edge_iterator(good_verts, all_nodes, true, !finite).unwrap();
-
-    //                 let iter = to_cases(iter, nodes_to_pidx, instance);
-    //                 //println!("iter: {}", iter.iter().join(", "));
-    //                 return Some((
-    //                     Box::new(iter),
-    //                     format!("Contractablility of large set {:?}", set),
-    //                 ));
-    //             }
-    //         }
-    //     }
-    // }
-
     None
 }
+
+// fn check_contractability(
+//     instance: &Instance,
+//     nodes_to_pidx: Vec<Option<Pidx>>,
+//     finite: bool,
+// ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
+//     let path_comps = instance.path_nodes().collect_vec();
+//     let len = path_comps.len();
+
+//     let all_edges = instance.all_edges();
+//     let relevant_comps = path_comps
+//         .iter()
+//         .filter(|c| c.comp.is_c3() || c.comp.is_c4() || c.comp.is_c5() || c.comp.is_c6())
+//         .cloned()
+//         .collect_vec();
+//     for i in 3..=3 {
+//         // println!("Instance: {}", instance);
+//         for pc in pseudo_cycles_of_length(
+//             relevant_comps.clone(),
+//             None,
+//             all_edges.clone(),
+//             vec![],
+//             i,
+//             false,
+//         ) {
+//             //  println!("{}", pc);
+//             let mut vertices_sets = vec![vec![]];
+//             for (n1, c, n2) in pc.cycle {
+//                 let idx = c.to_idx();
+//                 let comp = relevant_comps
+//                     .iter()
+//                     .find(|comp| comp.path_idx == idx)
+//                     .unwrap();
+//                 if n1 == n2 {
+//                     vertices_sets.iter_mut().for_each(|set| set.push(n1));
+//                 } else if comp.comp.is_adjacent(&n1, &n2) {
+//                     vertices_sets.iter_mut().for_each(|set| {
+//                         set.append(&mut comp.comp.nodes().iter().cloned().collect_vec())
+//                     });
+//                 } else {
+//                     let (p1, p2) = comp.comp.paths_between(&n1, &n2);
+//                     // println!("set {:?}, p1 {:?}, p2 {:?}", vertices_sets, p1, p2);
+//                     vertices_sets = vertices_sets
+//                         .into_iter()
+//                         .flat_map(|set| {
+//                             vec![
+//                                 vec![set.clone(), p1.clone()].concat(),
+//                                 vec![set, p2.clone()].concat(),
+//                             ]
+//                         })
+//                         .collect_vec();
+//                 }
+//             }
+
+//             for set in vertices_sets {
+//                 if let Some(good_verts) = is_contractible(&set, instance) {
+//                     // G[set] is contractible
+//                     let all_nodes = instance
+//                         .path_nodes()
+//                         .flat_map(|c| c.comp.matching_nodes())
+//                         .filter(|n| !set.contains(n) || good_verts.contains(n))
+//                         .cloned()
+//                         .collect_vec();
+
+//                     // We now enumerate all edges which potentially resolve the contractability. Those are between the good vertices and
+//                     // (all vertices / bad vertices) (including good vertices)
+//                     let iter = edge_iterator(good_verts, all_nodes, true, !finite).unwrap();
+
+//                     let iter = to_cases(iter, nodes_to_pidx, instance);
+//                     //println!("iter: {}", iter.iter().join(", "));
+//                     return Some((
+//                         Box::new(iter),
+//                         format!("Contractablility of large set {:?}", set),
+//                     ));
+//                 }
+//             }
+//         }
+//     }
+//     return None;
+// }
 
 fn compute_good_edges(
     instance: &mut Instance,
@@ -445,7 +509,7 @@ fn compute_good_edges(
 
 fn to_cases_mul(
     iter: Box<dyn Iterator<Item = Vec<(Node, Hit)>>>,
-    nodes_to_pidx: Vec<Option<Pidx>>,
+    nodes_to_pidx: &Vec<Option<Pidx>>,
     instance: &Instance,
 ) -> Box<dyn Iterator<Item = InstPart>> {
     to_cases_with_edge_cost_mul(iter, nodes_to_pidx, instance, Credit::from_integer(1))
@@ -453,7 +517,7 @@ fn to_cases_mul(
 
 fn to_cases(
     iter: Box<dyn Iterator<Item = (Node, Hit)>>,
-    nodes_to_pidx: Vec<Option<Pidx>>,
+    nodes_to_pidx: &Vec<Option<Pidx>>,
     instance: &Instance,
 ) -> Box<dyn Iterator<Item = InstPart>> {
     to_cases_with_edge_cost(iter, nodes_to_pidx, instance, Credit::from_integer(1))
@@ -461,7 +525,7 @@ fn to_cases(
 
 fn to_cases_with_edge_cost(
     iter: Box<dyn Iterator<Item = (Node, Hit)>>,
-    nodes_to_pidx: Vec<Option<Pidx>>,
+    nodes_to_pidx: &Vec<Option<Pidx>>,
     instance: &Instance,
     cost: Credit,
 ) -> Box<dyn Iterator<Item = InstPart>> {
@@ -471,7 +535,7 @@ fn to_cases_with_edge_cost(
 
 fn to_cases_with_edge_cost_mul(
     iter: Box<dyn Iterator<Item = Vec<(Node, Hit)>>>,
-    nodes_to_pidx: Vec<Option<Pidx>>,
+    nodes_to_pidx: &Vec<Option<Pidx>>,
     instance: &Instance,
     cost: Credit,
 ) -> Box<dyn Iterator<Item = InstPart>> {
@@ -481,6 +545,7 @@ fn to_cases_with_edge_cost_mul(
     let good_out = instance.good_out().into_iter().cloned().collect_vec();
 
     let new_rem_id = instance.new_rem_id();
+    let nodes_to_pidx = nodes_to_pidx.clone();
 
     let iter = Box::new(iter.flat_map(move |new_edges| {
         let mut part = InstPart::empty();
@@ -629,7 +694,7 @@ fn handle_contractable_components(
             // Case b) edges from f1 and f2
             let case_b = to_cases(
                 edge_iterator(free_nodes, complement, true, !finite),
-                nodes_to_pidx,
+                &nodes_to_pidx,
                 instance,
             );
 
@@ -674,7 +739,7 @@ fn handle_contractable_components(
                 // Case b) edges from f1 and f2 and f3
                 let case_b = to_cases(
                     edge_iterator(free_nodes, complement, true, !finite),
-                    nodes_to_pidx,
+                    &nodes_to_pidx,
                     instance,
                 );
 
@@ -741,7 +806,7 @@ fn handle_contractable_components(
             // Case b) edges from f1 and f2 and f3
             let case_b = to_cases(
                 edge_iterator(free_nodes, complement, true, !finite),
-                nodes_to_pidx,
+                &nodes_to_pidx,
                 instance,
             );
 
@@ -821,7 +886,7 @@ fn handle_contractable_components(
                 }
             });
             let iter = Box::new(iter);
-            let case_b = to_cases_mul(iter, nodes_to_pidx, instance);
+            let case_b = to_cases_mul(iter, &nodes_to_pidx, instance);
 
             return Some(Box::new(case_a.into_iter().chain(case_b)));
         }
