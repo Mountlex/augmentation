@@ -19,7 +19,7 @@ fn check_for_comp(instance: &Instance, idx: Pidx) -> PathProofNode {
 
     let comp = &path_comps[idx.raw()].comp;
 
-    if comp.is_complex() || comp.is_large() || comp.is_c3() || comp.is_c4() {
+    if comp.is_large() || comp.is_c3() || comp.is_c4() {
         return PathProofNode::new_leaf(
             "Contractability check not applied: component is C3, C4 , Large or Complex".into(),
             false,

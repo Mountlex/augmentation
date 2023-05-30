@@ -150,8 +150,6 @@ enum LastComp {
     C6,
     C7,
     L,
-    CT,
-    CP,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -248,8 +246,6 @@ fn prove_path(path: Path) {
         LastComp::C6 => c6(),
         LastComp::C7 => c7(),
         LastComp::L => large(),
-        LastComp::CP => complex_path(),
-        LastComp::CT => complex_tree(),
     };
 
     prove_nice_path_progress(

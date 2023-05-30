@@ -16,8 +16,9 @@ pub enum EdgeType {
     Buyable,
 }
 
-
-
+pub fn c3() -> Component {
+    Component::C3([0.into(), 1.into(), 2.into()])
+}
 pub fn c4() -> Component {
     Component::C4([0.into(), 1.into(), 2.into(), 3.into()])
 }
@@ -42,12 +43,59 @@ pub fn large() -> Component {
     Component::Large(Node::Comp(0))
 }
 
+pub fn complex_path() -> Component {
+    Component::ComplexPath(
+        Complex {
+            ///
+            /// 0 -- 1 -- 2 -- 3 -- 4 -- 5 -- 6
+            ///
+            graph: Graph::from_edges(vec![
+                (Node::c(0), 1.into(), EdgeType::Fixed),
+                (1.into(), 2.into(), EdgeType::Sellable),
+                (2.into(), 3.into(), EdgeType::Sellable),
+                (3.into(), 4.into(), EdgeType::Sellable),
+                (4.into(), 5.into(), EdgeType::Sellable),
+                (5.into(), Node::c(6), EdgeType::Fixed),
+            ]),
+            num_blocks: 2,
+            total_black_deg: 10,
+        },
+        [1.into(), 2.into(), 3.into(), 4.into(), 5.into()],
+    )
+}
 
+pub fn complex_tree() -> Component {
+    Component::ComplexTree(
+        Complex {
+            ///          0
+            ///          |
+            ///          1
+            ///          |
+            ///          2 -- 5 -- 6
+            ///          |
+            ///          3
+            ///          |
+            ///          4
+            graph: Graph::from_edges(vec![
+                (Node::c(0), 1.into(), EdgeType::Fixed),
+                (1.into(), 2.into(), EdgeType::Sellable),
+                (2.into(), 3.into(), EdgeType::Sellable),
+                (3.into(), Node::c(4), EdgeType::Fixed),
+                (2.into(), 5.into(), EdgeType::Sellable),
+                (5.into(), Node::c(6), EdgeType::Fixed),
+            ]),
+            num_blocks: 3,
+            total_black_deg: 9,
+        },
+        [1.into(), 2.into(), 3.into(), 5.into()],
+    )
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CompType {
     Cycle(usize),
     Large,
+    Complex,
 }
 
 impl Display for CompType {
@@ -55,6 +103,7 @@ impl Display for CompType {
         match self {
             CompType::Cycle(i) => write!(f, "C{}", i),
             CompType::Large => write!(f, "Lrg"),
+            CompType::Complex => write!(f, "Cpx"),
         }
     }
 }
@@ -67,6 +116,8 @@ pub enum Component {
     C4([Node; 4]),
     C3([Node; 3]),
     Large(Node),
+    ComplexPath(Complex, [Node; 5]),
+    ComplexTree(Complex, [Node; 4]),
 }
 
 impl Component {
@@ -131,11 +182,52 @@ impl Component {
         }
     }
 
+    pub fn is_complex(&self) -> bool {
+        matches!(self, Component::ComplexPath(_, _)) || matches!(self, Component::ComplexTree(_, _))
+    }
 
     pub fn is_large(&self) -> bool {
         matches!(self, Component::Large(_))
     }
 
+    pub fn complex_degree_between(&self, u: &Node, v: &Node) -> u32 {
+        match self {
+            Component::ComplexPath(_, _) => {
+                (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
+            }
+            Component::ComplexTree(_, b) => {
+                if b[..3].contains(u) && b[..3].contains(v) {
+                    (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
+                        + if u.to_vertex().min(v.to_vertex()) <= b[1].to_vertex()
+                            && u.to_vertex().max(v.to_vertex()) >= b[1].to_vertex()
+                        {
+                            1
+                        } else {
+                            0
+                        }
+                } else if b[3..].contains(u) && b[3..].contains(v) {
+                    (u.to_vertex().max(v.to_vertex()) - u.to_vertex().min(v.to_vertex()) + 1) * 2
+                } else if b[3..].contains(v) {
+                    (u.to_vertex().max(b[1].to_vertex()) - u.to_vertex().min(b[1].to_vertex())
+                        + v.to_vertex().max(b[1].to_vertex())
+                        - v.to_vertex().min(b[1].to_vertex())
+                        - 2
+                        + 1)
+                        * 2
+                        + 1
+                } else {
+                    (v.to_vertex().max(b[1].to_vertex()) - v.to_vertex().min(b[1].to_vertex())
+                        + u.to_vertex().max(b[1].to_vertex())
+                        - u.to_vertex().min(b[1].to_vertex())
+                        - 2
+                        + 1)
+                        * 2
+                        + 1
+                }
+            }
+            _ => panic!("Component is not complex!"),
+        }
+    }
 
     pub fn nodes(&self) -> &[Node] {
         match self {
@@ -145,12 +237,16 @@ impl Component {
             Component::C4(nodes) => nodes,
             Component::C3(nodes) => nodes,
             Component::Large(_) => panic!("large has no known nodes"),
+            Component::ComplexPath(_, nodes) => nodes,
+            Component::ComplexTree(_, nodes) => nodes,
         }
     }
 
     pub fn matching_nodes(&self) -> &[Node] {
         match self {
             Component::Large(n) => std::slice::from_ref(n),
+            Component::ComplexTree(_, nodes) => nodes,
+            Component::ComplexPath(_, nodes) => nodes,
             _ => self.nodes(),
         }
     }
@@ -160,6 +256,8 @@ impl Component {
     pub fn in_nodes(&self) -> &[Node] {
         match self {
             Component::Large(n) => std::slice::from_ref(n),
+            Component::ComplexTree(_, nodes) => nodes,
+            Component::ComplexPath(_, nodes) => nodes,
             _ => &self.nodes()[..(self.nodes().len() / 2 + 1)],
         }
     }
@@ -184,7 +282,16 @@ impl Component {
             Component::C4(nodes) => nodes_to_edges(nodes.as_slice()),
             Component::C3(nodes) => nodes_to_edges(nodes.as_slice()),
             Component::Large(_nodes) => vec![],
-             
+            Component::ComplexPath(complex, _) => complex
+                .graph
+                .all_edges()
+                .map(|(u, v, _)| (u, v))
+                .collect_vec(),
+            Component::ComplexTree(complex, _) => complex
+                .graph
+                .all_edges()
+                .map(|(u, v, _)| (u, v))
+                .collect_vec(),
         }
     }
 
@@ -196,6 +303,8 @@ impl Component {
             Component::C4(_) => "C4".to_string(),
             Component::C3(_) => "C3".to_string(),
             Component::Large(_) => "Large".to_string(),
+            Component::ComplexPath(_, _) => "Complex-Path".to_string(),
+            Component::ComplexTree(_, _) => "Complex-Tree".to_string(),
         }
     }
 
@@ -207,6 +316,8 @@ impl Component {
             Component::C4(nodes) => Some(nodes[0]),
             Component::C3(nodes) => Some(nodes[0]),
             Component::Large(node) => Some(*node),
+            Component::ComplexPath(_, _) => None,
+            Component::ComplexTree(_, _) => None,
         }
     }
 
@@ -218,6 +329,8 @@ impl Component {
             Component::C4(_) => 4,
             Component::C3(_) => 3,
             Component::Large(_) => 8,
+            Component::ComplexPath(_, _) => 8,
+            Component::ComplexTree(_, _) => 8,
         }
     }
 
@@ -229,6 +342,8 @@ impl Component {
             Component::C4(_) => 4,
             Component::C3(_) => 3,
             Component::Large(_) => 8,
+            Component::ComplexPath(_, _) => 12,
+            Component::ComplexTree(_, _) => 12,
         }
     }
 
@@ -242,12 +357,19 @@ impl Component {
             Component::C4(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
             Component::C3(nodes) => is_adjacent_in_cycle(nodes, v1, v2),
             Component::Large(_) => false,
+            Component::ComplexPath(complex, _) => complex.graph.neighbors(*v1).contains(v2),
+            Component::ComplexTree(complex, _) => complex.graph.neighbors(*v1).contains(v2),
         }
     }
 
     pub fn white_nodes(&self) -> Vec<Node> {
         match self {
             Component::Large(n) => vec![*n],
+            Component::ComplexPath(complex, _) | Component::ComplexTree(complex, _) => complex
+                .graph
+                .nodes()
+                .filter(|n| matches!(n, Node::Comp(_)))
+                .collect_vec(),
             _ => vec![],
         }
     }
@@ -269,6 +391,8 @@ impl Component {
                 g.add_node(*n);
                 g
             }
+            Component::ComplexPath(c, _) => c.graph.clone(),
+            Component::ComplexTree(c, _) => c.graph.clone(),
         }
     }
 
@@ -280,12 +404,24 @@ impl Component {
             Component::C4(nodes) => CompType::Cycle(nodes.len()),
             Component::C3(nodes) => CompType::Cycle(nodes.len()),
             Component::Large(_) => CompType::Large,
+            Component::ComplexPath(_, _) => CompType::Complex,
+            Component::ComplexTree(_, _) => CompType::Complex,
         }
     }
 
     pub fn combinations_with_replacement(&self, size: usize) -> Vec<Vec<Node>> {
         match self {
             Component::Large(n) => vec![vec![*n; size]],
+            Component::ComplexTree(_, nodes) => nodes
+                .iter()
+                .cloned()
+                .combinations_with_replacement(size)
+                .collect(),
+            Component::ComplexPath(_, nodes) => nodes
+                .iter()
+                .cloned()
+                .combinations_with_replacement(size)
+                .collect(),
             _ => self
                 .nodes()
                 .to_vec()
@@ -311,6 +447,8 @@ impl Component {
             Component::C4(_) => 4,
             Component::C3(_) => 3,
             Component::Large(_) => 1,
+            Component::ComplexPath(_, _) => 7,
+            Component::ComplexTree(_, _) => 7,
         }
     }
 }
@@ -343,24 +481,26 @@ impl Display for Component {
             Component::C4(nodes) => write!(f, "C4 [{}]", nodes.iter().join("-")),
             Component::C3(nodes) => write!(f, "C3 [{}]", nodes.iter().join("-")),
             Component::Large(n) => write!(f, "Large [{}]", n),
+            Component::ComplexPath(_, _) => write!(f, "Complex Path"),
+            Component::ComplexTree(_, _) => write!(f, "Complex Tree"),
         }
     }
 }
 
-// #[derive(Clone, Debug)]
-// pub struct Complex {
-//     pub graph: Graph,
-//     pub total_black_deg: usize,
-//     pub num_blocks: usize,
-// }
+#[derive(Clone, Debug)]
+pub struct Complex {
+    pub graph: Graph,
+    pub total_black_deg: usize,
+    pub num_blocks: usize,
+}
 
-// pub fn edges_of_type(graph: &Graph, typ: EdgeType) -> Vec<(Node, Node)> {
-//     graph
-//         .all_edges()
-//         .filter(|(_, _, t)| **t == typ)
-//         .map(|(a, b, _)| (a, b))
-//         .collect()
-// }
+pub fn edges_of_type(graph: &Graph, typ: EdgeType) -> Vec<(Node, Node)> {
+    graph
+        .all_edges()
+        .filter(|(_, _, t)| **t == typ)
+        .map(|(a, b, _)| (a, b))
+        .collect()
+}
 
 impl CreditInv {
     pub fn credits(&self, comp: &Component) -> Credit {
@@ -371,7 +511,49 @@ impl CreditInv {
             Component::C4(_) => self.two_ec_credit(4),
             Component::C3(_) => self.two_ec_credit(3),
             Component::Large(_) => self.large(),
+            Component::ComplexPath(c, _) => self.complex(c),
+            Component::ComplexTree(c, _) => self.complex(c),
         }
     }
 
+    pub fn complex(&self, complex: &Complex) -> Credit {
+        self.complex_comp()
+            + Credit::from_integer(complex.num_blocks as i64) * self.complex_block()
+            + self.complex_black(complex.total_black_deg as i64)
+    }
+}
+
+#[cfg(test)]
+mod test_complex_degree {
+    use super::*;
+
+    #[test]
+    fn test_complex_path() {
+        let comp = complex_path();
+
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(4)), 8);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(2)), 4);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(1)), 2);
+    }
+
+    #[test]
+    fn test_complex_tree() {
+        let comp = complex_tree();
+        //          0
+        //          |
+        //          1
+        //          |
+        //          2 -- 5 -- 6
+        //          |
+        //          3
+        //          |
+        //          4
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(3)), 7);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(2)), 5);
+        assert_eq!(comp.complex_degree_between(&Node::n(1), &Node::n(5)), 7);
+        assert_eq!(comp.complex_degree_between(&Node::n(2), &Node::n(2)), 3);
+        assert_eq!(comp.complex_degree_between(&Node::n(3), &Node::n(3)), 2);
+        assert_eq!(comp.complex_degree_between(&Node::n(3), &Node::n(5)), 7);
+        assert_eq!(comp.complex_degree_between(&Node::n(2), &Node::n(2)), 3);
+    }
 }

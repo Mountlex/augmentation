@@ -16,8 +16,8 @@ pub fn valid_in_out_npc(
         new_in != new_out
     } else if c.is_c5() && prelast && !used {
         npc.is_nice_pair(new_in, new_out)
-    } else if c.is_complex() {
-        new_in != new_out || new_in.is_comp()
+    // } else if c.is_complex() {
+    //     new_in != new_out || new_in.is_comp()
     } else {
         true
     }

@@ -229,9 +229,9 @@ fn enumerate_parts(
                                     vec![outside],
                                     instance.context.inv.two_ec_credit(6) - Credit::from_integer(1),
                                 ),
-                                crate::comps::CompType::Complex => {
-                                    panic!("no complex")
-                                }
+                                // crate::comps::CompType::Complex => {
+                                //     panic!("no complex")
+                                // }
                             };
 
                             // let cases = out_comp.comp.nodes().iter().filter(|o| !out_comp.comp.is_adjacent(&outside, o)).cloned().collect_vec();
