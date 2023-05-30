@@ -18,15 +18,16 @@ pub fn edge_enumerator(
     finite: bool,
 ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
     let path_comps = instance.path_nodes().collect_vec();
+    let len = path_comps.len();
 
-    let mut nodes_to_pidx: Vec<Option<Pidx>> = vec![None; path_comps.len() * 20];
+    let mut nodes_to_pidx: Vec<Option<Pidx>> = vec![None; len * 20];
     for path_comp in &path_comps {
         for node in path_comp.comp.matching_nodes() {
             nodes_to_pidx[node.get_id() as usize] = Some(path_comp.path_idx);
         }
     }
 
-    let res = eval(
+    let res = greedy_evaluation(
         instance,
         &nodes_to_pidx,
         finite,
@@ -42,14 +43,13 @@ pub fn edge_enumerator(
     if let Some((iter, name)) = res {
         let cases = iter.collect_vec();
         let iter = compute_good_edges(instance, finite, Box::new(cases.into_iter()));
-
         Some((iter, name))
     } else {
         None
     }
 }
 
-fn eval(
+fn greedy_evaluation(
     instance: &Instance,
     nodes_to_pidx: &Vec<Option<Pidx>>,
     finite: bool,
@@ -73,15 +73,6 @@ fn eval(
     None
 }
 
-// struct InstanceInfo {
-//     path_comps: Vec<PathComp>,
-//     old_path_len: usize,
-//     outside_edges: Vec<Node>,
-//     all_edges: Vec<Edge>,
-//     npc: NicePairConfig,
-//     nodes_to_pidx: Vec<Option<Pidx>>,
-// }
-
 fn check_comp_three_matching(
     instance: &Instance,
     nodes_to_pidx: &Vec<Option<Pidx>>,
@@ -92,7 +83,7 @@ fn check_comp_three_matching(
     let iter = if finite {
         path_comps.iter().collect_vec()
     } else {
-        path_comps.iter().skip(1).take(len - 2).collect_vec()
+        path_comps.iter().take(len - 1).collect_vec()
     };
     for path_comp in iter {
         let idx = path_comp.path_idx;
