@@ -206,7 +206,7 @@ fn split_cases(finite: bool, options: PathProofOptions, depth: u8) -> ProofExpr 
                     Mapper::ToFiniteInstance,
                     prove_progress(true, options, depth),
                 ), // finite case
-                all_opt(
+                all_opt_par(
                     // infinite case
                     OptEnumerator::PathNode,
                     prove_progress(false, options, depth),

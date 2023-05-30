@@ -310,6 +310,20 @@ pub fn all_opt<E, OE, T, M>(
     ))
 }
 
+pub fn all_opt_par<E, OE, T, M>(
+    enumerator: OE,
+    expr: Expression<E, OE, T, M>,
+    otherwise: Expression<E, OE, T, M>,
+    sc: bool,
+) -> Expression<E, OE, T, M> {
+    Expression::Quantor(Quantor::AllOptPar(
+        enumerator,
+        Box::new(expr),
+        Box::new(otherwise),
+        sc,
+    ))
+}
+
 pub fn any<E, OE, T, M>(enumerator: E, expr: Expression<E, OE, T, M>) -> Expression<E, OE, T, M> {
     Expression::Quantor(Quantor::Any(enumerator, Box::new(expr)))
 }
