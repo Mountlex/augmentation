@@ -31,9 +31,9 @@ pub fn edge_enumerator(
         &nodes_to_pidx,
         finite,
         vec![
-            Box::new(check_gainful_edges),
             Box::new(check_comp_three_matching),
             Box::new(check_three_matching),
+            Box::new(check_gainful_edges),
             Box::new(check_four_matching),
             Box::new(check_comp_contractability),
         ],
