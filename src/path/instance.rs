@@ -4,14 +4,14 @@ use itertools::Itertools;
 
 use crate::{
     comps::{CompType, Component},
+    logic::InstanceTrait,
     types::Edge,
     Credit, CreditInv, Node,
-    logic::InstanceTrait,
 };
 
 use super::{
-    extension::Extension, pseudo_cycle::PseudoCycle, EdgeId,
-    HalfAbstractEdge, NicePairConfig, PathComp, Pidx,
+    extension::Extension, pseudo_cycle::PseudoCycle, EdgeId, HalfAbstractEdge, NicePairConfig,
+    PathComp, Pidx,
 };
 
 #[derive(Clone, Debug)]

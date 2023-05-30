@@ -1,5 +1,5 @@
-use crate::logic::{EnumeratorTrait, InstanceTrait, OptEnumeratorTrait};
 use super::instance::{Instance, StackElement};
+use crate::logic::{EnumeratorTrait, InstanceTrait, OptEnumeratorTrait};
 
 mod edges;
 //mod nice_pairs;
@@ -37,13 +37,15 @@ impl EnumeratorTrait for Enumerator {
             //     Box::new(path_extension_enumerator(stack).map(StackElement::Inst))
             // }
             //Enumerator::NicePairs => Box::new(nice_pairs_enumerator(stack).map(StackElement::Inst)),
-            Enumerator::PseudoCycle(finite) => {
-                Box::new(pseudo_cycles::enumerate_pseudo_cycles(stack, *finite).map(StackElement::PseudoCycle))
-            }
+            Enumerator::PseudoCycle(finite) => Box::new(
+                pseudo_cycles::enumerate_pseudo_cycles(stack, *finite)
+                    .map(StackElement::PseudoCycle),
+            ),
 
-            Enumerator::Rearrangments(finite) => {
-                Box::new(rearrangements::enumerate_rearrangements(stack, *finite).map(StackElement::Rearrangement))
-            }
+            Enumerator::Rearrangments(finite) => Box::new(
+                rearrangements::enumerate_rearrangements(stack, *finite)
+                    .map(StackElement::Rearrangement),
+            ),
         }
     }
 }
@@ -80,4 +82,3 @@ impl OptEnumeratorTrait for OptEnumerator {
         }
     }
 }
-

@@ -2,9 +2,6 @@ use crate::{comps::Component, Node};
 
 use super::NicePairConfig;
 
-
-
-
 pub fn valid_in_out_npc(
     c: &Component,
     npc: &NicePairConfig,

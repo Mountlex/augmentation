@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
+use super::{instance::Instance, PathProofNode};
 use crate::logic::TacticTrait;
-use super::{PathProofNode, instance::Instance};
 
 mod contract;
 mod cycle_merge;
@@ -31,7 +31,9 @@ impl TacticTrait for Tactic {
             Tactic::LongerPath(finite) => longer_path::check_longer_nice_path(stack, *finite),
             Tactic::CycleMerge => cycle_merge::check_cycle_merge(stack),
             Tactic::LocalMerge => local_merge::check_local_merge(stack),
-            Tactic::Rearrangable(finite) => cycle_rearrange::check_path_rearrangement(stack, *finite),
+            Tactic::Rearrangable(finite) => {
+                cycle_rearrange::check_path_rearrangement(stack, *finite)
+            }
             Tactic::Contractable => contract::check_contractability(stack),
             Tactic::Pendant => pendant_rewire::check_pendant_node(stack),
             Tactic::TacticsExhausted(finite) => {

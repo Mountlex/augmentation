@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::{
     comps::CompType,
-    path::{extension::Extension, PathProofNode, Pidx, path_definition::valid_in_out_npc},
+    path::{extension::Extension, path_definition::valid_in_out_npc, PathProofNode, Pidx},
     path::{instance::Instance, NicePairConfig, PathComp},
 };
 
@@ -134,4 +134,3 @@ pub fn check_fixed_extension_feasible(
 
     PathProofNode::new_leaf("Feasible path".into(), true)
 }
-

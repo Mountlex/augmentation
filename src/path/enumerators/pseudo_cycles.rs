@@ -4,10 +4,10 @@ use crate::{
     path::{
         instance::Instance,
         pseudo_cycle::{CycleComp, PseudoCycle},
-        EdgeId, HalfAbstractEdge, PathComp, 
+        EdgeId, HalfAbstractEdge, PathComp,
     },
-    util::product_of_first,
     types::Edge,
+    util::product_of_first,
     Credit, Node,
 };
 
@@ -45,7 +45,6 @@ pub fn enumerate_pseudo_cycles(
     }
     iter
 }
-
 
 pub fn edges_between(
     edges: &[Edge],

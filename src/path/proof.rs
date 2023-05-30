@@ -1,22 +1,20 @@
+use chrono::prelude::*;
 use std::fmt::Write;
 use std::path::PathBuf;
-use chrono::prelude::*;
 
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::path::instance::{InstanceContext, PathNode};
-use crate::path::{PathComp, Pidx, PathProofNode};
-use crate::{comps::Component,  CreditInv};
+use crate::path::{PathComp, PathProofNode, Pidx};
+use crate::{comps::Component, CreditInv};
 
-use super::enumerators::{Enumerator, OptEnumerator, path_comp_enumerator};
+use super::enumerators::{path_comp_enumerator, Enumerator, OptEnumerator};
 use super::instance::{InstPart, Instance, StackElement};
-use crate::logic::*;
 use super::tactics::Tactic;
-
+use crate::logic::*;
 
 type ProofExpr = Expression<Enumerator, OptEnumerator, Tactic, Mapper>;
-
 
 #[derive(Clone, Debug)]
 enum Mapper {
@@ -215,7 +213,6 @@ fn compute_initial_cases(
 
     cases
 }
-
 
 fn prove_last_node(
     nodes: Vec<PathNode>,

@@ -1,10 +1,10 @@
 mod enumerators;
 mod extension;
 mod instance;
+mod path_definition;
 mod proof;
 mod pseudo_cycle;
 mod tactics;
-mod path_definition;
 
 use std::{cmp::Ordering, fmt::Display};
 
@@ -20,7 +20,6 @@ use crate::Node;
 use crate::comps::*;
 
 use self::instance::Instance;
-
 
 pub type PathProofNode = ProofNode<<Instance as InstanceTrait>::Payload>;
 
@@ -134,8 +133,6 @@ impl Display for NicePairConfig {
 }
 
 impl NicePairConfig {
-    
-
     pub fn is_nice_pair(&self, u: Node, v: Node) -> bool {
         self.nice_pairs
             .iter()

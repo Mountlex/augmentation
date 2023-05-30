@@ -3,12 +3,13 @@ use std::fmt::Write;
 use itertools::Itertools;
 
 use crate::{
-    path::{instance::Instance, Pidx},
     path::{
         extension::{Extension, InOutNode},
-        PathProofNode, path_definition::valid_in_out_npc, 
+        path_definition::valid_in_out_npc,
+        PathProofNode,
     },
-    util::product_of_first
+    path::{instance::Instance, Pidx},
+    util::product_of_first,
 };
 
 use super::cycle_rearrange::check_fixed_extension_feasible;

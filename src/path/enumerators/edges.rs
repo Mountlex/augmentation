@@ -2,12 +2,12 @@ use itertools::Itertools;
 
 use crate::path::extension::{Extension, InOutNode};
 use crate::path::path_definition::valid_in_out_npc;
-use crate::util::{product_of_first,hamiltonian_paths};
 use crate::path::{instance::InstPart, instance::Instance};
+use crate::util::{hamiltonian_paths, product_of_first};
 use crate::{
     path::{
-        proof::check_progress, tactics::check_fixed_extension_feasible,
-        HalfAbstractEdge, PathComp, Pidx,
+        proof::check_progress, tactics::check_fixed_extension_feasible, HalfAbstractEdge, PathComp,
+        Pidx,
     },
     types::Edge,
     Credit, Node,

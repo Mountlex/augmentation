@@ -15,9 +15,9 @@ mod util;
 //mod local_merge;
 mod comps;
 mod credit;
+mod logic;
 mod path;
 mod proof_tree;
-mod logic;
 mod types;
 
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Hash)]
