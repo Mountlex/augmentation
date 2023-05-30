@@ -16,8 +16,6 @@ pub enum EdgeType {
     Buyable,
 }
 
-
-
 pub fn c4() -> Component {
     Component::C4([0.into(), 1.into(), 2.into(), 3.into()])
 }
@@ -41,8 +39,6 @@ pub fn c7() -> Component {
 pub fn large() -> Component {
     Component::Large(Node::Comp(0))
 }
-
-
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CompType {
@@ -131,11 +127,9 @@ impl Component {
         }
     }
 
-
     pub fn is_large(&self) -> bool {
         matches!(self, Component::Large(_))
     }
-
 
     pub fn nodes(&self) -> &[Node] {
         match self {
@@ -184,7 +178,6 @@ impl Component {
             Component::C4(nodes) => nodes_to_edges(nodes.as_slice()),
             Component::C3(nodes) => nodes_to_edges(nodes.as_slice()),
             Component::Large(_nodes) => vec![],
-             
         }
     }
 
@@ -373,5 +366,4 @@ impl CreditInv {
             Component::Large(_) => self.large(),
         }
     }
-
 }
