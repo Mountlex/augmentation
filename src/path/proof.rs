@@ -351,11 +351,26 @@ impl Tactic {
             //     }
             // }
             Tactic::TacticsExhausted(finite) => {
+                let all_edges = stack.all_edges();
+                let outside = stack.out_edges();
+                let path_comps = stack.path_nodes().collect_vec();
+                let rem_edges = stack.rem_edges();
+
+                //  println!("{}", stack.get_profile(true));
+
+                let msg = format!(
+                    "Instance: [{}][{}][{}][{}]",
+                    path_comps.iter().join(", "),
+                    all_edges.iter().join(","),
+                    outside.iter().join(","),
+                    rem_edges.iter().join(",")
+                );
+
                 if *finite {
-                    log::info!("tactics (finite) exhausted for: {}", stack);
+                    log::info!("tactics (finite) exhausted for: {}", msg);
                     PathProofNode::new_leaf("Tactics (finite) exhausted!".into(), false)
                 } else {
-                    log::info!("tactics exhausted for: {}", stack);
+                    log::info!("tactics exhausted for: {}", msg);
                     PathProofNode::new_leaf("Tactics exhausted!".into(), false)
                 }
             }
@@ -583,6 +598,36 @@ fn find_edge_and_progress(
     )
 }
 
+fn prove_progress(finite: bool, options: PathProofOptions, depth: usize) -> Expression {
+    if depth > 0 {
+        or(progress(finite), split_cases(finite, options, depth - 1))
+    } else {
+        expr(Tactic::TacticsExhausted(false))
+    }
+}
+
+fn split_cases(finite: bool, options: PathProofOptions, depth: usize) -> Expression {
+    all_opt(
+        OptEnumerator::Edges(finite),
+        prove_progress(finite, options, depth),
+        if finite {
+            expr(Tactic::TacticsExhausted(true))
+        } else {
+            and(
+                
+                map(Mapper::ToFiniteInstance, prove_progress(true, options, depth)),  // finite case
+                all_opt( // infinite case
+                    OptEnumerator::PathNode,
+                    prove_progress(false, options, depth),
+                    expr(Tactic::TacticsExhausted(false)),
+                    options.sc,
+                ),
+            )
+        },
+        options.sc,
+    )
+}
+
 fn progress(finite: bool) -> Expression {
     or5(
         expr(Tactic::LocalMerge),
@@ -755,7 +800,7 @@ fn prove_last_node(
     let proofs: Vec<PathProofNode> = cases
         .into_par_iter()
         .map(|mut case| {
-            let expr = inductive_proof(options, options.node_depth);
+            let expr = prove_progress(false, options, 20);
             let mut proof = expr.prove(&mut case);
             let outcome = proof.eval();
             let profile = case.get_profile(outcome.success());
