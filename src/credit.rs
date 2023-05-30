@@ -115,7 +115,7 @@ impl Num for Credit {
     type FromStrRadixErr = <Rational64 as Num>::FromStrRadixErr;
 
     fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
-        Rational64::from_str_radix(str, radix).map(|r| Credit(r))
+        Rational64::from_str_radix(str, radix).map(Credit)
     }
 }
 

@@ -49,7 +49,7 @@ impl <I: InstanceTrait, E: EnumeratorTrait<Inst = I>, OE: OptEnumeratorTrait<Ins
                 stack.push(element);
                 let result = expression.prove(stack);
                 stack.pop();
-                return result;
+                result
             }
         }
     }
@@ -153,7 +153,7 @@ impl <I :InstanceTrait, E: EnumeratorTrait<Inst = I>, OE: OptEnumeratorTrait<Ins
                         stack.push(case);
                         let mut proof_item = self.formula().prove(&mut stack);
                         proof_item = PathProofNode::new_info(item_msg, proof_item);
-                        let outcome = proof_item.eval();
+                        let _outcome = proof_item.eval();
 
                         // if let Quantor::AllOpt(OptEnumerator::PathNode, _, _, _) = self {
                         //     proof_item.add_payload(stack.get_profile(outcome.success()));
@@ -183,7 +183,7 @@ impl <I :InstanceTrait, E: EnumeratorTrait<Inst = I>, OE: OptEnumeratorTrait<Ins
                     stack.pop();
 
                     let should_break = match self {
-                        Quantor::AllOptPar(_, _, _, sc) => panic!("We should not be in this case."),
+                        Quantor::AllOptPar(_, _, _, _sc) => panic!("We should not be in this case."),
                         Quantor::AllOpt(_, _, _, sc) => !res && *sc,
                         Quantor::All(_, _, sc) => !res && *sc,
                         Quantor::Any(_, _) => res,

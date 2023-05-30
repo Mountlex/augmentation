@@ -79,7 +79,7 @@ pub fn enumerate_rearrangements(
         // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]  3 is new last of nice path
         let iter = vec![extension1, extension2].into_iter();
 
-        return Box::new(iter);
+        Box::new(iter)
     } else {
         let len = pc.cycle.len();
         let pc = pc.clone();
@@ -130,10 +130,10 @@ pub fn enumerate_rearrangements(
             };
             // extension:   [0.out -- 1.in:1.out -- 2.in:2.out -- 3.in]  3 is new last of nice path
             let iter = vec![extension1, extension2].into_iter();
-            return Box::new(iter);
+            Box::new(iter)
         });
 
-        return Box::new(iter);
+        Box::new(iter)
     }
 }
 

@@ -83,7 +83,7 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                             prevalid_in_out(&comp_filter, in_node, *out_node, node_idx.is_prelast())
                         })
                         .flat_map(move |out_node| {
-                            let mut new_nice_pairs = comp_map.edges();
+                            let new_nice_pairs = comp_map.edges();
                             let mut path_comp = PathComp {
                                 comp: comp_map.clone(),
                                 in_node: Some(in_node),
@@ -112,27 +112,24 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                                     //   |   |
                                     //  in - 3
                                     //
-                                    let v1 = comp_map
+                                    let v1 = *comp_map
                                         .nodes()
                                         .iter()
                                         .find(|v| {
                                             comp_map.is_adjacent(v, &in_node)
                                                 && comp_map.is_adjacent(v, &out_node)
                                         })
-                                        .unwrap()
-                                        .clone();
-                                    let v2 = comp_map
+                                        .unwrap();
+                                    let v2 = *comp_map
                                         .nodes()
                                         .iter()
                                         .find(|v| **v != v1 && comp_map.is_adjacent(v, &out_node))
-                                        .unwrap()
-                                        .clone();
-                                    let v3 = comp_map
+                                        .unwrap();
+                                    let v3 = *comp_map
                                         .nodes()
                                         .iter()
                                         .find(|v| **v != v1 && comp_map.is_adjacent(v, &in_node))
-                                        .unwrap()
-                                        .clone();
+                                        .unwrap();
 
                                     path_comp.initial_nps.push((in_node, out_node));
                                     let mut p1 = path_comp.clone();
@@ -249,7 +246,7 @@ pub fn path_extension_enumerator(
                 })
         }));
 
-    return Some((Box::new(iter), "path node".into()));
+    Some((Box::new(iter), "path node".into()))
 }
 
 fn prevalid_in_out(c: &Component, new_in: Node, new_out: Node, prelast: bool) -> bool {

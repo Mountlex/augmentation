@@ -319,14 +319,14 @@ impl Instance {
             .flat_map(|part| part.rem_edges.iter())
             .map(|e| e.id)
             .max()
-            .unwrap_or_else(|| EdgeId(0));
+            .unwrap_or(EdgeId(0));
 
         let non_rem_edges: EdgeId = self
             .inst_parts()
             .flat_map(|part| part.non_rem_edges.iter())
             .cloned()
             .max()
-            .unwrap_or_else(|| EdgeId(0));
+            .unwrap_or(EdgeId(0));
 
         non_rem_edges.max(rem_edges).inc()
     }

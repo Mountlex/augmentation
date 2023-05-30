@@ -609,24 +609,21 @@ fn handle_contractable_components(
             //
             let f1 = free_nodes[0];
             let f2 = free_nodes[1];
-            let v3 = comp
+            let v3 = *comp
                 .nodes()
                 .iter()
                 .find(|v| comp.is_adjacent(v, &f1) && comp.is_adjacent(v, &f2))
-                .unwrap()
-                .clone();
-            let v1 = comp
+                .unwrap();
+            let v1 = *comp
                 .nodes()
                 .iter()
                 .find(|v| **v != v3 && comp.is_adjacent(v, &f1))
-                .unwrap()
-                .clone();
-            let v2 = comp
+                .unwrap();
+            let v2 = *comp
                 .nodes()
                 .iter()
                 .find(|v| **v != v3 && comp.is_adjacent(v, &f2))
-                .unwrap()
-                .clone();
+                .unwrap();
 
             // Case a) new nice pairs
             let case_a = vec![InstPart::new_nice_pairs(vec![(v1, v3), (v2, v3)])];
@@ -657,24 +654,21 @@ fn handle_contractable_components(
                 //  v3    v2
                 //   \    /
                 //     f3
-                let v1 = comp
+                let v1 = *comp
                     .nodes()
                     .iter()
                     .find(|v| comp.is_adjacent(v, &f1) && comp.is_adjacent(v, &f2))
-                    .unwrap()
-                    .clone();
-                let v2 = comp
+                    .unwrap();
+                let v2 = *comp
                     .nodes()
                     .iter()
                     .find(|v| comp.is_adjacent(v, &f2) && comp.is_adjacent(v, &f3))
-                    .unwrap()
-                    .clone();
-                let v3 = comp
+                    .unwrap();
+                let v3 = *comp
                     .nodes()
                     .iter()
                     .find(|v| comp.is_adjacent(v, &f1) && comp.is_adjacent(v, &f3))
-                    .unwrap()
-                    .clone();
+                    .unwrap();
 
                 // Case a) new nice pairs
                 let case_a = vec![InstPart::new_nice_pairs(vec![(v1, v3), (v2, v3), (v1, v2)])];
@@ -718,30 +712,27 @@ fn handle_contractable_components(
             let f1 = *adj[0];
             let f2 = *adj[1];
             let f3 = *free_nodes.iter().find(|f| !adj.contains(f)).unwrap();
-            let v3 = comp
+            let v3 = *comp
                 .nodes()
                 .iter()
                 .find(|v| {
                     comp.is_adjacent(v, &f3)
                         && (comp.is_adjacent(v, &f1) || comp.is_adjacent(v, &f2))
                 })
-                .unwrap()
-                .clone();
-            let v1 = comp
+                .unwrap();
+            let v1 = *comp
                 .nodes()
                 .iter()
                 .find(|v| {
                     !comp.is_adjacent(v, &f3)
                         && (comp.is_adjacent(v, &f1) || comp.is_adjacent(v, &f2))
                 })
-                .unwrap()
-                .clone();
-            let v2 = comp
+                .unwrap();
+            let v2 = *comp
                 .nodes()
                 .iter()
                 .find(|v| comp.is_adjacent(v, &v1) && comp.is_adjacent(v, &f3))
-                .unwrap()
-                .clone();
+                .unwrap();
 
             // Case a) new nice pairs between v1,v2,v3
             let case_a = vec![
@@ -803,7 +794,7 @@ fn handle_contractable_components(
             // Case a) new nice pair configs
             let case_a = np_configs
                 .into_iter()
-                .map(|nps| InstPart::new_nice_pairs(nps))
+                .map(InstPart::new_nice_pairs)
                 .collect_vec();
 
             // Case b) edges from free nodes
@@ -828,7 +819,7 @@ fn handle_contractable_components(
                         .map(|h| vec![(node, hit), h])
                         .collect_vec();
                 } else {
-                    return vec![vec![(node, hit)]];
+                    vec![vec![(node, hit)]]
                 }
             });
             let iter = Box::new(iter);
