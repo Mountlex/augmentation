@@ -5,21 +5,23 @@ use super::PathProofNode;
 
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
-
-
-
-
-
 #[derive(Debug, Clone)]
-pub enum Expression<E, OE,  T, M> {
+pub enum Expression<E, OE, T, M> {
     Quantor(Quantor<E, OE, T, M>),
     Tactic(T),
-    Or(Box<Expression<E, OE, T,M>>, Box<Expression<E, OE, T,M>>),
-    And(Box<Expression<E, OE, T,M>>, Box<Expression<E, OE, T,M>>),
-    Map(M, Box<Expression<E, OE, T,M>>),
+    Or(Box<Expression<E, OE, T, M>>, Box<Expression<E, OE, T, M>>),
+    And(Box<Expression<E, OE, T, M>>, Box<Expression<E, OE, T, M>>),
+    Map(M, Box<Expression<E, OE, T, M>>),
 }
 
-impl <I: InstanceTrait, E: EnumeratorTrait<Inst = I>, OE: OptEnumeratorTrait<Inst = I>, T:TacticTrait<Inst = I>,M:MapperTrait<Inst = I>> Expression<E, OE, T,M> {
+impl<
+        I: InstanceTrait,
+        E: EnumeratorTrait<Inst = I>,
+        OE: OptEnumeratorTrait<Inst = I>,
+        T: TacticTrait<Inst = I>,
+        M: MapperTrait<Inst = I>,
+    > Expression<E, OE, T, M>
+{
     pub fn prove(&self, stack: &mut I) -> PathProofNode {
         match self {
             Expression::Quantor(q) => q.prove(stack),
@@ -55,8 +57,7 @@ impl <I: InstanceTrait, E: EnumeratorTrait<Inst = I>, OE: OptEnumeratorTrait<Ins
     }
 }
 
-
-pub trait InstanceTrait: Clone + Send + Sync  {
+pub trait InstanceTrait: Clone + Send + Sync {
     type StackElement: Sized + Clone + Debug + Send + Sync;
 
     fn item_msg(&self, item: &Self::StackElement, enum_msg: &str) -> String;
@@ -73,10 +74,13 @@ pub trait OptEnumeratorTrait: Clone + Send + Sync {
     fn try_iter(
         &self,
         instance: &mut Self::Inst,
-    ) -> Option<(Box<dyn Iterator<Item = <Self::Inst as InstanceTrait>::StackElement>>, String)>;
+    ) -> Option<(
+        Box<dyn Iterator<Item = <Self::Inst as InstanceTrait>::StackElement>>,
+        String,
+    )>;
 }
 
-pub trait EnumeratorTrait: Clone + Send + Sync{
+pub trait EnumeratorTrait: Clone + Send + Sync {
     type Inst: InstanceTrait;
 
     fn msg(&self) -> &str;
@@ -98,18 +102,33 @@ pub trait MapperTrait: Clone + Send + Sync {
     fn stack_element(&self, stack: &Self::Inst) -> <Self::Inst as InstanceTrait>::StackElement;
 }
 
-
-
 #[derive(Debug, Clone)]
-pub enum Quantor<E, OE,  T, M> {
-    All(E, Box<Expression<E,OE,T,M>>, bool),
-    AllOpt(OE, Box<Expression<E,OE,T,M>>, Box<Expression<E,OE,T,M>>, bool),
-    AllOptPar(OE, Box<Expression<E,OE,T,M>>, Box<Expression<E,OE,T,M>>, bool),
-    Any(E, Box<Expression<E,OE,T,M>>),
+pub enum Quantor<E, OE, T, M> {
+    All(E, Box<Expression<E, OE, T, M>>, bool),
+    AllOpt(
+        OE,
+        Box<Expression<E, OE, T, M>>,
+        Box<Expression<E, OE, T, M>>,
+        bool,
+    ),
+    AllOptPar(
+        OE,
+        Box<Expression<E, OE, T, M>>,
+        Box<Expression<E, OE, T, M>>,
+        bool,
+    ),
+    Any(E, Box<Expression<E, OE, T, M>>),
 }
 
-impl <I :InstanceTrait, E: EnumeratorTrait<Inst = I>, OE: OptEnumeratorTrait<Inst = I>,  T:TacticTrait<Inst = I>, M:MapperTrait<Inst = I>> Quantor<E, OE,  T, M> {
-    fn formula(&self) -> &Box<Expression<E,OE,T,M>> {
+impl<
+        I: InstanceTrait,
+        E: EnumeratorTrait<Inst = I>,
+        OE: OptEnumeratorTrait<Inst = I>,
+        T: TacticTrait<Inst = I>,
+        M: MapperTrait<Inst = I>,
+    > Quantor<E, OE, T, M>
+{
+    fn formula(&self) -> &Box<Expression<E, OE, T, M>> {
         match self {
             Quantor::All(_, t, _) => t,
             Quantor::AllOpt(_, t, _, _) => t,
@@ -143,7 +162,7 @@ impl <I :InstanceTrait, E: EnumeratorTrait<Inst = I>, OE: OptEnumeratorTrait<Ins
             };
 
             //if false {
-            if let Quantor::AllOptPar(_,_,_,_) = self {
+            if let Quantor::AllOptPar(_, _, _, _) = self {
                 let cases = case_iterator.collect_vec();
                 let nodes: Vec<PathProofNode> = cases
                     .into_par_iter()
@@ -167,7 +186,6 @@ impl <I :InstanceTrait, E: EnumeratorTrait<Inst = I>, OE: OptEnumeratorTrait<Ins
                 }
             } else {
                 for case in case_iterator {
-                    
                     let item_msg = stack.item_msg(&case, &enum_msg);
                     stack.push(case);
                     let mut proof_item = self.formula().prove(stack);
@@ -183,7 +201,9 @@ impl <I :InstanceTrait, E: EnumeratorTrait<Inst = I>, OE: OptEnumeratorTrait<Ins
                     stack.pop();
 
                     let should_break = match self {
-                        Quantor::AllOptPar(_, _, _, _sc) => panic!("We should not be in this case."),
+                        Quantor::AllOptPar(_, _, _, _sc) => {
+                            panic!("We should not be in this case.")
+                        }
                         Quantor::AllOpt(_, _, _, sc) => !res && *sc,
                         Quantor::All(_, _, sc) => !res && *sc,
                         Quantor::Any(_, _) => res,
@@ -204,55 +224,71 @@ impl <I :InstanceTrait, E: EnumeratorTrait<Inst = I>, OE: OptEnumeratorTrait<Ins
     }
 }
 
-
-pub fn map<E,OE,T,M>(mapper: M, expr: Expression<E,OE,T,M>) -> Expression<E,OE,T,M> {
+pub fn map<E, OE, T, M>(mapper: M, expr: Expression<E, OE, T, M>) -> Expression<E, OE, T, M> {
     Expression::Map(mapper, Box::new(expr))
 }
 
-
-pub fn and<E,OE,T,M>(expr1: Expression<E,OE,T,M>, expr2: Expression<E,OE,T,M>) -> Expression<E,OE,T,M> {
+pub fn and<E, OE, T, M>(
+    expr1: Expression<E, OE, T, M>,
+    expr2: Expression<E, OE, T, M>,
+) -> Expression<E, OE, T, M> {
     Expression::And(Box::new(expr1), Box::new(expr2))
 }
 
-pub fn or<E,OE,T,M>(expr1: Expression<E,OE,T,M>, expr2: Expression<E,OE,T,M>) -> Expression<E,OE,T,M> {
+pub fn or<E, OE, T, M>(
+    expr1: Expression<E, OE, T, M>,
+    expr2: Expression<E, OE, T, M>,
+) -> Expression<E, OE, T, M> {
     Expression::Or(Box::new(expr1), Box::new(expr2))
 }
 
-pub fn or3<E,OE,T,M>(expr1: Expression<E,OE,T,M>, expr2: Expression<E,OE,T,M>, expr3: Expression<E,OE,T,M>) -> Expression<E,OE,T,M> {
+pub fn or3<E, OE, T, M>(
+    expr1: Expression<E, OE, T, M>,
+    expr2: Expression<E, OE, T, M>,
+    expr3: Expression<E, OE, T, M>,
+) -> Expression<E, OE, T, M> {
     or(expr1, or(expr2, expr3))
 }
 
-pub fn or4<E,OE,T,M>(expr1: Expression<E,OE,T,M>, expr2: Expression<E,OE,T,M>, expr3: Expression<E,OE,T,M>, expr4: Expression<E,OE,T,M>) -> Expression<E,OE,T,M> {
+pub fn or4<E, OE, T, M>(
+    expr1: Expression<E, OE, T, M>,
+    expr2: Expression<E, OE, T, M>,
+    expr3: Expression<E, OE, T, M>,
+    expr4: Expression<E, OE, T, M>,
+) -> Expression<E, OE, T, M> {
     or(expr1, or3(expr2, expr3, expr4))
 }
 
-pub fn or5<E,OE,T,M>(
-    expr1: Expression<E,OE,T,M>,
-    expr2: Expression<E,OE,T,M>,
-    expr3: Expression<E,OE,T,M>,
-    expr4: Expression<E,OE,T,M>,
-    expr5: Expression<E,OE,T,M>,
-) -> Expression<E,OE,T,M> {
+pub fn or5<E, OE, T, M>(
+    expr1: Expression<E, OE, T, M>,
+    expr2: Expression<E, OE, T, M>,
+    expr3: Expression<E, OE, T, M>,
+    expr4: Expression<E, OE, T, M>,
+    expr5: Expression<E, OE, T, M>,
+) -> Expression<E, OE, T, M> {
     or(expr1, or4(expr2, expr3, expr4, expr5))
 }
 
 #[allow(dead_code)]
-pub fn or6<E,OE,T,M>(
-    expr1: Expression<E,OE,T,M>,
-    expr2: Expression<E,OE,T,M>,
-    expr3: Expression<E,OE,T,M>,
-    expr4: Expression<E,OE,T,M>,
-    expr5: Expression<E,OE,T,M>,
-    expr6: Expression<E,OE,T,M>,
-) -> Expression<E,OE,T,M> {
+pub fn or6<E, OE, T, M>(
+    expr1: Expression<E, OE, T, M>,
+    expr2: Expression<E, OE, T, M>,
+    expr3: Expression<E, OE, T, M>,
+    expr4: Expression<E, OE, T, M>,
+    expr5: Expression<E, OE, T, M>,
+    expr6: Expression<E, OE, T, M>,
+) -> Expression<E, OE, T, M> {
     or(expr1, or5(expr2, expr3, expr4, expr5, expr6))
 }
 
-pub fn expr<E,OE,T,M>(tactic: T) -> Expression<E,OE,T,M> {
+pub fn expr<E, OE, T, M>(tactic: T) -> Expression<E, OE, T, M> {
     Expression::Tactic(tactic)
 }
 
-pub fn all_sc<E,OE,T,M>(enumerator: E, expr: Expression<E,OE,T,M>) -> Expression<E,OE,T,M> {
+pub fn all_sc<E, OE, T, M>(
+    enumerator: E,
+    expr: Expression<E, OE, T, M>,
+) -> Expression<E, OE, T, M> {
     Expression::Quantor(Quantor::All(enumerator, Box::new(expr), true))
 }
 
@@ -260,12 +296,12 @@ pub fn all_sc<E,OE,T,M>(enumerator: E, expr: Expression<E,OE,T,M>) -> Expression
 //     Expression::Quantor(Quantor::All(enumerator, Box::new(expr), sc))
 // }
 
-pub fn all_opt<E,OE,T,M>(
+pub fn all_opt<E, OE, T, M>(
     enumerator: OE,
-    expr: Expression<E,OE,T,M>,
-    otherwise: Expression<E,OE,T,M>,
+    expr: Expression<E, OE, T, M>,
+    otherwise: Expression<E, OE, T, M>,
     sc: bool,
-) -> Expression<E,OE,T,M> {
+) -> Expression<E, OE, T, M> {
     Expression::Quantor(Quantor::AllOpt(
         enumerator,
         Box::new(expr),
@@ -274,7 +310,6 @@ pub fn all_opt<E,OE,T,M>(
     ))
 }
 
-pub fn any<E,OE,T,M>(enumerator: E, expr: Expression<E,OE,T,M>) -> Expression<E,OE,T,M> {
+pub fn any<E, OE, T, M>(enumerator: E, expr: Expression<E, OE, T, M>) -> Expression<E, OE, T, M> {
     Expression::Quantor(Quantor::Any(enumerator, Box::new(expr)))
 }
-

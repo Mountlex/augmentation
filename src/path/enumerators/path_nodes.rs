@@ -4,7 +4,7 @@ use crate::{
     comps::Component,
     path::{
         enumerators::edges::edge_enumerator,
-        instance::{Instance, InstPart, PathNode},
+        instance::{InstPart, Instance, PathNode},
         PathComp, Pidx,
     },
     types::Edge,

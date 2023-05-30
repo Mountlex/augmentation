@@ -9,8 +9,8 @@ use crate::{
 };
 
 use super::{
-    extension::Extension,  pseudo_cycle::PseudoCycle, EdgeId, HalfAbstractEdge,
-    NicePairConfig, PathComp, Pidx, logic::InstanceTrait,
+    extension::Extension, logic::InstanceTrait, pseudo_cycle::PseudoCycle, EdgeId,
+    HalfAbstractEdge, NicePairConfig, PathComp, Pidx,
 };
 
 #[derive(Clone, Debug)]
@@ -148,10 +148,10 @@ impl InstanceTrait for Instance {
 
     fn item_msg(&self, item: &Self::StackElement, enum_msg: &str) -> String {
         match item {
-                        StackElement::Inst(_) => format!("part {}", enum_msg),
-                        StackElement::PseudoCycle(_) => format!("pc {}", enum_msg),
-                        StackElement::Rearrangement(_) => format!("rearr {}", enum_msg),
-                    }
+            StackElement::Inst(_) => format!("part {}", enum_msg),
+            StackElement::PseudoCycle(_) => format!("pc {}", enum_msg),
+            StackElement::Rearrangement(_) => format!("rearr {}", enum_msg),
+        }
     }
 
     fn push(&mut self, ele: StackElement) {
@@ -164,8 +164,6 @@ impl InstanceTrait for Instance {
 }
 
 impl Instance {
-    
-
     pub fn top_mut(&mut self) -> Option<&mut InstPart> {
         self.stack.last_mut().and_then(|last| match last {
             StackElement::Inst(part) => Some(part),

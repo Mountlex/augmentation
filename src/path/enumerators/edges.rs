@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::path::extension::{Extension, InOutNode};
-use crate::path::{instance::Instance, instance::InstPart};
+use crate::path::{instance::InstPart, instance::Instance};
 use crate::{
     path::{
         enumerators::pseudo_cycles::product_of_first,

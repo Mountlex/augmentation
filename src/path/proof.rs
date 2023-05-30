@@ -12,7 +12,7 @@ use super::enumerators::edges::edge_enumerator;
 use super::enumerators::path_nodes::{path_comp_enumerator, path_extension_enumerator};
 use super::enumerators::pseudo_cycles::enumerate_pseudo_cycles;
 use super::enumerators::rearrangements::enumerate_rearrangements;
-use super::instance::{Instance, StackElement, InstPart};
+use super::instance::{InstPart, Instance, StackElement};
 use super::logic::*;
 use super::tactics::contract::check_contractability;
 use super::tactics::cycle_merge::check_cycle_merge;
@@ -21,10 +21,7 @@ use super::tactics::local_merge::check_local_merge;
 use super::tactics::longer_path::check_longer_nice_path;
 use super::tactics::pendant_rewire::check_pendant_node;
 
-
-
 type ProofExpr = Expression<Enumerator, OptEnumerator, Tactic, Mapper>;
-
 
 #[derive(Clone, Debug)]
 enum Enumerator {
@@ -45,13 +42,15 @@ impl EnumeratorTrait for Enumerator {
         }
     }
 
-    fn get_iter(&self, stack: &Instance) -> Box<dyn Iterator<Item = <Instance as InstanceTrait>::StackElement>> {
+    fn get_iter(
+        &self,
+        stack: &Instance,
+    ) -> Box<dyn Iterator<Item = <Instance as InstanceTrait>::StackElement>> {
         match self {
             // Enumerator::PathNodes => {
             //     Box::new(path_extension_enumerator(stack).map(StackElement::Inst))
             // }
             //Enumerator::NicePairs => Box::new(nice_pairs_enumerator(stack).map(StackElement::Inst)),
-
             Enumerator::PseudoCycle(finite) => {
                 Box::new(enumerate_pseudo_cycles(stack, *finite).map(StackElement::PseudoCycle))
             }
@@ -62,7 +61,6 @@ impl EnumeratorTrait for Enumerator {
         }
     }
 }
-
 
 #[derive(Debug, Clone)]
 enum OptEnumerator {
@@ -142,40 +140,35 @@ impl TacticTrait for Tactic {
                     log::info!("tactics exhausted for: {}", msg);
                     PathProofNode::new_leaf("Tactics exhausted!".into(), false)
                 }
-            }
-            // Tactic::Print => {
-            //     let all_edges = stack.all_edges();
-            //     let outside = stack.out_edges();
-            //     let path_comps = stack.path_nodes().collect_vec();
-            //     let rem_edges = stack.rem_edges();
+            } // Tactic::Print => {
+              //     let all_edges = stack.all_edges();
+              //     let outside = stack.out_edges();
+              //     let path_comps = stack.path_nodes().collect_vec();
+              //     let rem_edges = stack.rem_edges();
 
-            //     //  println!("{}", stack.get_profile(true));
+              //     //  println!("{}", stack.get_profile(true));
 
-            //     let msg = format!(
-            //         "Instance: [{}][{}][{}][{}]",
-            //         path_comps.iter().join(", "),
-            //         all_edges.iter().join(","),
-            //         outside.iter().join(","),
-            //         rem_edges.iter().join(",")
-            //     );
+              //     let msg = format!(
+              //         "Instance: [{}][{}][{}][{}]",
+              //         path_comps.iter().join(", "),
+              //         all_edges.iter().join(","),
+              //         outside.iter().join(","),
+              //         rem_edges.iter().join(",")
+              //     );
 
-            //     PathProofNode::new_leaf(msg, false)
-            // }
+              //     PathProofNode::new_leaf(msg, false)
+              // }
         };
         proof
     }
 }
-
-
-
-
 
 #[derive(Clone, Debug)]
 enum Mapper {
     ToFiniteInstance,
 }
 
-impl MapperTrait  for Mapper {
+impl MapperTrait for Mapper {
     type Inst = Instance;
     fn stack_element(&self, stack: &Instance) -> StackElement {
         match self {
@@ -193,9 +186,6 @@ impl MapperTrait  for Mapper {
     }
 }
 
-
-
-
 fn prove_progress(finite: bool, options: PathProofOptions, depth: u8) -> ProofExpr {
     if depth > 0 {
         or(progress(finite), split_cases(finite, options, depth - 1))
@@ -212,9 +202,12 @@ fn split_cases(finite: bool, options: PathProofOptions, depth: u8) -> ProofExpr 
             expr(Tactic::TacticsExhausted(true))
         } else {
             and(
-                
-                map(Mapper::ToFiniteInstance, prove_progress(true, options, depth)),  // finite case
-                all_opt( // infinite case
+                map(
+                    Mapper::ToFiniteInstance,
+                    prove_progress(true, options, depth),
+                ), // finite case
+                all_opt(
+                    // infinite case
                     OptEnumerator::PathNode,
                     prove_progress(false, options, depth),
                     expr(Tactic::TacticsExhausted(false)),
