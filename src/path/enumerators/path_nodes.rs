@@ -38,39 +38,12 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
         let new_node_idx = pattern_comps.last().unwrap().path_idx.prec();
 
         // new comp has a fixed out node
-        let out_nodes = if let Some(fixed) = comp.fixed_node() {
-            vec![fixed] // we assume here that if comp has a fixed node it was not used for any matching hit node.
-        } else {
-            // this case is only for complex
-            panic!("no complex")
+        let out_nodes = vec![comp.fixed_node().unwrap()];
 
-            // let succ = new_node_idx.succ().unwrap();
-            // let matching_endpoints_at_new = pattern_edges
-            //     .iter()
-            //     .filter(|&edge| edge.between_path_nodes(succ, new_node_idx))
-            //     .flat_map(|e| e.endpoint_at(new_node_idx))
-            //     .collect_vec();
-
-            // comp.matching_nodes()
-            //     .iter()
-            //     .filter(|&n| !matching_endpoints_at_new.contains(n))
-            //     .cloned()
-            //     .collect_vec()
-        };
-
+        // new comp has a list of possible in nodes
         let in_nodes = comp.matching_nodes().to_vec();
 
-        // if !new_node_idx.is_last() {
-        //     comp.matching_nodes().to_vec()
-        // } else if let Some(fixed) = comp.fixed_node() {
-        //     // if comp is last
-        //     vec![fixed]
-        // } else {
-        //     // only concerns complex
-        //     comp.matching_nodes().to_vec()
-        // };
-
-        // for all in_nodes of the new component
+        // for any in_node of the new component
         let iter: Box<dyn Iterator<Item = PathComp>> =
             Box::new(in_nodes.into_iter().flat_map(move |in_node| {
                 // copies for moves
@@ -203,7 +176,7 @@ pub fn path_extension_enumerator(
                     // hitting_back_edges is the set of edges which should now hit the newly enumerated comp
                     let mut iter: Box<dyn Iterator<Item = InstPart>> =
                         Box::new(vec![InstPart::new_path_comp(path_comp.clone())].into_iter());
-           
+
                     for i in 0..old_pattern_len {
                         let source_idx = Pidx::from(i);
                         let source_comp = pattern_comps[source_idx.raw()].comp.clone();
@@ -217,24 +190,34 @@ pub fn path_extension_enumerator(
                             .collect_vec();
 
                         // previous rem_edges which will be now realized are converted to non_rem_edges, so we collect those ids
-                        let hitting_back_ids = hitting_back_edges.iter().map(|e| e.id).collect_vec();
+                        let hitting_back_ids =
+                            hitting_back_edges.iter().map(|e| e.id).collect_vec();
 
                         iter = Box::new(iter.flat_map(move |inst_part| {
                             let matching_edges = matching_edges.clone();
                             let hitting_back_ids = hitting_back_ids.clone();
 
-                            let comp_hit_nodes_combs = if source_comp.is_large() {
+                            let comp_hit_nodes_combinations = if source_comp.is_large() {
+                                // if there are back edges originating from large, these must all be matching edges to each other
                                 comp.combinations(matching_edges.len())
                             } else {
                                 comp.combinations_with_replacement(matching_edges.len())
                             };
-                            comp_hit_nodes_combs
+
+                            comp_hit_nodes_combinations
                                 .into_iter()
                                 .filter(move |matched| {
                                     if source_idx.prec() == new_idx {
                                         if let Some(out) = path_comp.out_node {
-                                            out.is_comp()
-                                                || matched.iter().all(|matched| *matched != out)
+                                            if out.is_comp() {
+                                                // this is the case where the next component is a large
+                                                true
+                                            } else if !matched.contains(&out) {
+                                                // the in-out edge was also a matching edge
+                                                true
+                                            } else {
+                                                false
+                                            }
                                         } else {
                                             true
                                         }

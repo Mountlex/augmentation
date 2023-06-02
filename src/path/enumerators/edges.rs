@@ -360,6 +360,7 @@ fn check_comp_contractability(
     let iter = if finite {
         path_comps.iter().collect_vec()
     } else {
+        // !! If we consider all, we have to make sure that a potential back edge could hit the out node of the next comp.
         path_comps.iter().take(len - 1).collect_vec()
     };
     let contractability_checked = instance.contractability_checked().collect_vec();
