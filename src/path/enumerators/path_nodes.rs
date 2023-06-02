@@ -164,7 +164,7 @@ pub fn path_extension_enumerator(
     // Enumerate back edges which might hit or don't hit the new component
     let iter: Box<dyn Iterator<Item = InstPart>> =
         Box::new(iter.into_iter().flat_map(move |inst_part| {
-            let pattern_comps = pattern_comps.clone();
+            //let pattern_comps = pattern_comps.clone();
             let back_edges = back_edges.iter().cloned().collect_vec();
             back_edges
                 .into_iter()
@@ -230,11 +230,11 @@ pub fn path_extension_enumerator(
                                             true
                                         }
                                     })
-                                    // .flat_map(|matched| {
-                                    //     let len = matched.len();
-                                    //     // the selected new edges can hit the new component in any permutation
-                                    //     matched.into_iter().permutations(len)
-                                    // })
+                                    .flat_map(|matched| {
+                                        let len = matched.len();
+                                        // the selected new edges can hit the new component in any permutation
+                                        matched.into_iter().permutations(len)
+                                    })
                                     .map(move |matched| {
                                         let mut edges = matched
                                             .into_iter()
@@ -287,11 +287,11 @@ pub fn path_extension_enumerator(
                                             true
                                         }
                                     })
-                                    // .flat_map(|matched| {
-                                    //     let len = matched.len();
-                                    //     // the selected new edges can hit the new component in any permutation
-                                    //     matched.into_iter().permutations(len)
-                                    // })
+                                    .flat_map(|matched| {
+                                        let len = matched.len();
+                                        // the selected new edges can hit the new component in any permutation
+                                        matched.into_iter().permutations(len)
+                                    })
                                     .map(move |matched| {
                                         let mut edges = matched
                                             .into_iter()
