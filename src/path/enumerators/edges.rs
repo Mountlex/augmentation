@@ -313,24 +313,18 @@ fn check_four_matching(
     let path_comps = instance.path_nodes().collect_vec();
     let len = path_comps.len();
 
-    for s in 2..=len - 1 {
-        let comp_nodes = path_comps
+    for comps in path_comps.iter().powerset().filter(|set| set.len() >= 1) {
+        let set = comps
             .iter()
-            .take(s)
             .flat_map(|c| c.comp.nodes().to_vec())
             .collect_vec();
 
-        let left_size: usize = path_comps
+        let left_size: usize = comps
             .iter()
-            .take(s)
             .map(|comp| comp.comp.num_vertices())
             .sum();
 
-        let right_size: usize = path_comps
-            .iter()
-            .skip(s)
-            .map(|comp| comp.comp.num_vertices())
-            .sum();
+       
 
         let num_outside = instance.out_edges().len();
 
@@ -338,9 +332,9 @@ fn check_four_matching(
         if left_size >= 10 // && finite && (right_size >= 10 - 4 * num_outside))
             //|| (left_size >= 10 && !finite && right_size >= 6 - 4 * num_outside)
         {
-            if let Some(iter) = ensure_k_matching(comp_nodes, instance, 4, finite) {
+            if let Some(iter) = ensure_k_matching(set, instance, 4, finite) {
                 let iter = to_cases(iter, nodes_to_pidx, instance, true);
-                return Some((iter, format!("4-Matching of {} first pathnodes", s)));
+                return Some((iter, format!("4-Matching")));
             }
         }
     }
