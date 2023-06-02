@@ -313,7 +313,7 @@ fn check_four_matching(
     let path_comps = instance.path_nodes().collect_vec();
     let len = path_comps.len();
 
-    for comps in path_comps.iter().powerset().filter(|set| set.len() >= 1) {
+    for comps in path_comps.iter().powerset().filter(|set| set.len() >= 2) {
         let set = comps
             .iter()
             .flat_map(|c| c.comp.nodes().to_vec())
