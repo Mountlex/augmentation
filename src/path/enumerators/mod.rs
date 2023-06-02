@@ -2,7 +2,6 @@ use super::instance::{Instance, StackElement};
 use crate::logic::{EnumeratorTrait, InstanceTrait, OptEnumeratorTrait};
 
 mod edges;
-//mod nice_pairs;
 mod path_nodes;
 mod pseudo_cycles;
 mod rearrangements;

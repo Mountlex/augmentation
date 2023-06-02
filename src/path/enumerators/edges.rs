@@ -328,9 +328,15 @@ fn check_four_matching(
             .flat_map(|c| c.comp.matching_nodes().to_vec())
             .collect_vec();
 
-        let size: usize = path_comps
+        let left_size: usize = path_comps
             .iter()
             .take(s)
+            .map(|comp| comp.comp.num_vertices())
+            .sum();
+
+        let right_size: usize = path_comps
+            .iter()
+            .skip(s)
             .map(|comp| comp.comp.num_vertices())
             .sum();
 
@@ -339,7 +345,8 @@ fn check_four_matching(
             .filter(|p| p.path_idx.raw() >= s)
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
-        if size >= 10 {
+
+        if (left_size >= 10 && finite && right_size >= 10) || (left_size >= 10 && !finite && right_size >= 6) {
             if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4, finite) {
                 let iter = to_cases(iter, nodes_to_pidx, instance, true);
                 return Some((iter, format!("4-Matching of {} first pathnodes", s)));
@@ -361,7 +368,6 @@ fn check_comp_contractability(
     let iter = if finite {
         path_comps.iter().collect_vec()
     } else {
-        // !! If we consider all, we have to make sure that a potential back edge could hit the out node of the next comp.
         path_comps.iter().take(len - 1).collect_vec()
     };
     let contractability_checked = instance.contractability_checked().collect_vec();
@@ -473,6 +479,8 @@ fn check_comp_contractability(
 //     return None;
 // }
 
+/// For the given pattern we say that a new edge is good if adding this edge to the instance guarantees progress for any superpattern.
+/// Intuitively, we don't have to enumerate this edge again in any subpattern of this pattern.
 fn compute_good_edges(
     instance: &mut Instance,
     finite: bool,
@@ -481,14 +489,14 @@ fn compute_good_edges(
     let mut good_edges = vec![];
     let mut good_out = vec![];
 
-    let mut rem_parts = vec![];
+    let mut not_already_good = vec![];
     let parts = iter.collect_vec();
     for mut part in parts {
         if check_progress(instance, finite, part.clone()) {
             good_edges.append(&mut part.edges);
             good_out.append(&mut part.out_edges);
         } else {
-            rem_parts.push(part);
+            not_already_good.push(part);
         }
     }
 
@@ -497,7 +505,7 @@ fn compute_good_edges(
         top.good_out.append(&mut good_out);
     }
 
-    Box::new(rem_parts.into_iter())
+    Box::new(not_already_good.into_iter())
 }
 
 fn to_cases_mul(
@@ -657,6 +665,8 @@ fn handle_contractable_components(
     let opt_lb = free_nodes.len() * 2 - num_edges_between_free_nodes;
 
     if opt_lb * 5 >= comp.graph().node_count() * 4 {
+        // component is 5/4-contractable!
+
         if comp.is_c5() {
             assert_eq!(free_nodes.len(), 2);
             assert!(!comp.is_adjacent(&free_nodes[0], &free_nodes[1]));
@@ -912,6 +922,7 @@ fn ensure_k_matching(
     k: u8,
     finite: bool,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
+    // TODO we assume that set1 and set2 partitions all nodes?!
     let outside_edges_at_set = instance
         .out_edges()
         .iter()
@@ -924,13 +935,14 @@ fn ensure_k_matching(
         .map(|e| e.source)
         .filter(|n| set1.contains(n))
         .collect_vec();
-    let edges = instance.all_edges();
-    let edges_at_set = edges
+    let pattern_edges = instance.all_edges();
+    let pattern_edges_between_sets = pattern_edges
         .iter()
         .filter(|e| e.one_sided_nodes_incident(&set1))
         .collect_vec();
 
     // 1. step: Compute and count unique non-comp nodes in set with outgoing or REM edges.
+    // these are counted as matching edges!
     let non_comp_out_or_rem = set1
         .iter()
         .filter(|n| {
@@ -940,18 +952,20 @@ fn ensure_k_matching(
         .cloned()
         .collect_vec();
 
-    // 2. step: Compute and count outgoing and REM edges at comp notes in set.
+    // 2. step: Compute and count outgoing and REM edges at comp nodes in set.
+    // these are counted as matching edges!
     let num_edges_comp_out_or_rem = outside_edges_at_set.iter().filter(|n| n.is_comp()).count()
         + rem_edges_at_set.iter().filter(|n| n.is_comp()).count();
 
     // 3. step: Num edges between comp nodes
-    let num_edges_between_comp = edges_at_set
+    // these are counted as matching edges!
+    let num_edges_between_comp = pattern_edges_between_sets
         .iter()
         .filter(|e| e.to_tuple().0.is_comp() && e.to_tuple().1.is_comp())
         .count();
 
-    // 4. step: Compute edges incident only to non-comp nodes
-    let edges_incident_to_non_comp = edges_at_set
+    // 4. step: Compute pattern edges incident to at least one non-comp node
+    let edges_incident_to_non_comp = pattern_edges_between_sets
         .iter()
         .filter(|e| !(e.to_tuple().0.is_comp() && e.to_tuple().1.is_comp()))
         .collect_vec();
@@ -987,7 +1001,7 @@ fn ensure_k_matching(
         let free_complement = set2
             .into_iter()
             .filter(|n| {
-                n.is_comp() || edges_at_set.iter().filter(|e| e.node_incident(n)).count() == 0
+                n.is_comp() || pattern_edges_between_sets.iter().filter(|e| e.node_incident(n)).count() == 0
                 // ) || (edges_incident_to_non_comp
                 //     .iter()
                 //     .filter(|e| e.node_incident(n))
@@ -1002,7 +1016,7 @@ fn ensure_k_matching(
             .filter(|n| {
                 n.is_comp()
                     || (!non_comp_out_or_rem.contains(n)
-                        && (edges_at_set.iter().filter(|e| e.node_incident(n)).count() == 0))
+                        && (pattern_edges_between_sets.iter().filter(|e| e.node_incident(n)).count() == 0))
                 // || (edges_incident_to_non_comp
                 //     .iter()
                 //     .filter(|e| e.node_incident(n))
