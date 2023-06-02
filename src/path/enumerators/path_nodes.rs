@@ -268,25 +268,25 @@ pub fn path_extension_enumerator(
 
                                 comp_hit_non_matching_nodes_combinations
                                     .into_iter()
-                                    .filter(move |matched| {
-                                        if source_idx.prec() == new_idx {
-                                            if let Some(out) = path_comp.out_node {
-                                                if out.is_comp() {
-                                                    // this is the case where the next component is a large
-                                                    true
-                                                } else if !matched.contains(&out) {
-                                                    // the in-out edge was also a matching edge
-                                                    true
-                                                } else {
-                                                    false
-                                                }
-                                            } else {
-                                                true
-                                            }
-                                        } else {
-                                            true
-                                        }
-                                    })
+                                    // .filter(move |matched| {
+                                    //     if source_idx.prec() == new_idx {
+                                    //         if let Some(out) = path_comp.out_node {
+                                    //             if out.is_comp() {
+                                    //                 // this is the case where the next component is a large
+                                    //                 true
+                                    //             } else if !matched.contains(&out) {
+                                    //                 // the in-out edge was also a matching edge
+                                    //                 true
+                                    //             } else {
+                                    //                 false
+                                    //             }
+                                    //         } else {
+                                    //             true
+                                    //         }
+                                    //     } else {
+                                    //         true
+                                    //     }
+                                    // })
                                     .flat_map(|matched| {
                                         let len = matched.len();
                                         // the selected new edges can hit the new component in any permutation
