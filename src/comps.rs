@@ -160,14 +160,14 @@ impl Component {
         }
     }
 
-    /// A list of all nodes which could be in-nodes.
-    /// Removes symmetric cases.
-    pub fn in_nodes(&self) -> &[Node] {
-        match self {
-            Component::Large(n) => std::slice::from_ref(n),
-            _ => &self.nodes() //[..(self.nodes().len() / 2 + 1)],
-        }
-    }
+    // /// A list of all nodes which could be in-nodes.
+    // /// Removes symmetric cases.
+    // pub fn in_nodes(&self) -> &[Node] {
+    //     match self {
+    //         Component::Large(n) => std::slice::from_ref(n),
+    //         _ => &self.nodes() //[..(self.nodes().len() / 2 + 1)],
+    //     }
+    // }
 
     pub fn incident(&self, edge: &Edge) -> Option<Node> {
         if let Component::Large(n) = self {

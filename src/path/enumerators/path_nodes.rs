@@ -58,15 +58,17 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
             //     .collect_vec()
         };
 
-        let in_nodes = if !new_node_idx.is_last() {
-            comp.in_nodes().to_vec()
-        } else if let Some(fixed) = comp.fixed_node() {
-            // if comp is last
-            vec![fixed]
-        } else {
-            // only concerns complex
-            comp.in_nodes().to_vec()
-        };
+        let in_nodes = comp.matching_nodes().to_vec();
+
+        // if !new_node_idx.is_last() {
+        //     comp.matching_nodes().to_vec()
+        // } else if let Some(fixed) = comp.fixed_node() {
+        //     // if comp is last
+        //     vec![fixed]
+        // } else {
+        //     // only concerns complex
+        //     comp.matching_nodes().to_vec()
+        // };
 
         // for all in_nodes of the new component
         let iter: Box<dyn Iterator<Item = PathComp>> =
