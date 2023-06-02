@@ -149,14 +149,8 @@ impl Component {
             Component::C5(nodes) => nodes,
             Component::C4(nodes) => nodes,
             Component::C3(nodes) => nodes,
-            Component::Large(_) => panic!("large has no known nodes"),
-        }
-    }
-
-    pub fn matching_nodes(&self) -> &[Node] {
-        match self {
             Component::Large(n) => std::slice::from_ref(n),
-            _ => self.nodes(),
+            //Component::Large(_) => panic!("large has no known nodes"),
         }
     }
 

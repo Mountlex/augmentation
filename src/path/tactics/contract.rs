@@ -26,7 +26,7 @@ fn check_for_comp(instance: &Instance, idx: Pidx) -> PathProofNode {
         );
     }
 
-    let nodes = comp.matching_nodes();
+    let nodes = comp.nodes();
     let used_nodes = nodes
         .iter()
         .filter(|n| {

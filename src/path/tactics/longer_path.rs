@@ -29,7 +29,7 @@ pub fn check_longer_nice_path(instance: &Instance, finite: bool) -> PathProofNod
 
         let new_last_idx = extension.end;
         let new_last_comp = &all_comps[new_last_idx.raw()];
-        let new_last_nodes = new_last_comp.comp.matching_nodes();
+        let new_last_nodes = new_last_comp.comp.nodes();
         let outside_hits = all_outside.iter().filter(|n| new_last_nodes.contains(n));
         for outside_hit in outside_hits {
             // new_last will be prelast, check if end_in and outside_hit build feasible nice path
@@ -64,7 +64,7 @@ pub fn check_longer_nice_path(instance: &Instance, finite: bool) -> PathProofNod
 
     // check if last comp has feasible outside edges
     let last_comp = &all_comps[Pidx::Last.raw()];
-    let last_comp_nodes = last_comp.comp.matching_nodes();
+    let last_comp_nodes = last_comp.comp.nodes();
 
     for outside_hit in all_outside.iter().filter(|n| last_comp_nodes.contains(n)) {
         if valid_in_out_npc(

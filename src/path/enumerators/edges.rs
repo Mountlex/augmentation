@@ -22,7 +22,7 @@ pub fn edge_enumerator(
 
     let mut nodes_to_pidx: Vec<Option<Pidx>> = vec![None; len * 20];
     for path_comp in &path_comps {
-        for node in path_comp.comp.matching_nodes() {
+        for node in path_comp.comp.nodes() {
             nodes_to_pidx[node.get_id() as usize] = Some(path_comp.path_idx);
         }
     }
@@ -87,13 +87,9 @@ fn check_comp_three_matching(
     };
     for path_comp in iter {
         let idx = path_comp.path_idx;
-        let comp_nodes = path_comp.comp.matching_nodes().to_vec();
-        let other_nodes = path_comps
-            .iter()
-            .filter(|p| p.path_idx != path_comp.path_idx)
-            .flat_map(|p| p.comp.matching_nodes().to_vec())
-            .collect_vec();
-        if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance, finite) {
+        let comp_nodes = path_comp.comp.nodes().to_vec();
+
+        if let Some(iter) = ensure_three_matching(comp_nodes,  instance, finite) {
             let iter = to_cases(iter, nodes_to_pidx, instance, true);
             return Some((iter, format!("3-Matching of {}", idx)));
         }
@@ -112,14 +108,10 @@ fn check_three_matching(
         let comp_nodes = path_comps
             .iter()
             .take(s)
-            .flat_map(|c| c.comp.matching_nodes().to_vec())
+            .flat_map(|c| c.comp.nodes().to_vec())
             .collect_vec();
-        let other_nodes = path_comps
-            .iter()
-            .filter(|p| p.path_idx.raw() >= s)
-            .flat_map(|p| p.comp.matching_nodes().to_vec())
-            .collect_vec();
-        if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance, finite) {
+
+        if let Some(iter) = ensure_three_matching(comp_nodes,  instance, finite) {
             let iter = to_cases(iter, nodes_to_pidx, instance, true);
             return Some((iter, format!("3-Matching of {} first pathnodes", s)));
         }
@@ -266,7 +258,7 @@ fn check_gainful_edges(
                             let all_other_nodes = path_comps
                                 .iter()
                                 .filter(|comp| comp.path_idx != out_pidx)
-                                .flat_map(|c| c.comp.matching_nodes())
+                                .flat_map(|c| c.comp.nodes())
                                 .filter(|n| {
                                     !all_edges.iter().any(|e| {
                                         e.node_incident(n)
@@ -325,7 +317,7 @@ fn check_four_matching(
         let comp_nodes = path_comps
             .iter()
             .take(s)
-            .flat_map(|c| c.comp.matching_nodes().to_vec())
+            .flat_map(|c| c.comp.nodes().to_vec())
             .collect_vec();
 
         let left_size: usize = path_comps
@@ -340,14 +332,9 @@ fn check_four_matching(
             .map(|comp| comp.comp.num_vertices())
             .sum();
 
-        let other_nodes = path_comps
-            .iter()
-            .filter(|p| p.path_idx.raw() >= s)
-            .flat_map(|p| p.comp.matching_nodes().to_vec())
-            .collect_vec();
 
         if (left_size >= 10 && finite && right_size >= 10) || (left_size >= 10 && !finite && right_size >= 6) {
-            if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4, finite) {
+            if let Some(iter) = ensure_k_matching(comp_nodes,  instance, 4, finite) {
                 let iter = to_cases(iter, nodes_to_pidx, instance, true);
                 return Some((iter, format!("4-Matching of {} first pathnodes", s)));
             }
@@ -619,7 +606,7 @@ fn handle_contractable_components(
     let path_comps = instance.path_nodes().collect_vec();
     let rem_edges = instance.rem_edges();
 
-    let nodes = comp.matching_nodes();
+    let nodes = comp.nodes();
 
     // nodes which are incident to some non-component edge
     let used_nodes = nodes
@@ -653,7 +640,7 @@ fn handle_contractable_components(
     let complement = path_comps
         .iter()
         .filter(|p| p.path_idx != path_comp.path_idx)
-        .flat_map(|p| p.comp.matching_nodes().to_vec())
+        .flat_map(|p| p.comp.nodes().to_vec())
         .collect_vec();
 
     let num_edges_between_free_nodes = comp
@@ -908,21 +895,21 @@ fn handle_contractable_components(
 
 fn ensure_three_matching(
     set1: Vec<Node>,
-    set2: Vec<Node>,
     instance: &Instance,
     finite: bool,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
-    ensure_k_matching(set1, set2, instance, 3, finite)
+    ensure_k_matching(set1,  instance, 3, finite)
 }
 
+/// Assumed that set1 is composed of all nodes of path comps
 fn ensure_k_matching(
     set1: Vec<Node>,
-    set2: Vec<Node>,
     instance: &Instance,
     k: u8,
     finite: bool,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
-    // TODO we assume that set1 and set2 partitions all nodes?!
+    let set2 = instance.all_nodes().filter(|n| !set1.contains(n)).cloned().collect_vec();
+
     let outside_edges_at_set = instance
         .out_edges()
         .iter()
@@ -970,6 +957,7 @@ fn ensure_k_matching(
         .filter(|e| !(e.to_tuple().0.is_comp() && e.to_tuple().1.is_comp()))
         .collect_vec();
 
+    // all pattern edges with have an comp endpoint in set1 but a non-comp endpoint in set2 are counted as matching edges
     let num_edges_comp_at_set_non_comp_compl = edges_incident_to_non_comp
         .iter()
         .map(|e| e.endpoint_in(&set1).unwrap())

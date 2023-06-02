@@ -9,7 +9,7 @@ pub fn check_pendant_node(instance: &Instance) -> PathProofNode {
     let mut path_comps = instance.path_nodes();
     let rem_edges = instance.rem_edges();
 
-    let last_comp_nodes = &path_comps.next().unwrap().comp.matching_nodes();
+    let last_comp_nodes = &path_comps.next().unwrap().comp.nodes();
 
     let a = all_edges
         .iter()

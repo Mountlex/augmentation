@@ -174,7 +174,7 @@ fn compute_initial_cases(
     let in_nodes = if comp.fixed_node().is_some() {
         vec![comp.fixed_node().unwrap()]
     } else {
-        comp.matching_nodes().to_vec()
+        comp.nodes().to_vec()
     };
 
     let mut cases = in_nodes
