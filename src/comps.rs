@@ -278,6 +278,18 @@ impl Component {
         }
     }
 
+    pub fn combinations(&self, size: usize) -> Vec<Vec<Node>> {
+        match self {
+            Component::Large(n) => vec![vec![*n; size]],
+            _ => self
+                .nodes()
+                .to_vec()
+                .into_iter()
+                .combinations(size)
+                .collect(),
+        }
+    }
+
     pub fn combinations_with_replacement(&self, size: usize) -> Vec<Vec<Node>> {
         match self {
             Component::Large(n) => vec![vec![*n; size]],

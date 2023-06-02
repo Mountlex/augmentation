@@ -189,6 +189,7 @@ pub fn path_extension_enumerator(
     // Enumerate back edges which might hit or don't hit the new component
     let iter: Box<dyn Iterator<Item = InstPart>> =
         Box::new(iter.into_iter().flat_map(move |inst_part| {
+            let pattern_comps = pattern_comps.clone();
             let back_edges = back_edges.iter().cloned().collect_vec();
             back_edges
                 .into_iter()
@@ -203,6 +204,7 @@ pub fn path_extension_enumerator(
            
                     for i in 0..old_pattern_len {
                         let source_idx = Pidx::from(i);
+                        let source_comp = pattern_comps[source_idx.raw()].comp.clone();
                         let comp = path_comp.comp.clone();
 
                         // all matching edges between source_idx and node_idx
@@ -213,14 +215,18 @@ pub fn path_extension_enumerator(
                             .collect_vec();
 
                         // previous rem_edges which will be now realized are converted to non_rem_edges, so we collect those ids
-                        let non_rem_edges = hitting_back_edges.iter().map(|e| e.id).collect_vec();
+                        let hitting_back_ids = hitting_back_edges.iter().map(|e| e.id).collect_vec();
 
                         iter = Box::new(iter.flat_map(move |inst_part| {
                             let matching_edges = matching_edges.clone();
-                            let non_rem_edges = non_rem_edges.clone();
+                            let hitting_back_ids = hitting_back_ids.clone();
 
-                            //comp.subsets_of_size(matching_edges.len())
-                            comp.combinations_with_replacement(matching_edges.len())
+                            let comp_hit_nodes_combs = if source_comp.is_large() {
+                                comp.combinations(matching_edges.len())
+                            } else {
+                                comp.combinations_with_replacement(matching_edges.len())
+                            };
+                            comp_hit_nodes_combs
                                 .into_iter()
                                 .filter(move |matched| {
                                     if source_idx.prec() == new_idx {
@@ -241,7 +247,7 @@ pub fn path_extension_enumerator(
                                         .map(|(u, v)| Edge::new(v.source, source_idx, u, new_idx))
                                         .collect_vec();
 
-                                    let mut non_rem_edges = non_rem_edges.clone();
+                                    let mut non_rem_edges = hitting_back_ids.clone();
 
                                     let mut inst_part_copy = inst_part.clone();
                                     inst_part_copy.edges.append(&mut edges);
