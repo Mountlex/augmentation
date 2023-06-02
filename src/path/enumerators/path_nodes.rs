@@ -145,13 +145,13 @@ pub fn path_extension_enumerator(
     let pattern_comps = instance.path_nodes().cloned().collect_vec();
     let back_edges = instance.rem_edges();
 
-    if back_edges.is_empty() && pattern_comps.len() >= 3 {
-        // If we cannot find more edges, and there are no rem edges, it wont help to enumerate more nodes.
-        if edge_enumerator(instance, false).is_none() {
-            log::info!("Enumerating more path nodes does not help!");
-            return None;
-        }
-    }
+    // if back_edges.is_empty() && pattern_comps.len() >= 3 {
+    //     // If we cannot find more edges, and there are no rem edges, it wont help to enumerate more nodes.
+    //     if edge_enumerator(instance, false).is_none() {
+    //         log::info!("Enumerating more path nodes does not help!");
+    //         return None;
+    //     }
+    // }
 
     //let profile = instance.get_profile(true);
     //log::info!("Currently extending: {}", profile);
