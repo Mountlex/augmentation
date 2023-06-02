@@ -200,7 +200,6 @@ pub fn path_extension_enumerator(
                         // First enumerate matching edges
                         if !matching_hit_back.is_empty() {
                             iter = Box::new(iter.flat_map(move |inst_part| {
-                               
                                 let matching_hit_back = matching_hit_back.clone();
 
                                 let hitting_back_ids =
@@ -246,17 +245,17 @@ pub fn path_extension_enumerator(
 
                                         let mut non_rem_edges = hitting_back_ids.clone();
 
-                                        let mut inst_part_copy = inst_part.clone();
-                                        inst_part_copy.edges.append(&mut edges);
-                                        inst_part_copy.non_rem_edges.append(&mut non_rem_edges);
+                                        let mut inst_part = inst_part.clone();
+                                        inst_part.edges.append(&mut edges);
+                                        inst_part.non_rem_edges.append(&mut non_rem_edges);
 
-                                        inst_part_copy
+                                        inst_part
                                     })
                             }));
                         }
 
                         let comp = comp2;
-
+                        // Second enumerate non-matching edges
                         if !non_matching_hit_back.is_empty() {
                             iter = Box::new(iter.flat_map(move |inst_part| {
                                 let non_matching_hit_back = non_matching_hit_back.clone();
@@ -268,25 +267,6 @@ pub fn path_extension_enumerator(
 
                                 comp_hit_non_matching_nodes_combinations
                                     .into_iter()
-                                    // .filter(move |matched| {
-                                    //     if source_idx.prec() == new_idx {
-                                    //         if let Some(out) = path_comp.out_node {
-                                    //             if out.is_comp() {
-                                    //                 // this is the case where the next component is a large
-                                    //                 true
-                                    //             } else if !matched.contains(&out) {
-                                    //                 // the in-out edge was also a matching edge
-                                    //                 true
-                                    //             } else {
-                                    //                 false
-                                    //             }
-                                    //         } else {
-                                    //             true
-                                    //         }
-                                    //     } else {
-                                    //         true
-                                    //     }
-                                    // })
                                     .flat_map(|matched| {
                                         let len = matched.len();
                                         // the selected new edges can hit the new component in any permutation
@@ -303,11 +283,11 @@ pub fn path_extension_enumerator(
 
                                         let mut non_rem_edges = hitting_back_ids.clone();
 
-                                        let mut inst_part_copy = inst_part.clone();
-                                        inst_part_copy.edges.append(&mut edges);
-                                        inst_part_copy.non_rem_edges.append(&mut non_rem_edges);
+                                        let mut inst_part = inst_part.clone();
+                                        inst_part.edges.append(&mut edges);
+                                        inst_part.non_rem_edges.append(&mut non_rem_edges);
 
-                                        inst_part_copy
+                                        inst_part
                                     })
                             }));
                         }
@@ -317,5 +297,5 @@ pub fn path_extension_enumerator(
                 })
         }));
 
-    Some((Box::new(iter), "path node".into()))
+    Some((Box::new(iter), "new path node".into()))
 }
