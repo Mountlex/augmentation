@@ -41,7 +41,7 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
         let out_nodes = vec![comp.fixed_node().unwrap()];
 
         // new comp has a list of possible in nodes
-        let in_nodes = comp.matching_nodes().to_vec();
+        let in_nodes = comp.in_nodes().to_vec(); //comp.matching_nodes().to_vec();
 
         // for any in_node of the new component
         let iter: Box<dyn Iterator<Item = PathComp>> =
