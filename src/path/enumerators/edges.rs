@@ -334,8 +334,8 @@ fn check_four_matching(
 
         let num_outside = instance.out_edges().len();
 
-        if left_size >= 10 //&& finite && (right_size >= 10 - 4 * num_outside))
-            //|| (left_size >= 10 && !finite && right_size >= 6 - 4 * num_outside)
+        if (left_size >= 10 && finite && (right_size >= 10 - 4 * num_outside))
+            || (left_size >= 10 && !finite && right_size >= 6 - 4 * num_outside)
         {
             if let Some(iter) = ensure_k_matching(comp_nodes, instance, 4, finite) {
                 let iter = to_cases(iter, nodes_to_pidx, instance, true);
