@@ -197,8 +197,6 @@ impl Component {
         }
     }
 
-    
-
     pub fn num_edges(&self) -> usize {
         match self {
             Component::C7(_) => 7,

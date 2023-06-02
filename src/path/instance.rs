@@ -369,7 +369,9 @@ impl Instance {
     }
 
     pub fn all_nodes(&self) -> impl Iterator<Item = &'_ Node> {
-        self.inst_parts().flat_map(|part| part.path_nodes.iter()).flat_map(|comp| comp.comp.nodes().into_iter())
+        self.inst_parts()
+            .flat_map(|part| part.path_nodes.iter())
+            .flat_map(|comp| comp.comp.nodes().into_iter())
     }
 
     pub fn contractability_checked(&self) -> impl Iterator<Item = &'_ Pidx> {

@@ -23,7 +23,6 @@ pub fn valid_in_out_npc(
     }
 }
 
-
 pub fn valid_in_out_pre_npc(c: &Component, new_in: Node, new_out: Node, prelast: bool) -> bool {
     if c.is_c3() || c.is_c4() || (c.is_c5() && prelast) {
         new_in != new_out

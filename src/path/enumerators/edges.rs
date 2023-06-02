@@ -89,7 +89,7 @@ fn check_comp_three_matching(
         let idx = path_comp.path_idx;
         let comp_nodes = path_comp.comp.nodes().to_vec();
 
-        if let Some(iter) = ensure_three_matching(comp_nodes,  instance, finite) {
+        if let Some(iter) = ensure_three_matching(comp_nodes, instance, finite) {
             let iter = to_cases(iter, nodes_to_pidx, instance, true);
             return Some((iter, format!("3-Matching of {}", idx)));
         }
@@ -111,7 +111,7 @@ fn check_three_matching(
             .flat_map(|c| c.comp.nodes().to_vec())
             .collect_vec();
 
-        if let Some(iter) = ensure_three_matching(comp_nodes,  instance, finite) {
+        if let Some(iter) = ensure_three_matching(comp_nodes, instance, finite) {
             let iter = to_cases(iter, nodes_to_pidx, instance, true);
             return Some((iter, format!("3-Matching of {} first pathnodes", s)));
         }
@@ -282,7 +282,7 @@ fn check_gainful_edges(
                                     nodes_to_pidx,
                                     instance,
                                     Credit::from_integer(1) - gain,
-                                    false
+                                    false,
                                 );
                                 let iter = Box::new(iter.map(move |mut part| {
                                     for n in &cases {
@@ -332,9 +332,10 @@ fn check_four_matching(
             .map(|comp| comp.comp.num_vertices())
             .sum();
 
-
-        if (left_size >= 10 && finite && right_size >= 10) || (left_size >= 10 && !finite && right_size >= 6) {
-            if let Some(iter) = ensure_k_matching(comp_nodes,  instance, 4, finite) {
+        if (left_size >= 10 && finite && right_size >= 10)
+            || (left_size >= 10 && !finite && right_size >= 6)
+        {
+            if let Some(iter) = ensure_k_matching(comp_nodes, instance, 4, finite) {
                 let iter = to_cases(iter, nodes_to_pidx, instance, true);
                 return Some((iter, format!("4-Matching of {} first pathnodes", s)));
             }
@@ -501,7 +502,13 @@ fn to_cases_mul(
     instance: &Instance,
     matching: bool,
 ) -> Box<dyn Iterator<Item = InstPart>> {
-    to_cases_with_edge_cost_mul(iter, nodes_to_pidx, instance, Credit::from_integer(1), matching)
+    to_cases_with_edge_cost_mul(
+        iter,
+        nodes_to_pidx,
+        instance,
+        Credit::from_integer(1),
+        matching,
+    )
 }
 
 fn to_cases(
@@ -510,7 +517,13 @@ fn to_cases(
     instance: &Instance,
     matching: bool,
 ) -> Box<dyn Iterator<Item = InstPart>> {
-    to_cases_with_edge_cost(iter, nodes_to_pidx, instance, Credit::from_integer(1), matching)
+    to_cases_with_edge_cost(
+        iter,
+        nodes_to_pidx,
+        instance,
+        Credit::from_integer(1),
+        matching,
+    )
 }
 
 fn to_cases_with_edge_cost(
@@ -551,7 +564,7 @@ fn to_cases_with_edge_cost_mul(
                         source_idx: nodes_to_pidx[node.get_id() as usize].unwrap(),
                         cost,
                         id: new_rem_id,
-                        matching
+                        matching,
                     });
                 }
                 Hit::Node(hit_node) => {
@@ -691,7 +704,7 @@ fn handle_contractable_components(
                 edge_iterator(free_nodes, complement, true, !finite),
                 &nodes_to_pidx,
                 instance,
-                false
+                false,
             );
 
             return Some(Box::new(case_a.into_iter().chain(case_b)));
@@ -737,7 +750,7 @@ fn handle_contractable_components(
                     edge_iterator(free_nodes, complement, true, !finite),
                     &nodes_to_pidx,
                     instance,
-                    false
+                    false,
                 );
 
                 return Some(Box::new(case_a.into_iter().chain(case_b)));
@@ -805,7 +818,7 @@ fn handle_contractable_components(
                 edge_iterator(free_nodes, complement, true, !finite),
                 &nodes_to_pidx,
                 instance,
-                false
+                false,
             );
 
             return Some(Box::new(case_a.into_iter().chain(case_b)));
@@ -898,7 +911,7 @@ fn ensure_three_matching(
     instance: &Instance,
     finite: bool,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
-    ensure_k_matching(set1,  instance, 3, finite)
+    ensure_k_matching(set1, instance, 3, finite)
 }
 
 /// Assumed that set1 is composed of all nodes of path comps
@@ -908,7 +921,11 @@ fn ensure_k_matching(
     k: u8,
     finite: bool,
 ) -> Option<Box<dyn Iterator<Item = (Node, Hit)>>> {
-    let set2 = instance.all_nodes().filter(|n| !set1.contains(n)).cloned().collect_vec();
+    let set2 = instance
+        .all_nodes()
+        .filter(|n| !set1.contains(n))
+        .cloned()
+        .collect_vec();
 
     let outside_edges_at_set = instance
         .out_edges()
@@ -989,7 +1006,12 @@ fn ensure_k_matching(
         let free_complement = set2
             .into_iter()
             .filter(|n| {
-                n.is_comp() || pattern_edges_between_sets.iter().filter(|e| e.node_incident(n)).count() == 0
+                n.is_comp()
+                    || pattern_edges_between_sets
+                        .iter()
+                        .filter(|e| e.node_incident(n))
+                        .count()
+                        == 0
                 // ) || (edges_incident_to_non_comp
                 //     .iter()
                 //     .filter(|e| e.node_incident(n))
@@ -1004,7 +1026,11 @@ fn ensure_k_matching(
             .filter(|n| {
                 n.is_comp()
                     || (!non_comp_out_or_rem.contains(n)
-                        && (pattern_edges_between_sets.iter().filter(|e| e.node_incident(n)).count() == 0))
+                        && (pattern_edges_between_sets
+                            .iter()
+                            .filter(|e| e.node_incident(n))
+                            .count()
+                            == 0))
                 // || (edges_incident_to_non_comp
                 //     .iter()
                 //     .filter(|e| e.node_incident(n))
