@@ -334,6 +334,7 @@ fn check_four_matching(
 
         let num_outside = instance.out_edges().len();
 
+        // TODO
         if left_size >= 10 // && finite && (right_size >= 10 - 4 * num_outside))
             //|| (left_size >= 10 && !finite && right_size >= 6 - 4 * num_outside)
         {
