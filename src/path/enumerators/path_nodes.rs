@@ -225,6 +225,10 @@ pub fn path_extension_enumerator(
                                         true
                                     }
                                 })
+                                .flat_map(|matched| {
+                                    let len = matched.len();
+                                    matched.into_iter().permutations(len)
+                                })
                                 .map(move |matched| {
                                     let mut edges = matched
                                         .into_iter()
