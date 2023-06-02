@@ -2,7 +2,6 @@ use itertools::Itertools;
 
 use crate::{
     path::{
-        enumerators::edges::edge_enumerator,
         instance::{InstPart, Instance, PathNode},
         path_definition::valid_in_out_pre_npc,
         PathComp, Pidx,

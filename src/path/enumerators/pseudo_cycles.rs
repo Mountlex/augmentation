@@ -13,14 +13,13 @@ use crate::{
 
 pub fn enumerate_pseudo_cycles(
     instance: &Instance,
-    finite: bool,
+    bounded: bool,
 ) -> Box<dyn Iterator<Item = PseudoCycle>> {
-    let path_comps = instance.path_nodes().cloned().collect_vec();
-    let all_edges = instance.all_edges();
-    //let last_single_edge = instance.last_single_edge();
-    let mut all_rem_edges = instance.rem_edges();
-    let last_comp = path_comps.last().cloned().unwrap();
-    all_rem_edges.push(HalfAbstractEdge {
+    let pattern_comps = instance.path_nodes().cloned().collect_vec();
+    let pattern_edges = instance.all_edges();
+    let mut back_edges = instance.rem_edges();
+    let last_comp = pattern_comps.last().cloned().unwrap();
+    back_edges.push(HalfAbstractEdge {
         source: last_comp.in_node.unwrap(),
         source_idx: last_comp.path_idx,
         cost: Credit::from_integer(1),
@@ -28,39 +27,33 @@ pub fn enumerate_pseudo_cycles(
         matching: false,
     });
 
-    if path_comps.len() < 3 {
+    if pattern_comps.len() < 3 {
         return Box::new(std::iter::empty());
     }
 
     let mut iter: Box<dyn Iterator<Item = PseudoCycle>> = Box::new(std::iter::empty());
-    for i in 3..=(path_comps.len() + 1) {
+    for i in 3..=(pattern_comps.len() + 1) {
+        // enumerate all cycles of size i
         let fixed_edge_iter = pseudo_cycles_of_length(
-            path_comps.clone(),
-            None,
-            all_edges.clone(),
-            all_rem_edges.clone(),
+            pattern_comps.clone(),
+            pattern_edges.clone(),
+            back_edges.clone(),
             i,
-            !finite,
+            !bounded, // consider back edges if we are not in the bounded case
         );
         iter = Box::new(iter.chain(fixed_edge_iter))
     }
     iter
 }
 
-pub fn edges_between(
+fn edges_between(
     edges: &[Edge],
-    last_single_edge: Option<Edge>,
     rem_edges: &[HalfAbstractEdge],
     i1: &CycleComp,
     i2: &CycleComp,
 ) -> Vec<((Node, Node), Credit)> {
     match (i1, i2) {
         (CycleComp::PathComp(idx1), CycleComp::PathComp(idx2)) => {
-            if let Some(edge) = last_single_edge {
-                if edge.between_path_nodes(*idx1, *idx2) {
-                    return vec![(edge.nodes_between_path_nodes(*idx1, *idx2), edge.cost)];
-                }
-            }
             return edges
                 .iter()
                 .filter(|e| e.between_path_nodes(*idx1, *idx2))
@@ -81,15 +74,14 @@ pub fn edges_between(
     }
 }
 
-pub fn pseudo_cycles_of_length(
-    path_comps: Vec<PathComp>,
-    last_single_edge: Option<Edge>,
-    all_edges: Vec<Edge>,
-    all_rem_edges: Vec<HalfAbstractEdge>,
+fn pseudo_cycles_of_length(
+    pattern_comps: Vec<PathComp>,
+    pattern_edges: Vec<Edge>,
+    back_edges: Vec<HalfAbstractEdge>,
     length: usize,
     with_rem: bool,
 ) -> impl Iterator<Item = PseudoCycle> {
-    let indices = path_comps.iter().map(|c| c.path_idx).collect_vec();
+    let indices = pattern_comps.iter().map(|c| c.path_idx).collect_vec();
 
     let comps = if with_rem {
         indices
@@ -108,15 +100,18 @@ pub fn pseudo_cycles_of_length(
         .flat_map(move |perm| {
             let length = length;
             let first = perm[0].clone();
-            let cons_edges = vec![perm.clone(), vec![first]]
+            let sets_of_in_between_edges = vec![perm.clone(), vec![first]]
                 .concat()
                 .windows(2)
-                .map(|e| edges_between(&all_edges, last_single_edge, &all_rem_edges, &e[0], &e[1]))
+                .map(|e| edges_between(&pattern_edges, &back_edges, &e[0], &e[1]))
                 .collect_vec();
 
-            assert_eq!(length, cons_edges.len());
+            assert_eq!(length, sets_of_in_between_edges.len());
 
-            product_of_first(cons_edges).flat_map(move |edges| {
+            // for any combination...
+            product_of_first(sets_of_in_between_edges).flat_map(move |edges| {
+                // this now defines one pseudo cycle in the pattern
+                
                 let cycle_indices = &perm;
 
                 // at most one credit gaining edge
