@@ -165,7 +165,7 @@ impl Component {
     pub fn in_nodes(&self) -> &[Node] {
         match self {
             Component::Large(n) => std::slice::from_ref(n),
-            _ => &self.nodes() //[..(self.nodes().len() / 2 + 1)],
+            _ => &self.nodes() [..(self.nodes().len() / 2 + 1)],
         }
     }
 
