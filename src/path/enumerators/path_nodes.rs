@@ -179,72 +179,138 @@ pub fn path_extension_enumerator(
 
                     for i in 0..old_pattern_len {
                         let source_idx = Pidx::from(i);
-                        let source_comp = pattern_comps[source_idx.raw()].comp.clone();
+                        //let source_comp = pattern_comps[source_idx.raw()].comp.clone();
                         let comp = path_comp.comp.clone();
 
                         // all matching edges between source_idx and node_idx
-                        let matching_edges = hitting_back_edges
+                        let matching_hit_back = hitting_back_edges
                             .clone()
                             .into_iter()
-                            .filter(|e| e.source_idx == source_idx)
+                            .filter(|e| e.source_idx == source_idx && e.matching)
                             .collect_vec();
 
-                        // previous rem_edges which will be now realized are converted to non_rem_edges, so we collect those ids
-                        let hitting_back_ids =
-                            hitting_back_edges.iter().map(|e| e.id).collect_vec();
+                        let non_matching_hit_back = hitting_back_edges
+                            .clone()
+                            .into_iter()
+                            .filter(|e| e.source_idx == source_idx && !e.matching)
+                            .collect_vec();
 
-                        iter = Box::new(iter.flat_map(move |inst_part| {
-                            let matching_edges = matching_edges.clone();
-                            let hitting_back_ids = hitting_back_ids.clone();
+                        let comp2 = comp.clone();
 
-                            let comp_hit_nodes_combinations = if source_comp.is_large() {
-                                // if there are back edges originating from large, these must all be matching edges to each other
-                                comp.combinations(matching_edges.len())
-                            } else {
-                                comp.combinations_with_replacement(matching_edges.len())
-                            };
+                        // First enumerate matching edges
+                        if !matching_hit_back.is_empty() {
+                            iter = Box::new(iter.flat_map(move |inst_part| {
+                               
+                                let matching_hit_back = matching_hit_back.clone();
 
-                            comp_hit_nodes_combinations
-                                .into_iter()
-                                .filter(move |matched| {
-                                    if source_idx.prec() == new_idx {
-                                        if let Some(out) = path_comp.out_node {
-                                            if out.is_comp() {
-                                                // this is the case where the next component is a large
-                                                true
-                                            } else if !matched.contains(&out) {
-                                                // the in-out edge was also a matching edge
-                                                true
+                                let hitting_back_ids =
+                                    matching_hit_back.iter().map(|e| e.id).collect_vec();
+
+                                let comp_hit_matching_nodes_combinations =
+                                    comp.combinations(matching_hit_back.len());
+
+                                comp_hit_matching_nodes_combinations
+                                    .into_iter()
+                                    .filter(move |matched| {
+                                        if source_idx.prec() == new_idx {
+                                            if let Some(out) = path_comp.out_node {
+                                                if out.is_comp() {
+                                                    // this is the case where the next component is a large
+                                                    true
+                                                } else if !matched.contains(&out) {
+                                                    // the in-out edge was also a matching edge
+                                                    true
+                                                } else {
+                                                    false
+                                                }
                                             } else {
-                                                false
+                                                true
                                             }
                                         } else {
                                             true
                                         }
-                                    } else {
-                                        true
-                                    }
-                                })
-                                .flat_map(|matched| {
-                                    let len = matched.len();
-                                    matched.into_iter().permutations(len)
-                                })
-                                .map(move |matched| {
-                                    let mut edges = matched
-                                        .into_iter()
-                                        .zip(matching_edges.iter())
-                                        .map(|(u, v)| Edge::new(v.source, source_idx, u, new_idx))
-                                        .collect_vec();
+                                    })
+                                    // .flat_map(|matched| {
+                                    //     let len = matched.len();
+                                    //     // the selected new edges can hit the new component in any permutation
+                                    //     matched.into_iter().permutations(len)
+                                    // })
+                                    .map(move |matched| {
+                                        let mut edges = matched
+                                            .into_iter()
+                                            .zip(matching_hit_back.iter())
+                                            .map(|(u, v)| {
+                                                Edge::new(v.source, source_idx, u, new_idx)
+                                            })
+                                            .collect_vec();
 
-                                    let mut non_rem_edges = hitting_back_ids.clone();
+                                        let mut non_rem_edges = hitting_back_ids.clone();
 
-                                    let mut inst_part_copy = inst_part.clone();
-                                    inst_part_copy.edges.append(&mut edges);
-                                    inst_part_copy.non_rem_edges.append(&mut non_rem_edges);
+                                        let mut inst_part_copy = inst_part.clone();
+                                        inst_part_copy.edges.append(&mut edges);
+                                        inst_part_copy.non_rem_edges.append(&mut non_rem_edges);
 
-                                    inst_part_copy
-                                })
-                        }))
+                                        inst_part_copy
+                                    })
+                            }));
+                        }
+
+                        let comp = comp2;
+
+                        if !non_matching_hit_back.is_empty() {
+                            iter = Box::new(iter.flat_map(move |inst_part| {
+                                let non_matching_hit_back = non_matching_hit_back.clone();
+                                let hitting_back_ids =
+                                    non_matching_hit_back.iter().map(|e| e.id).collect_vec();
+
+                                let comp_hit_non_matching_nodes_combinations =
+                                    comp.combinations_with_replacement(non_matching_hit_back.len());
+
+                                comp_hit_non_matching_nodes_combinations
+                                    .into_iter()
+                                    .filter(move |matched| {
+                                        if source_idx.prec() == new_idx {
+                                            if let Some(out) = path_comp.out_node {
+                                                if out.is_comp() {
+                                                    // this is the case where the next component is a large
+                                                    true
+                                                } else if !matched.contains(&out) {
+                                                    // the in-out edge was also a matching edge
+                                                    true
+                                                } else {
+                                                    false
+                                                }
+                                            } else {
+                                                true
+                                            }
+                                        } else {
+                                            true
+                                        }
+                                    })
+                                    // .flat_map(|matched| {
+                                    //     let len = matched.len();
+                                    //     // the selected new edges can hit the new component in any permutation
+                                    //     matched.into_iter().permutations(len)
+                                    // })
+                                    .map(move |matched| {
+                                        let mut edges = matched
+                                            .into_iter()
+                                            .zip(non_matching_hit_back.iter())
+                                            .map(|(u, v)| {
+                                                Edge::new(v.source, source_idx, u, new_idx)
+                                            })
+                                            .collect_vec();
+
+                                        let mut non_rem_edges = hitting_back_ids.clone();
+
+                                        let mut inst_part_copy = inst_part.clone();
+                                        inst_part_copy.edges.append(&mut edges);
+                                        inst_part_copy.non_rem_edges.append(&mut non_rem_edges);
+
+                                        inst_part_copy
+                                    })
+                            }));
+                        }
                     }
 
                     iter

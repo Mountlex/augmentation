@@ -25,6 +25,7 @@ pub fn enumerate_pseudo_cycles(
         source_idx: last_comp.path_idx,
         cost: Credit::from_integer(1),
         id: EdgeId(0),
+        matching: false
     });
 
     if path_comps.len() < 3 {

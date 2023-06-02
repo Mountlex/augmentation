@@ -104,6 +104,7 @@ pub struct HalfAbstractEdge {
     source_idx: Pidx,
     id: EdgeId,
     cost: Credit,
+    pub matching: bool,
 }
 
 impl Display for HalfAbstractEdge {

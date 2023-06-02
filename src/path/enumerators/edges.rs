@@ -94,7 +94,7 @@ fn check_comp_three_matching(
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
         if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance, finite) {
-            let iter = to_cases(iter, nodes_to_pidx, instance);
+            let iter = to_cases(iter, nodes_to_pidx, instance, true);
             return Some((iter, format!("3-Matching of {}", idx)));
         }
     }
@@ -120,7 +120,7 @@ fn check_three_matching(
             .flat_map(|p| p.comp.matching_nodes().to_vec())
             .collect_vec();
         if let Some(iter) = ensure_three_matching(comp_nodes, other_nodes, instance, finite) {
-            let iter = to_cases(iter, nodes_to_pidx, instance);
+            let iter = to_cases(iter, nodes_to_pidx, instance, true);
             return Some((iter, format!("3-Matching of {} first pathnodes", s)));
         }
     }
@@ -290,6 +290,7 @@ fn check_gainful_edges(
                                     nodes_to_pidx,
                                     instance,
                                     Credit::from_integer(1) - gain,
+                                    false
                                 );
                                 let iter = Box::new(iter.map(move |mut part| {
                                     for n in &cases {
@@ -340,7 +341,7 @@ fn check_four_matching(
             .collect_vec();
         if size >= 10 {
             if let Some(iter) = ensure_k_matching(comp_nodes, other_nodes, instance, 4, finite) {
-                let iter = to_cases(iter, nodes_to_pidx, instance);
+                let iter = to_cases(iter, nodes_to_pidx, instance, true);
                 return Some((iter, format!("4-Matching of {} first pathnodes", s)));
             }
         }
@@ -503,16 +504,18 @@ fn to_cases_mul(
     iter: Box<dyn Iterator<Item = Vec<(Node, Hit)>>>,
     nodes_to_pidx: &Vec<Option<Pidx>>,
     instance: &Instance,
+    matching: bool,
 ) -> Box<dyn Iterator<Item = InstPart>> {
-    to_cases_with_edge_cost_mul(iter, nodes_to_pidx, instance, Credit::from_integer(1))
+    to_cases_with_edge_cost_mul(iter, nodes_to_pidx, instance, Credit::from_integer(1), matching)
 }
 
 fn to_cases(
     iter: Box<dyn Iterator<Item = (Node, Hit)>>,
     nodes_to_pidx: &Vec<Option<Pidx>>,
     instance: &Instance,
+    matching: bool,
 ) -> Box<dyn Iterator<Item = InstPart>> {
-    to_cases_with_edge_cost(iter, nodes_to_pidx, instance, Credit::from_integer(1))
+    to_cases_with_edge_cost(iter, nodes_to_pidx, instance, Credit::from_integer(1), matching)
 }
 
 fn to_cases_with_edge_cost(
@@ -520,9 +523,10 @@ fn to_cases_with_edge_cost(
     nodes_to_pidx: &Vec<Option<Pidx>>,
     instance: &Instance,
     cost: Credit,
+    matching: bool,
 ) -> Box<dyn Iterator<Item = InstPart>> {
     let iter = Box::new(iter.map(|h| vec![h]));
-    to_cases_with_edge_cost_mul(iter, nodes_to_pidx, instance, cost)
+    to_cases_with_edge_cost_mul(iter, nodes_to_pidx, instance, cost, matching)
 }
 
 fn to_cases_with_edge_cost_mul(
@@ -530,6 +534,7 @@ fn to_cases_with_edge_cost_mul(
     nodes_to_pidx: &Vec<Option<Pidx>>,
     instance: &Instance,
     cost: Credit,
+    matching: bool,
 ) -> Box<dyn Iterator<Item = InstPart>> {
     let all_edges = instance.all_edges();
 
@@ -551,6 +556,7 @@ fn to_cases_with_edge_cost_mul(
                         source_idx: nodes_to_pidx[node.get_id() as usize].unwrap(),
                         cost,
                         id: new_rem_id,
+                        matching
                     });
                 }
                 Hit::Node(hit_node) => {
@@ -688,6 +694,7 @@ fn handle_contractable_components(
                 edge_iterator(free_nodes, complement, true, !finite),
                 &nodes_to_pidx,
                 instance,
+                false
             );
 
             return Some(Box::new(case_a.into_iter().chain(case_b)));
@@ -733,6 +740,7 @@ fn handle_contractable_components(
                     edge_iterator(free_nodes, complement, true, !finite),
                     &nodes_to_pidx,
                     instance,
+                    false
                 );
 
                 return Some(Box::new(case_a.into_iter().chain(case_b)));
@@ -800,6 +808,7 @@ fn handle_contractable_components(
                 edge_iterator(free_nodes, complement, true, !finite),
                 &nodes_to_pidx,
                 instance,
+                false
             );
 
             return Some(Box::new(case_a.into_iter().chain(case_b)));
@@ -878,7 +887,7 @@ fn handle_contractable_components(
                 }
             });
             let iter = Box::new(iter);
-            let case_b = to_cases_mul(iter, &nodes_to_pidx, instance);
+            let case_b = to_cases_mul(iter, &nodes_to_pidx, instance, false);
 
             return Some(Box::new(case_a.into_iter().chain(case_b)));
         }
