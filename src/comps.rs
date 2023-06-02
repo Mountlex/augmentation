@@ -117,13 +117,24 @@ impl Component {
 
     pub fn symmetric_combs(&self) -> Vec<[Node; 2]> {
         match self {
-            // must be consistent with the fact that fixed node is n[0]!!!
+            // must be consistent with the fact that fixed node is n[0]!!! see below
             Component::C7(n) => vec![[n[1], n[2]], [n[1], n[3]], [n[2], n[4]], [n[1], n[4]]],
             Component::C6(n) => vec![[n[1], n[2]], [n[1], n[3]], [n[2], n[4]]],
             Component::C5(n) => vec![[n[1], n[2]], [n[1], n[3]]],
             Component::C4(n) => vec![[n[1], n[2]]],
             Component::C3(n) => vec![[n[1], n[2]]],
             _ => panic!("Complex or large is not symmetric!"),
+        }
+    }
+
+    pub fn fixed_node(&self) -> Option<Node> {
+        match self {
+            Component::C7(nodes) => Some(nodes[0]),
+            Component::C6(nodes) => Some(nodes[0]),
+            Component::C5(nodes) => Some(nodes[0]),
+            Component::C4(nodes) => Some(nodes[0]),
+            Component::C3(nodes) => Some(nodes[0]),
+            Component::Large(node) => Some(*node),
         }
     }
 
@@ -154,7 +165,7 @@ impl Component {
     pub fn in_nodes(&self) -> &[Node] {
         match self {
             Component::Large(n) => std::slice::from_ref(n),
-            _ => &self.nodes()[..(self.nodes().len() / 2 + 1)],
+            _ => &self.nodes() //[..(self.nodes().len() / 2 + 1)],
         }
     }
 
@@ -192,16 +203,7 @@ impl Component {
         }
     }
 
-    pub fn fixed_node(&self) -> Option<Node> {
-        match self {
-            Component::C7(nodes) => Some(nodes[0]),
-            Component::C6(nodes) => Some(nodes[0]),
-            Component::C5(nodes) => Some(nodes[0]),
-            Component::C4(nodes) => Some(nodes[0]),
-            Component::C3(nodes) => Some(nodes[0]),
-            Component::Large(node) => Some(*node),
-        }
-    }
+    
 
     pub fn num_edges(&self) -> usize {
         match self {

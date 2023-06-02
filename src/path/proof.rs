@@ -127,6 +127,7 @@ pub fn prove_nice_path_progress(
 ) {
     std::fs::create_dir_all(&output_dir).expect("Unable to create directory");
 
+    // Prepare proof cases
     let nodes = comps
         .into_iter()
         .flat_map(|comp| {

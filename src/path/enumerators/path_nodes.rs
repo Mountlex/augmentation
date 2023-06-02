@@ -12,47 +12,53 @@ use crate::{
     Node,
 };
 
+/// Splits the current pattern by adding one more component and considering all feasible in- out-
+/// pairs between the previous first component and the new component
 pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = InstPart>> {
-    let path_comps = instance.path_nodes().cloned().collect_vec();
-    let all_edges = instance.all_edges();
-    let comps = instance.context.comps.iter().cloned().collect_vec();
+    let pattern_comps = instance.path_nodes().cloned().collect_vec();
+    let pattern_edges = instance.all_edges();
+    let all_comps = instance.context.comps.iter().cloned().collect_vec();
 
-    // for all component types...
-    let iter = comps.into_iter().flat_map(move |node| {
-        let comp = node.get_comp().clone();
-        let num_used_labels = path_comps
+    // Create a new case for every possible new component
+    let iter = all_comps.into_iter().flat_map(move |new_comp| {
+        let comp = new_comp.get_comp().clone();
+        let num_used_labels = pattern_comps
             .iter()
             .map(|c| c.comp.num_labels())
             .sum::<usize>() as u32;
         let mut new_comps = vec![comp];
         relabels_nodes_sequentially(&mut new_comps, num_used_labels);
         let comp = new_comps.remove(0);
-        let node = match node {
+        let node = match new_comp {
             PathNode::Used(_) => PathNode::Used(comp.clone()),
             PathNode::Unused(_) => PathNode::Unused(comp.clone()),
         };
 
-        let node_idx = path_comps.last().unwrap().path_idx.prec();
+        // compute index for new comp
+        let new_node_idx = pattern_comps.last().unwrap().path_idx.prec();
 
+        // new comp has a fixed out node
         let out_nodes = if let Some(fixed) = comp.fixed_node() {
             vec![fixed] // we assume here that if comp has a fixed node it was not used for any matching hit node.
         } else {
             // this case is only for complex
-            let succ = node_idx.succ().unwrap();
-            let matching_endpoints_at_new = all_edges
-                .iter()
-                .filter(|&edge| edge.between_path_nodes(succ, node_idx))
-                .flat_map(|e| e.endpoint_at(node_idx))
-                .collect_vec();
+            panic!("no complex")
 
-            comp.matching_nodes()
-                .iter()
-                .filter(|&n| !matching_endpoints_at_new.contains(n))
-                .cloned()
-                .collect_vec()
+            // let succ = new_node_idx.succ().unwrap();
+            // let matching_endpoints_at_new = pattern_edges
+            //     .iter()
+            //     .filter(|&edge| edge.between_path_nodes(succ, new_node_idx))
+            //     .flat_map(|e| e.endpoint_at(new_node_idx))
+            //     .collect_vec();
+
+            // comp.matching_nodes()
+            //     .iter()
+            //     .filter(|&n| !matching_endpoints_at_new.contains(n))
+            //     .cloned()
+            //     .collect_vec()
         };
 
-        let in_nodes = if !node_idx.is_last() {
+        let in_nodes = if !new_node_idx.is_last() {
             comp.in_nodes().to_vec()
         } else if let Some(fixed) = comp.fixed_node() {
             // if comp is last
@@ -80,7 +86,7 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                         .clone()
                         .into_iter()
                         .filter(move |out_node| {
-                            prevalid_in_out(&comp_filter, in_node, *out_node, node_idx.is_prelast())
+                            prevalid_in_out(&comp_filter, in_node, *out_node, new_node_idx.is_prelast())
                         })
                         .flat_map(move |out_node| {
                             let new_nice_pairs = comp_map.edges();
@@ -89,14 +95,14 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
                                 in_node: Some(in_node),
                                 out_node: Some(out_node),
                                 used: node_map.is_used(),
-                                path_idx: node_idx,
+                                path_idx: new_node_idx,
                                 initial_nps: new_nice_pairs,
                             };
 
                             if (comp_map.is_c4()
                                 || (comp_map.is_c5()
                                     && !node_map.is_used()
-                                    && node_idx.is_prelast()))
+                                    && new_node_idx.is_prelast()))
                                 && !comp_map.is_adjacent(&in_node, &out_node)
                             {
                                 // in and out must form a nice pair in comp!
