@@ -1,5 +1,6 @@
 use itertools::Itertools;
 
+use crate::comps::Component;
 use crate::path::extension::{Extension, InOutNode};
 use crate::path::path_definition::valid_in_out_npc;
 use crate::path::{instance::InstPart, instance::Instance};
@@ -326,20 +327,9 @@ fn check_four_matching(
             .map(|comp| comp.comp.num_vertices())
             .sum();
 
-        let right_size: usize = path_comps
-            .iter()
-            .skip(s)
-            .map(|comp| comp.comp.num_vertices())
-            .sum();
+        let left_large = path_comps.iter().take(s).any(|c| c.comp.is_large());
 
-        let num_outside = instance.out_edges().len();
-        let large = path_comps.iter().take(s).any(|c| c.comp.is_large());
-
-        // TODO
-        // if (left_size >= 10  && finite && (right_size >= 10 - 4 * num_outside))
-        //     || (left_size >= 10 && !finite && right_size >= 6 - 4 * num_outside)
-        //     || (left_size >= 10 && !large && num_outside == 0)
-        if left_size >= 10 && !large
+        if left_size >= 10 && !left_large
         {
             if let Some(iter) = ensure_k_matching(comp_nodes, instance, 4, finite) {
                 let iter = to_cases(iter, nodes_to_pidx, instance, true);
@@ -393,85 +383,6 @@ fn check_comp_contractability(
     None
 }
 
-// fn check_contractability(
-//     instance: &Instance,
-//     nodes_to_pidx: Vec<Option<Pidx>>,
-//     finite: bool,
-// ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
-//     let path_comps = instance.path_nodes().collect_vec();
-//     let len = path_comps.len();
-
-//     let all_edges = instance.all_edges();
-//     let relevant_comps = path_comps
-//         .iter()
-//         .filter(|c| c.comp.is_c3() || c.comp.is_c4() || c.comp.is_c5() || c.comp.is_c6())
-//         .cloned()
-//         .collect_vec();
-//     for i in 3..=3 {
-//         // println!("Instance: {}", instance);
-//         for pc in pseudo_cycles_of_length(
-//             relevant_comps.clone(),
-//             None,
-//             all_edges.clone(),
-//             vec![],
-//             i,
-//             false,
-//         ) {
-//             //  println!("{}", pc);
-//             let mut vertices_sets = vec![vec![]];
-//             for (n1, c, n2) in pc.cycle {
-//                 let idx = c.to_idx();
-//                 let comp = relevant_comps
-//                     .iter()
-//                     .find(|comp| comp.path_idx == idx)
-//                     .unwrap();
-//                 if n1 == n2 {
-//                     vertices_sets.iter_mut().for_each(|set| set.push(n1));
-//                 } else if comp.comp.is_adjacent(&n1, &n2) {
-//                     vertices_sets.iter_mut().for_each(|set| {
-//                         set.append(&mut comp.comp.nodes().iter().cloned().collect_vec())
-//                     });
-//                 } else {
-//                     let (p1, p2) = comp.comp.paths_between(&n1, &n2);
-//                     // println!("set {:?}, p1 {:?}, p2 {:?}", vertices_sets, p1, p2);
-//                     vertices_sets = vertices_sets
-//                         .into_iter()
-//                         .flat_map(|set| {
-//                             vec![
-//                                 vec![set.clone(), p1.clone()].concat(),
-//                                 vec![set, p2.clone()].concat(),
-//                             ]
-//                         })
-//                         .collect_vec();
-//                 }
-//             }
-
-//             for set in vertices_sets {
-//                 if let Some(good_verts) = is_contractible(&set, instance) {
-//                     // G[set] is contractible
-//                     let all_nodes = instance
-//                         .path_nodes()
-//                         .flat_map(|c| c.comp.matching_nodes())
-//                         .filter(|n| !set.contains(n) || good_verts.contains(n))
-//                         .cloned()
-//                         .collect_vec();
-
-//                     // We now enumerate all edges which potentially resolve the contractability. Those are between the good vertices and
-//                     // (all vertices / bad vertices) (including good vertices)
-//                     let iter = edge_iterator(good_verts, all_nodes, true, !finite).unwrap();
-
-//                     let iter = to_cases(iter, nodes_to_pidx, instance);
-//                     //println!("iter: {}", iter.iter().join(", "));
-//                     return Some((
-//                         Box::new(iter),
-//                         format!("Contractablility of large set {:?}", set),
-//                     ));
-//                 }
-//             }
-//         }
-//     }
-//     return None;
-// }
 
 /// For the given pattern we say that a new edge is good if adding this edge to the instance guarantees progress for any superpattern.
 /// Intuitively, we don't have to enumerate this edge again in any subpattern of this pattern.
@@ -603,7 +514,6 @@ fn to_cases_with_edge_cost_mul(
     Box::new(iter.filter(move |part| {
         if !part.edges.is_empty() {
             part.edges.iter().all(|edge| !good_edges.contains(edge))
-            // !good_edges.contains(part.edges.first().unwrap())
         } else if !part.out_edges.is_empty() {
             part.out_edges.iter().all(|edge| !good_out.contains(edge))
         } else {
@@ -612,6 +522,7 @@ fn to_cases_with_edge_cost_mul(
     }))
 }
 
+/// This method assumes that the given component already has a 3-matching.
 fn handle_contractable_components(
     path_comp: &PathComp,
     instance: &Instance,
@@ -627,7 +538,8 @@ fn handle_contractable_components(
 
     let nodes = comp.nodes();
 
-    // nodes which are incident to some non-component edge
+    // nodes which are incident to some non-component edge, that is,
+    // outside edges, back edges, in and out.
     let used_nodes = nodes
         .iter()
         .filter(|n| {
@@ -641,6 +553,7 @@ fn handle_contractable_components(
         .collect_vec();
 
     // free_nodes = nodes - used_nodes
+    // have currently no incident edges
     let free_nodes = nodes
         .iter()
         .filter(|n| !used_nodes.contains(n))
@@ -705,7 +618,7 @@ fn handle_contractable_components(
             // Case a) new nice pairs
             let case_a = vec![InstPart::new_nice_pairs(vec![(v1, v3), (v2, v3)])];
 
-            // Case b) edges from f1 and f2
+            // Case b) non-inside edges from f1 and f2
             let case_b = to_cases(
                 edge_iterator(free_nodes, complement, true, !finite),
                 &nodes_to_pidx,
@@ -769,9 +682,18 @@ fn handle_contractable_components(
                 .count()
                 > 1
             {
+                //
+                //     f2
+                //   /    \
+                //  f1    f3
+                //   |    |
+                //  v3    v1
+                //   \    /
+                //     v2
                 // Here we do nothing
                 return None;
             }
+
 
             // This case remains:
 
@@ -831,39 +753,34 @@ fn handle_contractable_components(
         } else if comp.is_c7() {
             let num_cords =
                 (opt_lb as f64 - comp.graph().node_count() as f64 * (4.0 / 5.0)).floor() as usize;
+            // This follows from the assumption that the C7 must already have a 3-matching. 
             // 1 <= num_cors <= 2
             assert!(num_cords <= 2);
             assert!(num_cords >= 1);
 
-            let all_possible_cords = free_nodes
+            let free_cords = free_nodes
                 .iter()
                 .combinations(2)
                 .filter(|c| !comp.is_adjacent(c[0], c[1]))
                 .collect_vec();
 
-            let np_configs = all_possible_cords
+            let np_configs = free_cords
                 .iter()
                 .combinations(num_cords)
                 .map(|cords| {
                     let mut induced_nps = nodes
                         .iter()
-                        .combinations(2)
-                        .filter(|m| !comp.is_adjacent(m[0], m[1]))
-                        .filter(|m| {
+                        .tuple_combinations()
+                        .filter(|(u,v)| !comp.is_adjacent(u,v))
+                        .filter(|(&u,&v)| {
                             // m is np if hamiltonian path exists
-                            hamiltonian_paths(*m[0], *m[1], comp.nodes())
+                            hamiltonian_paths(u, v, comp.nodes())
                                 .iter()
                                 .any(|path| {
-                                    path.windows(2).all(|e| {
-                                        comp.is_adjacent(&e[0], &e[1])
-                                            || cords.iter().any(|cord| {
-                                                (*cord[0] == e[0] && *cord[1] == e[1])
-                                                    || (*cord[1] == e[0] && *cord[0] == e[1])
-                                            })
-                                    })
+                                    is_path_in_comp(path, &cords, comp)
                                 })
                         })
-                        .map(|m| (*m[0], *m[1]))
+                        .map(|(u, v)| (*u, *v))
                         .collect_vec();
                     induced_nps.sort();
                     induced_nps
@@ -911,6 +828,18 @@ fn handle_contractable_components(
 
     None
 }
+
+fn is_path_in_comp(path: &[Node], cords: &Vec<&Vec<&Node>>, comp: &Component) -> bool {
+    path.windows(2).all(|e| {
+        comp.is_adjacent(&e[0], &e[1])
+            || cords.iter().any(|cord| {
+                (*cord[0] == e[0] && *cord[1] == e[1])
+                    || (*cord[1] == e[0] && *cord[0] == e[1])
+            })
+    })
+}
+
+
 
 fn ensure_three_matching(
     set1: Vec<Node>,
