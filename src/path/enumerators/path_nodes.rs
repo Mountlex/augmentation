@@ -217,11 +217,11 @@ pub fn path_extension_enumerator(
                                             true
                                         }
                                     })
-                                    .flat_map(|matched| {
-                                        let len = matched.len();
-                                        // the selected new edges can hit the new component in any permutation
-                                        matched.into_iter().permutations(len)
-                                    })
+                                    // .flat_map(|matched| {
+                                    //     let len = matched.len();
+                                    //     // the selected new edges can hit the new component in any permutation
+                                    //     matched.into_iter().permutations(len)
+                                    // })
                                     .map(move |matched| {
                                         let mut edges = matched
                                             .into_iter()
@@ -255,11 +255,11 @@ pub fn path_extension_enumerator(
 
                                 comp_hit_non_matching_nodes_combinations
                                     .into_iter()
-                                    .flat_map(|matched| {
-                                        let len = matched.len();
-                                        // the selected new edges can hit the new component in any permutation
-                                        matched.into_iter().permutations(len)
-                                    })
+                                    // .flat_map(|matched| {
+                                    //     let len = matched.len();
+                                    //     // the selected new edges can hit the new component in any permutation
+                                    //     matched.into_iter().permutations(len)
+                                    // })
                                     .map(move |matched| {
                                         let mut edges = matched
                                             .into_iter()
