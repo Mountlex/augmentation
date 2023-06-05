@@ -157,7 +157,7 @@ fn check_gainful_edges(
         let out_comp = &path_comps[out_pidx.raw()];
 
         let old_last = path_comps.first().unwrap();
-        if old_last.comp.is_c4() || old_last.comp.is_c5() {
+        if old_last.comp.is_c4() || old_last.comp.is_c5() || old_last.comp.is_c6() || old_last.comp.is_c7() {
             for subpath in path_comps
                 .iter()
                 .permutations(path_comps.len() - 1)
