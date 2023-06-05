@@ -105,19 +105,35 @@ fn check_three_matching(
 ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
     let path_comps = instance.path_nodes().collect_vec();
     let len = path_comps.len();
-    for s in 2..=len - 1 {
-        let comp_nodes = path_comps
-            .iter()
-            .take(s)
-            .flat_map(|c| c.comp.nodes().to_vec())
-            .collect_vec();
 
-        if let Some(iter) = ensure_three_matching(comp_nodes, instance, finite) {
-            let iter = to_cases(iter, nodes_to_pidx, instance, true);
-            return Some((iter, format!("3-Matching of {} first pathnodes", s)));
+    if finite {
+        let path_comps = instance.path_nodes().collect_vec();
+
+        for left_side in path_comps.into_iter().powerset().filter(|p| p.len() >= 2) {
+            let comp_nodes = left_side
+                .iter()
+                .flat_map(|c| c.comp.nodes().to_vec())
+                .collect_vec();
+
+            if let Some(iter) = ensure_three_matching(comp_nodes, instance, finite) {
+                let iter = to_cases(iter, nodes_to_pidx, instance, true);
+                return Some((iter, format!("3-Matching of first pathnodes")));
+            }
+        }
+    } else {
+        for s in 2..=len - 1 {
+            let comp_nodes = path_comps
+                .iter()
+                .take(s)
+                .flat_map(|c| c.comp.nodes().to_vec())
+                .collect_vec();
+
+            if let Some(iter) = ensure_three_matching(comp_nodes, instance, finite) {
+                let iter = to_cases(iter, nodes_to_pidx, instance, true);
+                return Some((iter, format!("3-Matching of first pathnodes")));
+            }
         }
     }
-
     None
 }
 
@@ -140,7 +156,7 @@ fn check_gainful_edges(
         let out_comp = &path_comps[out_pidx.raw()];
 
         let old_last = path_comps.first().unwrap();
-        if old_last.comp.is_c4() {
+        if old_last.comp.is_c4() || old_last.comp.is_c5() {
             for subpath in path_comps
                 .iter()
                 .permutations(path_comps.len() - 1)
@@ -314,26 +330,47 @@ fn check_four_matching(
     let path_comps = instance.path_nodes().collect_vec();
     let len = path_comps.len();
 
-    for s in 2..=len - 1 {
-        let comp_nodes = path_comps
-            .iter()
-            .take(s)
-            .flat_map(|c| c.comp.nodes().to_vec())
-            .collect_vec();
+    if finite {
+        let path_comps = instance.path_nodes().collect_vec();
 
-        let left_size: usize = path_comps
-            .iter()
-            .take(s)
-            .map(|comp| comp.comp.num_vertices())
-            .sum();
+        for left_side in path_comps.into_iter().powerset().filter(|p| p.len() >= 2) {
+            let comp_nodes = left_side
+                .iter()
+                .flat_map(|c| c.comp.nodes().to_vec())
+                .collect_vec();
 
-        let left_large = path_comps.iter().take(s).any(|c| c.comp.is_large());
+            let left_size: usize = left_side.iter().map(|comp| comp.comp.num_vertices()).sum();
 
-        if left_size >= 10 && !left_large
-        {
-            if let Some(iter) = ensure_k_matching(comp_nodes, instance, 4, finite) {
-                let iter = to_cases(iter, nodes_to_pidx, instance, true);
-                return Some((iter, format!("4-Matching")));
+            let left_large = left_side.iter().any(|c| c.comp.is_large());
+
+            if left_size >= 10 && !left_large {
+                if let Some(iter) = ensure_k_matching(comp_nodes, instance, 4, finite) {
+                    let iter = to_cases(iter, nodes_to_pidx, instance, true);
+                    return Some((iter, format!("4-Matching")));
+                }
+            }
+        }
+    } else {
+        for s in 2..=len - 1 {
+            let comp_nodes = path_comps
+                .iter()
+                .take(s)
+                .flat_map(|c| c.comp.nodes().to_vec())
+                .collect_vec();
+
+            let left_size: usize = path_comps
+                .iter()
+                .take(s)
+                .map(|comp| comp.comp.num_vertices())
+                .sum();
+
+            let left_large = path_comps.iter().take(s).any(|c| c.comp.is_large());
+
+            if left_size >= 10 && !left_large {
+                if let Some(iter) = ensure_k_matching(comp_nodes, instance, 4, finite) {
+                    let iter = to_cases(iter, nodes_to_pidx, instance, true);
+                    return Some((iter, format!("4-Matching")));
+                }
             }
         }
     }
@@ -382,7 +419,6 @@ fn check_comp_contractability(
 
     None
 }
-
 
 /// For the given pattern we say that a new edge is good if adding this edge to the instance guarantees progress for any superpattern.
 /// Intuitively, we don't have to enumerate this edge again in any subpattern of this pattern.
@@ -546,7 +582,9 @@ fn handle_contractable_components(
             outside.contains(n)
                 || rem_edges.iter().any(|e| e.source == **n)
                 || all_edges.iter().any(|e| e.node_incident(n))
-                || path_comp.in_node == Some(**n)
+                || (path_comp.in_node == Some(**n)
+                    && !finite
+                    && path_comp.path_idx != path_comps.last().unwrap().path_idx)
                 || path_comp.out_node == Some(**n)
         })
         .cloned()
@@ -694,7 +732,6 @@ fn handle_contractable_components(
                 return None;
             }
 
-
             // This case remains:
 
             //      v1
@@ -753,76 +790,76 @@ fn handle_contractable_components(
         } else if comp.is_c7() {
             let num_cords =
                 (opt_lb as f64 - comp.graph().node_count() as f64 * (4.0 / 5.0)).floor() as usize;
-            // This follows from the assumption that the C7 must already have a 3-matching. 
+            // This follows from the assumption that the C7 must already have a 3-matching.
             // 1 <= num_cors <= 2
             assert!(num_cords <= 2);
-            assert!(num_cords >= 1);
+            //assert!(num_cords >= 1);
 
-            let free_cords = free_nodes
-                .iter()
-                .combinations(2)
-                .filter(|c| !comp.is_adjacent(c[0], c[1]))
-                .collect_vec();
+            if num_cords >= 1 {
+                let free_cords = free_nodes
+                    .iter()
+                    .combinations(2)
+                    .filter(|c| !comp.is_adjacent(c[0], c[1]))
+                    .collect_vec();
 
-            let np_configs = free_cords
-                .iter()
-                .combinations(num_cords)
-                .map(|cords| {
-                    let mut induced_nps = nodes
-                        .iter()
-                        .tuple_combinations()
-                        .filter(|(u,v)| !comp.is_adjacent(u,v))
-                        .filter(|(&u,&v)| {
-                            // m is np if hamiltonian path exists
-                            hamiltonian_paths(u, v, comp.nodes())
-                                .iter()
-                                .any(|path| {
-                                    is_path_in_comp(path, &cords, comp)
-                                })
-                        })
-                        .map(|(u, v)| (*u, *v))
-                        .collect_vec();
-                    induced_nps.sort();
-                    induced_nps
-                })
-                .unique()
-                .collect_vec();
+                let np_configs = free_cords
+                    .iter()
+                    .combinations(num_cords)
+                    .map(|cords| {
+                        let mut induced_nps = nodes
+                            .iter()
+                            .tuple_combinations()
+                            .filter(|(u, v)| !comp.is_adjacent(u, v))
+                            .filter(|(&u, &v)| {
+                                // m is np if hamiltonian path exists
+                                hamiltonian_paths(u, v, comp.nodes())
+                                    .iter()
+                                    .any(|path| is_path_in_comp(path, &cords, comp))
+                            })
+                            .map(|(u, v)| (*u, *v))
+                            .collect_vec();
+                        induced_nps.sort();
+                        induced_nps
+                    })
+                    .unique()
+                    .collect_vec();
 
-            // Case a) new nice pair configs
-            let case_a = np_configs
-                .into_iter()
-                .map(InstPart::new_nice_pairs)
-                .collect_vec();
+                // Case a) new nice pair configs
+                let case_a = np_configs
+                    .into_iter()
+                    .map(InstPart::new_nice_pairs)
+                    .collect_vec();
 
-            // Case b) edges from free nodes
-            let iter = edge_iterator(free_nodes.clone(), complement.clone(), true, !finite);
-            let comp = comp.clone();
-            let iter = iter.flat_map(move |(node, hit)| {
-                if free_nodes.len() - 1 == 3
-                    && free_nodes
-                        .iter()
-                        .filter(|f| **f != node)
-                        .combinations(2)
-                        .all(|fs| !comp.is_adjacent(fs[0], fs[1]))
-                {
-                    // the remaining free nodes are pairwise not adjacent.
-                    // in this case, enumerating this edge is not enough to break contractability
-                    let other_free_nodes = free_nodes
-                        .iter()
-                        .filter(|f| f != &&node)
-                        .cloned()
-                        .collect_vec();
-                    return edge_iterator(other_free_nodes, complement.clone(), true, !finite)
-                        .map(|h| vec![(node, hit), h])
-                        .collect_vec();
-                } else {
-                    vec![vec![(node, hit)]]
-                }
-            });
-            let iter = Box::new(iter);
-            let case_b = to_cases_mul(iter, &nodes_to_pidx, instance, false);
+                // Case b) edges from free nodes
+                let iter = edge_iterator(free_nodes.clone(), complement.clone(), true, !finite);
+                let comp = comp.clone();
+                let iter = iter.flat_map(move |(node, hit)| {
+                    if free_nodes.len() - 1 == 3
+                        && free_nodes
+                            .iter()
+                            .filter(|f| **f != node)
+                            .combinations(2)
+                            .all(|fs| !comp.is_adjacent(fs[0], fs[1]))
+                    {
+                        // the remaining free nodes are pairwise not adjacent.
+                        // in this case, enumerating this edge is not enough to break contractability
+                        let other_free_nodes = free_nodes
+                            .iter()
+                            .filter(|f| f != &&node)
+                            .cloned()
+                            .collect_vec();
+                        return edge_iterator(other_free_nodes, complement.clone(), true, !finite)
+                            .map(|h| vec![(node, hit), h])
+                            .collect_vec();
+                    } else {
+                        vec![vec![(node, hit)]]
+                    }
+                });
+                let iter = Box::new(iter);
+                let case_b = to_cases_mul(iter, &nodes_to_pidx, instance, false);
 
-            return Some(Box::new(case_a.into_iter().chain(case_b)));
+                return Some(Box::new(case_a.into_iter().chain(case_b)));
+            }
         }
     }
 
@@ -833,13 +870,10 @@ fn is_path_in_comp(path: &[Node], cords: &Vec<&Vec<&Node>>, comp: &Component) ->
     path.windows(2).all(|e| {
         comp.is_adjacent(&e[0], &e[1])
             || cords.iter().any(|cord| {
-                (*cord[0] == e[0] && *cord[1] == e[1])
-                    || (*cord[1] == e[0] && *cord[0] == e[1])
+                (*cord[0] == e[0] && *cord[1] == e[1]) || (*cord[1] == e[0] && *cord[0] == e[1])
             })
     })
 }
-
-
 
 fn ensure_three_matching(
     set1: Vec<Node>,

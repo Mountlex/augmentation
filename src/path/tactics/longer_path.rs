@@ -167,6 +167,117 @@ pub fn check_longer_nice_path(instance: &Instance, finite: bool) -> PathProofNod
         }
     }
 
+    // TODO maybe unnecessary
+    if finite {
+        // check if last comp has feasible outside edges
+        let mut rev_comps = all_comps.clone();
+        rev_comps.reverse();
+        let last_comp = &rev_comps[Pidx::Last.raw()];
+        let last_comp_nodes = last_comp.comp.nodes();
+
+        for outside_hit in all_outside.iter().filter(|n| last_comp_nodes.contains(n)) {
+            if valid_in_out_npc(
+                &last_comp.comp,
+                &npc,
+                last_comp.out_node.unwrap(),
+                *outside_hit,
+                true,
+                last_comp.used,
+            ) {
+                return PathProofNode::new_leaf(
+                    format!("Longer nice path found via outside edge ({})!", outside_hit),
+                    true,
+                );
+            }
+
+            let cons_edges = rev_comps
+                .windows(2)
+                .map(|w| {
+                    all_edges
+                        .iter()
+                        .filter(|e| e.between_path_nodes(w[0].path_idx, w[1].path_idx))
+                        .map(|e| {
+                            if e.path_index_n1 == w[0].path_idx {
+                                (e.n1, e.n2)
+                            } else {
+                                (e.n2, e.n1)
+                            }
+                        })
+                        .collect_vec()
+                })
+                .collect_vec();
+
+            if cons_edges.is_empty() {
+                if valid_in_out_npc(
+                    &last_comp.comp,
+                    &npc,
+                    last_comp.out_node.unwrap(),
+                    *outside_hit,
+                    true,
+                    last_comp.used,
+                ) {
+                    return PathProofNode::new_leaf(
+                        format!("Longer nice path found via outside edge ({})!", outside_hit),
+                        true,
+                    );
+                }
+            } else {
+                let nice_paths = product_of_first(cons_edges).collect_vec();
+                for nice_path in nice_paths {
+                    // (0.in -- 1.out):(1.in -- 2.out):(2.in -- 3.out) ... (... -- start.out)
+                    if valid_in_out_npc(
+                        &last_comp.comp,
+                        &npc,
+                        nice_path.first().unwrap().0,
+                        *outside_hit,
+                        true,
+                        last_comp.used,
+                    ) {
+                        let end = Pidx::Last;
+                        let end_in = nice_path.first().unwrap().0;
+                        let start = Pidx::from(nice_path.len());
+                        let start_out = nice_path.last().unwrap().1;
+
+                        let mut inner = nice_path
+                            .windows(2)
+                            .enumerate()
+                            .map(|(i, edges)| InOutNode {
+                                in_node: edges[1].0,
+                                idx: Pidx::from(i + 1),
+                                out_node: edges[0].1,
+                            })
+                            .collect_vec();
+                        // IMPORTANT
+                        inner.reverse();
+
+                        // extension [start.out -- .. -- 2.in:2.out -- 1.in:1.out -- end.in]
+                        let extension = Extension {
+                            start,
+                            start_out,
+                            end,
+                            end_in,
+                            inner,
+                        };
+
+                        let mut feasible = check_fixed_extension_feasible(
+                            &extension, &rev_comps, &npc, false, finite,
+                        );
+                        feasible.eval();
+                        if feasible.success() {
+                            return PathProofNode::new_leaf(
+                                format!(
+                            "Longer nice path found via outside edge ({}) and path rearrangement!",
+                            outside_hit
+                        ),
+                                true,
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     PathProofNode::new_leaf(
         format!(
             "No outside matching hit does is a valid out edge for the last node: {}!",
