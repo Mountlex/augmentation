@@ -17,6 +17,7 @@ pub fn enumerate_rearrangements(
 ) -> Box<dyn Iterator<Item = Extension>> {
     let pc = instance.pseudo_cycle().unwrap();
 
+    // A pseudo cycle can only be interpreted as a rearrangement if it only consist of path components and contain all components of the prefix of the nice path
     if !pc.consecutive_end() || pc.cycle.iter().any(|(_, n, _)| n.is_rem()) {
         return Box::new(std::iter::empty());
     }

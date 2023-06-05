@@ -3,7 +3,6 @@ use itertools::Itertools;
 use super::{instance::Instance, PathProofNode};
 use crate::logic::TacticTrait;
 
-mod contract;
 mod cycle_merge;
 mod cycle_rearrange;
 mod local_merge;
@@ -18,7 +17,7 @@ pub enum Tactic {
     CycleMerge,
     LocalMerge,
     Rearrangable(bool),
-    Contractable,
+    //Contractable,
     Pendant,
     TacticsExhausted(bool),
 }
@@ -34,7 +33,7 @@ impl TacticTrait for Tactic {
             Tactic::Rearrangable(finite) => {
                 cycle_rearrange::check_path_rearrangement(stack, *finite)
             }
-            Tactic::Contractable => contract::check_contractability(stack),
+            //Tactic::Contractable => contract::check_contractability(stack),
             Tactic::Pendant => pendant_rewire::check_pendant_node(stack),
             Tactic::TacticsExhausted(finite) => {
                 let all_edges = stack.all_edges();
