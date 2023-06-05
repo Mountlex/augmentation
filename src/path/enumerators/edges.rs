@@ -111,13 +111,28 @@ fn check_comp_config(
         .into_iter()
         .filter(|e| e.path_incident(comp.path_idx))
         .collect_vec();
+
+    let incident_back_edges = instance
+        .rem_edges()
+        .into_iter()
+        .filter(|e| e.source_idx == comp.path_idx)
+        .collect_vec();
+
+    let incident_out_edges = instance
+        .out_edges()
+        .into_iter()
+        .filter(|n| comp.comp.contains(n))
+        .collect_vec();
+
     let complement = path_comps
         .iter()
         .skip(1)
         .flat_map(|p| p.comp.nodes().to_vec())
+        .filter(|n| n != &comp.in_node.unwrap())
         .collect_vec();
 
-        if comp.comp.is_c7() && incident_edges.len() == 1 {
+    if incident_edges.len() == 1 && incident_out_edges.len() == 0 && incident_back_edges.len() == 0 {
+        if comp.comp.is_c7()  {
             let in_node = comp.in_node.unwrap();
             let nodes = comp.comp.nodes();
             assert!(nodes[0] == in_node);
@@ -142,7 +157,7 @@ fn check_comp_config(
             return Some((all_cases, "C7 config".into()))
         }
 
-    if comp.comp.is_c6() && incident_edges.len() == 1 {
+    if comp.comp.is_c6()  {
         let in_node = comp.in_node.unwrap();
         let nodes = comp.comp.nodes();
         assert!(nodes[0] == in_node);
@@ -164,7 +179,7 @@ fn check_comp_config(
         return Some((all_cases, "C6 config".into()))
     }
 
-    if comp.comp.is_c5() && incident_edges.len() == 1 {
+    if comp.comp.is_c5()  {
         let in_node = comp.in_node.unwrap();
         let nodes = comp.comp.nodes();
         assert!(nodes[0] == in_node);
@@ -186,7 +201,7 @@ fn check_comp_config(
         return Some((all_cases, "C5 config".into()))
     }
 
-    if comp.comp.is_c4() && incident_edges.len() == 1 {
+    if comp.comp.is_c4()  {
         let in_node = comp.in_node.unwrap();
         let nodes = comp.comp.nodes();
         assert!(nodes[0] == in_node);
@@ -204,6 +219,7 @@ fn check_comp_config(
         }
         return Some((all_cases, "C4 config".into()))
     }
+}
     None
 }
 
@@ -1203,10 +1219,14 @@ fn full_edge_iterator(
 ) -> Box<dyn Iterator<Item = Vec<(Node, Hit)>>> {
     let mut hits = hit_set.into_iter().map(Hit::Node).collect_vec();
     if with_outside {
-        hits.push(Hit::Outside);
+        for _ in &node_set {
+            hits.push(Hit::Outside);
+        }
     }
     if with_rem {
-        hits.push(Hit::RemPath);
+        for _ in &node_set {
+            hits.push(Hit::RemPath);
+        }
     }
 
     let iter = FullEdgeIterator::new(node_set, hits, matching);
