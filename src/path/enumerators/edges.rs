@@ -121,10 +121,11 @@ fn check_three_matching(
             }
         }
     } else {
-        for s in 2..=len - 1 {
-            let comp_nodes = path_comps
+        let path_comps = instance.path_nodes().collect_vec();
+
+        for left_side in path_comps.into_iter().powerset().filter(|p| p.len() >= 2) {
+            let comp_nodes = left_side
                 .iter()
-                .take(s)
                 .flat_map(|c| c.comp.nodes().to_vec())
                 .collect_vec();
 
@@ -351,20 +352,15 @@ fn check_four_matching(
             }
         }
     } else {
-        for s in 2..=len - 1 {
-            let comp_nodes = path_comps
+        for left_side in path_comps.into_iter().powerset().filter(|p| p.len() >= 2) {
+            let comp_nodes = left_side
                 .iter()
-                .take(s)
                 .flat_map(|c| c.comp.nodes().to_vec())
                 .collect_vec();
 
-            let left_size: usize = path_comps
-                .iter()
-                .take(s)
-                .map(|comp| comp.comp.num_vertices())
-                .sum();
+            let left_size: usize = left_side.iter().map(|comp| comp.comp.num_vertices()).sum();
 
-            let left_large = path_comps.iter().take(s).any(|c| c.comp.is_large());
+            let left_large = left_side.iter().any(|c| c.comp.is_large());
 
             if left_size >= 10 && !left_large {
                 if let Some(iter) = ensure_k_matching(comp_nodes, instance, 4, finite) {
