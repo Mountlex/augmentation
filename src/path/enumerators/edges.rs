@@ -121,7 +121,7 @@ fn check_three_matching(
             }
         }
     } else {
-        let path_comps = instance.path_nodes().collect_vec();
+        let path_comps = instance.path_nodes().take(len - 2).collect_vec();
 
         for left_side in path_comps.into_iter().powerset().filter(|p| p.len() >= 2) {
             let comp_nodes = left_side
@@ -352,7 +352,7 @@ fn check_four_matching(
             }
         }
     } else {
-        for left_side in path_comps.into_iter().powerset().filter(|p| p.len() >= 2) {
+        for left_side in path_comps.into_iter().take(len-2).powerset().filter(|p| p.len() >= 2) {
             let comp_nodes = left_side
                 .iter()
                 .flat_map(|c| c.comp.nodes().to_vec())
