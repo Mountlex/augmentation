@@ -54,11 +54,16 @@ impl Display for PathComp {
             ),
             (Some(in_n), None) => write!(
                 f,
-                "[{}, in={}, idx={}{}]",
+                "[{}, in={}, idx={}{}, np={}]",
                 self.comp.short_name(),
                 in_n,
                 self.path_idx,
-                used
+                used,
+                self.initial_nps
+                    .iter()
+                    //.filter(|(u, v)| !self.comp.is_adjacent(u, v))
+                    .map(|(u, v)| format!("({},{})", u, v))
+                    .join(",")
             ),
             (Some(in_n), Some(out_n)) => write!(
                 f,
@@ -109,7 +114,7 @@ pub struct HalfAbstractEdge {
 
 impl Display for HalfAbstractEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-REM(c={})", self.source, self.cost)
+        write!(f, "{}-REM(c={},id={})", self.source, self.cost, self.id)
     }
 }
 

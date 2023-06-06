@@ -189,7 +189,7 @@ fn check_comp_config(
             vec![nodes[1], nodes[4]],
             vec![nodes[1], nodes[3]],
             vec![nodes[4], nodes[2]],
-            vec![nodes[2], nodes[3]],
+            //vec![nodes[2], nodes[3]],
         ];
 
         let mut all_cases: Box<dyn Iterator<Item = InstPart>> = Box::new(std::iter::empty());
@@ -632,13 +632,15 @@ fn to_cases_with_edge_cost_mul(
     let good_edges = instance.good_edges().into_iter().cloned().collect_vec();
     let good_out = instance.good_out().into_iter().cloned().collect_vec();
 
-    let new_rem_id = instance.new_rem_id();
     let nodes_to_pidx = nodes_to_pidx.clone();
+    let instance = instance.clone();
 
     let iter = Box::new(iter.flat_map(move |new_edges| {
         let mut part = InstPart::empty();
 
-        for (node, hit) in new_edges {
+        let len = new_edges.len();
+        let new_rem_ids = instance.new_rem_ids(len);
+        for ((node, hit), id) in new_edges.into_iter().zip(new_rem_ids.into_iter()) {
             match hit {
                 Hit::Outside => part.out_edges.push(node),
                 Hit::RemPath => {
@@ -646,7 +648,7 @@ fn to_cases_with_edge_cost_mul(
                         source: node,
                         source_idx: nodes_to_pidx[node.get_id() as usize].unwrap(),
                         cost,
-                        id: new_rem_id,
+                        id,
                         matching,
                     });
                 }
@@ -782,6 +784,14 @@ fn handle_contractable_components(
                 .iter()
                 .find(|v| **v != v3 && comp.is_adjacent(v, &f2))
                 .unwrap();
+
+            assert!(comp.is_adjacent(&v1, &v2));
+            assert!(!comp.is_adjacent(&v1, &v3));
+            assert!(!comp.is_adjacent(&v3, &v2));
+
+            assert!(!free_nodes.contains(&v1));
+            assert!(!free_nodes.contains(&v2));
+            assert!(!free_nodes.contains(&v3));
 
             // Case a) new nice pairs
             let case_a = vec![InstPart::new_nice_pairs(vec![(v1, v3), (v2, v3)])];
@@ -1219,12 +1229,20 @@ fn full_edge_iterator(
 ) -> Box<dyn Iterator<Item = Vec<(Node, Hit)>>> {
     let mut hits = hit_set.into_iter().map(Hit::Node).collect_vec();
     if with_outside {
-        for _ in &node_set {
+        if matching {
+            for _ in &node_set {
+                hits.push(Hit::Outside);
+            }
+        } else {
             hits.push(Hit::Outside);
         }
     }
     if with_rem {
-        for _ in &node_set {
+        if matching {
+            for _ in &node_set {
+                hits.push(Hit::RemPath);
+            }
+        } else {
             hits.push(Hit::RemPath);
         }
     }

@@ -313,7 +313,26 @@ impl Instance {
             .collect_vec()
     }
 
-    pub fn new_rem_id(&self) -> EdgeId {
+    pub fn all_rem_edges(&self) -> Vec<HalfAbstractEdge> {
+        self
+            .inst_parts()
+            .flat_map(|part| part.rem_edges.iter())
+            .cloned()
+            .collect_vec()
+
+      
+    }
+
+    pub fn non_rem_edges(&self) -> Vec<EdgeId> {
+        self
+            .inst_parts()
+            .flat_map(|part| part.non_rem_edges.iter())
+            .cloned()
+            .collect_vec()
+      
+    }
+
+    pub fn new_rem_ids(&self, n: usize) -> Vec<EdgeId> {
         let rem_edges: EdgeId = self
             .inst_parts()
             .flat_map(|part| part.rem_edges.iter())
@@ -328,7 +347,13 @@ impl Instance {
             .max()
             .unwrap_or(EdgeId(0));
 
-        non_rem_edges.max(rem_edges).inc()
+        let mut prev = non_rem_edges.max(rem_edges);
+        let mut res = vec![];
+        for _ in 0..n {
+            prev = prev.inc();
+            res.push(prev);
+        }
+        res
     }
 
     pub fn pseudo_cycle(&self) -> Option<&PseudoCycle> {

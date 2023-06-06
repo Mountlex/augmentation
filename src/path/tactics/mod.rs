@@ -41,14 +41,19 @@ impl TacticTrait for Tactic {
                 let path_comps = stack.path_nodes().collect_vec();
                 let rem_edges = stack.rem_edges();
 
+                let mut contract_checked = stack.contractability_checked();
+
                 //  println!("{}", stack.get_profile(true));
 
                 let msg = format!(
-                    "Instance: [{}][{}][{}][{}]",
+                    "Instance: [{}][{}][{}][{}] contr[{}] non_rem[{}] all_rem[{}]",
                     path_comps.iter().join(", "),
                     all_edges.iter().join(","),
                     outside.iter().join(","),
-                    rem_edges.iter().join(",")
+                    rem_edges.iter().join(","),
+                    contract_checked.join(","),
+                    stack.non_rem_edges().iter().join(","),
+                    stack.all_rem_edges().iter().join(",")
                 );
 
                 if *finite {

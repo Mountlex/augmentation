@@ -219,7 +219,7 @@ impl<T: Clone> ProofNode<T> {
                     }
                 }
                 let outcome = node.outcome.unwrap();
-                if outcome.success() {
+                if outcome.success() || node.msg == "pc" {
                     node.childs.clear();
                 }
                 outcome
@@ -239,7 +239,7 @@ impl<T: Clone> ProofNode<T> {
                     }
                 }
                 let outcome = node.outcome.unwrap();
-                if outcome.success() {
+                if outcome.success() || node.msg == "pc" {
                     node.childs.clear();
                 }
                 outcome
