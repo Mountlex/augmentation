@@ -28,7 +28,7 @@ impl TacticTrait for Tactic {
 
     fn prove(&self, stack: &mut Instance) -> PathProofNode {
         let proof = match self {
-            Tactic::LongerPath(finite) => {
+            Tactic::FastLongerPath(finite) => {
                 let outside = stack.out_edges();
                 let path_comps = stack.path_nodes().collect_vec();
                 let last = path_comps.first().unwrap();
@@ -39,7 +39,7 @@ impl TacticTrait for Tactic {
                 }
                 PathProofNode::new_leaf("no fast_longer_path".into(), false)
             }
-            Tactic::FastLongerPath(finite) => longer_path::check_longer_nice_path(stack, *finite),
+            Tactic::LongerPath(finite) => longer_path::check_longer_nice_path(stack, *finite),
             Tactic::CycleMerge => cycle_merge::check_cycle_merge(stack),
             Tactic::LocalMerge => local_merge::check_local_merge(stack),
             Tactic::Rearrangable(finite) => {
