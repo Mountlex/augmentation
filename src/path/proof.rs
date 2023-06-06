@@ -79,10 +79,10 @@ fn split_cases(finite: bool, options: PathProofOptions, depth: u8) -> ProofExpr 
 }
 
 fn progress(finite: bool) -> ProofExpr {
-    or4(
+    or5(
         expr(Tactic::LocalMerge),
         expr(Tactic::Pendant),
-       // expr(Tactic::Contractable),
+       expr(Tactic::FastLongerPath(finite)),
         expr(Tactic::LongerPath(finite)),
         any(
             Enumerator::PseudoCycle(finite),

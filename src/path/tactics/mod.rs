@@ -14,6 +14,7 @@ pub use cycle_rearrange::check_fixed_extension_feasible;
 #[derive(Debug, Clone)]
 pub enum Tactic {
     LongerPath(bool),
+    FastLongerPath(bool),
     CycleMerge,
     LocalMerge,
     Rearrangable(bool),
@@ -27,7 +28,18 @@ impl TacticTrait for Tactic {
 
     fn prove(&self, stack: &mut Instance) -> PathProofNode {
         let proof = match self {
-            Tactic::LongerPath(finite) => longer_path::check_longer_nice_path(stack, *finite),
+            Tactic::LongerPath(finite) => {
+                let outside = stack.out_edges();
+                let path_comps = stack.path_nodes().collect_vec();
+                let last = path_comps.first().unwrap();
+                if last.comp.is_c6() || last.comp.is_c7() {
+                    if outside.iter().any(|n| last.comp.contains(&n)) {
+                        return PathProofNode::new_leaf("fast_longer_path".into(), true)
+                    }
+                }
+                PathProofNode::new_leaf("no fast_longer_path".into(), false)
+            }
+            Tactic::FastLongerPath(finite) => longer_path::check_longer_nice_path(stack, *finite),
             Tactic::CycleMerge => cycle_merge::check_cycle_merge(stack),
             Tactic::LocalMerge => local_merge::check_local_merge(stack),
             Tactic::Rearrangable(finite) => {
