@@ -32,14 +32,7 @@ pub fn check_path_rearrangement(instance: &Instance, finite: bool) -> PathProofN
             CompType::Cycle(7),
             CompType::Cycle(6),
         ];
-        // let order = [
-        //     CompType::Large,
-        //     CompType::Cycle(7),
-        //     CompType::Cycle(6),
-        //     CompType::Cycle(5),
-        //     CompType::Cycle(4),
-        // ];
-
+        
         let old_type = old_last_comp.comp_type();
         let new_type = new_last_comp.comp_type();
 

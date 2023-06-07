@@ -21,24 +21,6 @@ pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
 
     let cycle_value = pc.value(&path_comps, &all_edges, &npc, instance);
 
-    // let complex = pc.cycle.iter().any(|(_, comp, _)| match comp {
-    //     CycleComp::PathComp(idx) => path_comps[idx.raw()].comp.is_complex(),
-    //     CycleComp::Rem => false,
-    // });
-    // if complex {
-    //     // 2c due to gainful bridge covering. We convert the resulting complex to a large
-    //     cycle_value += Credit::from_integer(1) * instance.context.inv.c
-    // }
-
-    // if complex && cycle_value >= Credit::from_integer(1) {
-    //     PathProofNode::new_leaf(
-    //         format!(
-    //             "Merged pseudo cycle with to a block with value {}!",
-    //             cycle_value
-    //         ),
-    //         true,
-    //     )
-    // } else
     if cycle_value >= Credit::from_integer(2) {
         PathProofNode::new_leaf(
             format!("Merged pseudo cycle with value {}!", cycle_value),
@@ -57,15 +39,14 @@ pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
 }
 
 struct CompValue {
-    comp_idx: Pidx,
     base: Credit,
+    /// list of other components and the credit gained through a shortcut with this other component
     shortcuts: Vec<(Pidx, Credit)>,
 }
 
 impl CompValue {
-    fn base(base_value: Credit, comp_idx: Pidx) -> Self {
+    fn base(base_value: Credit) -> Self {
         CompValue {
-            comp_idx,
             base: base_value,
             shortcuts: vec![],
         }
@@ -104,23 +85,18 @@ impl PseudoCycle {
         let values = self
             .cycle
             .iter()
-            .enumerate()
-            .map(|(_j, (in_node, comp, out_node))| {
-                // let lower_complex = first_complex.is_some() && first_complex.unwrap() > j;
-
+            .map(|(in_node, comp, out_node)| {
                 match comp {
                     CycleComp::PathComp(idx) => {
                         let comp = path_comps[idx.raw()];
                         self.comp_value(
                             comp, in_node, out_node, npc, all_edges, instance,
-                            //lower_complex,
                         )
                     }
                     CycleComp::Rem => {
                         CompValue::base(
                             instance.context.inv.two_ec_credit(4),
-                            Pidx::N(path_comps.len()),
-                        ) // non shortcutable triangle
+                        ) // non shortcutable C4
                     }
                 }
             })
@@ -131,20 +107,10 @@ impl PseudoCycle {
             .iter()
             .flat_map(|v| v.shortcuts.iter().map(|(_, v)| *v))
             .max()
-            .unwrap_or(Credit::zero())
-            .max(Credit::zero());
+            .unwrap_or(Credit::zero())    
+            .max(Credit::zero()); 
+
         base + best_shortcut
-
-        // let mut M = Matrix::new(values.len(), path_comps.len() + 1, Credit::from_integer(0));
-        // for (i, v) in values.iter().enumerate() {
-        //     *M.get_mut((i, v.comp_idx.raw())).unwrap() = v.base;
-        //     for (s_idx, value) in &v.shortcuts {
-        //         *M.get_mut((i, s_idx.raw())).unwrap() = *value;
-        //     }
-        // }
-
-        // let (max_value, _) = kuhn_munkres(&M);
-        // max_value
     }
 
     fn comp_value(
@@ -155,7 +121,6 @@ impl PseudoCycle {
         npc: &NicePairConfig,
         all_edges: &[Edge],
         instance: &Instance,
-        // lower_complex: bool,
     ) -> CompValue {
         let nice_pair = npc.is_nice_pair(*in_node, *out_node);
 
@@ -180,7 +145,7 @@ impl PseudoCycle {
         match comp.comp.comp_type() {
             CompType::Cycle(4) => {
                 if nice_pair {
-                    //return credit_inv.credits(&comp.comp) + Credit::from_integer(1);
+                    
                     if comp.comp.is_adjacent(in_node, out_node) {
                         let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
                             .filter(|(e1, e2)| {
@@ -198,6 +163,7 @@ impl PseudoCycle {
                                     .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
                                     .unwrap();
 
+                                // Credit for shortcutting the other side
                                 let other_shortcut = if npc.is_nice_pair(
                                     e1.endpoint_at(hit_comp.path_idx).unwrap(),
                                     e2.endpoint_at(hit_comp.path_idx).unwrap(),
@@ -207,8 +173,8 @@ impl PseudoCycle {
                                     Credit::from_integer(0)
                                 };
 
-                                let credit = if !(n1 == *in_node && n2 == *in_node)
-                                    && !(n2 == *in_node && n1 == *in_node)
+                                let credit = if !(n1 == *in_node && n2 == *out_node)
+                                    && !(n2 == *in_node && n1 == *out_node)
                                     && comp.comp.is_adjacent(&n1, &n2)
                                 {
                                     // in this case we can double shortcut C4
@@ -227,7 +193,6 @@ impl PseudoCycle {
 
                         let mut value = CompValue::base(
                             credit_inv.credits(&comp.comp) + Credit::from_integer(1),
-                            comp.path_idx,
                         );
 
                         for (c, idx) in local_merge_credits {
@@ -240,7 +205,6 @@ impl PseudoCycle {
                     } else {
                         CompValue::base(
                             credit_inv.credits(&comp.comp) + Credit::from_integer(1),
-                            comp.path_idx,
                         )
                     }
                 } else {
@@ -274,7 +238,7 @@ impl PseudoCycle {
                             .collect_vec();
 
                         let mut value =
-                            CompValue::base(credit_inv.credits(&comp.comp), comp.path_idx);
+                            CompValue::base(credit_inv.credits(&comp.comp));
 
                         for (c, idx) in local_merge_credits {
                             if c > Credit::from_integer(0) {
@@ -328,7 +292,7 @@ impl PseudoCycle {
                             .collect_vec();
 
                         let mut value =
-                            CompValue::base(credit_inv.credits(&comp.comp), comp.path_idx);
+                            CompValue::base(credit_inv.credits(&comp.comp));
 
                         for (c, idx) in local_merge_credits {
                             if c > Credit::from_integer(0) {
@@ -344,7 +308,6 @@ impl PseudoCycle {
                 if nice_pair {
                     CompValue::base(
                         instance.context.inv.credits(&comp.comp) + Credit::from_integer(1),
-                        comp.path_idx,
                     )
                 // shortcut!
                 } else {
@@ -400,7 +363,7 @@ impl PseudoCycle {
                         })
                         .collect_vec();
 
-                    let mut value = CompValue::base(credit_inv.credits(&comp.comp), comp.path_idx);
+                    let mut value = CompValue::base(credit_inv.credits(&comp.comp));
 
                     for (c, idx) in local_merge_credits {
                         if c > Credit::from_integer(0) {
@@ -416,13 +379,12 @@ impl PseudoCycle {
                 if in_node != out_node {
                     CompValue::base(
                         credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5),
-                        comp.path_idx,
                     )
                 } else {
-                    CompValue::base(credit_inv.credits(&comp.comp), comp.path_idx)
+                    CompValue::base(credit_inv.credits(&comp.comp))
                 }
             }
-            CompType::Large => CompValue::base(credit_inv.credits(&comp.comp), comp.path_idx),
+            CompType::Large => CompValue::base(credit_inv.credits(&comp.comp)),
             // CompType::Complex => {
             //     let complex = if lower_complex {
             //         credit_inv.complex_comp()
