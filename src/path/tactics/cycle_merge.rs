@@ -89,14 +89,10 @@ impl PseudoCycle {
                 match comp {
                     CycleComp::PathComp(idx) => {
                         let comp = path_comps[idx.raw()];
-                        self.comp_value(
-                            comp, in_node, out_node, npc, all_edges, instance,
-                        )
+                        self.comp_value(comp, in_node, out_node, npc, all_edges, instance)
                     }
                     CycleComp::Rem => {
-                        CompValue::base(
-                            instance.context.inv.two_ec_credit(4),
-                        ) // non shortcutable C4
+                        CompValue::base(instance.context.inv.two_ec_credit(4)) // non shortcutable C4
                     }
                 }
             })
@@ -107,8 +103,8 @@ impl PseudoCycle {
             .iter()
             .flat_map(|v| v.shortcuts.iter().map(|(_, v)| *v))
             .max()
-            .unwrap_or(Credit::zero())    
-            .max(Credit::zero()); 
+            .unwrap_or(Credit::zero())
+            .max(Credit::zero());
 
         base + best_shortcut
     }
@@ -248,60 +244,57 @@ impl PseudoCycle {
 
                     //     value
                     // } else {
-                        // in_node == out_node
+                    // in_node == out_node
 
-                        // either in == out or !adj(in, out)
-                        let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
-                            .filter(|(e1, e2)| {
-                                // pair of edges that hits the same comp but not this cycle
-                                e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
-                                    && !cycle_indices
-                                        .contains(&e2.other_idx(comp.path_idx).unwrap())
-                            })
-                            .map(|(e1, e2)| {
-                                let n1 = e1.endpoint_at(comp.path_idx).unwrap();
-                                let n2 = e2.endpoint_at(comp.path_idx).unwrap();
+                    // either in == out or !adj(in, out)
+                    let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
+                        .filter(|(e1, e2)| {
+                            // pair of edges that hits the same comp but not this cycle
+                            e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
+                                && !cycle_indices.contains(&e2.other_idx(comp.path_idx).unwrap())
+                        })
+                        .map(|(e1, e2)| {
+                            let n1 = e1.endpoint_at(comp.path_idx).unwrap();
+                            let n2 = e2.endpoint_at(comp.path_idx).unwrap();
 
-                                let hit_comp = path_comps
-                                    .iter()
-                                    .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
-                                    .unwrap();
+                            let hit_comp = path_comps
+                                .iter()
+                                .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
+                                .unwrap();
 
-                                let other_shortcut = if npc.is_nice_pair(
-                                    e1.endpoint_at(hit_comp.path_idx).unwrap(),
-                                    e2.endpoint_at(hit_comp.path_idx).unwrap(),
-                                ) {
-                                    Credit::from_integer(1)
-                                } else {
-                                    Credit::from_integer(0)
-                                };
+                            let other_shortcut = if npc.is_nice_pair(
+                                e1.endpoint_at(hit_comp.path_idx).unwrap(),
+                                e2.endpoint_at(hit_comp.path_idx).unwrap(),
+                            ) {
+                                Credit::from_integer(1)
+                            } else {
+                                Credit::from_integer(0)
+                            };
 
-                                let credit = if !npc.is_nice_pair(n1, n2)
-                                {
-                                    // in this case we cannot shortcut C4
-                                    credit_inv.credits(&hit_comp.comp) - Credit::from_integer(2)
-                                        + other_shortcut
-                                } else {
-                                    // in this case we can shortcut C4
-                                    credit_inv.credits(&hit_comp.comp) - Credit::from_integer(2)
-                                        + other_shortcut
-                                        + Credit::from_integer(1)
-                                };
+                            let credit = if !npc.is_nice_pair(n1, n2) {
+                                // in this case we cannot shortcut C4
+                                credit_inv.credits(&hit_comp.comp) - Credit::from_integer(2)
+                                    + other_shortcut
+                            } else {
+                                // in this case we can shortcut C4
+                                credit_inv.credits(&hit_comp.comp) - Credit::from_integer(2)
+                                    + other_shortcut
+                                    + Credit::from_integer(1)
+                            };
 
-                                (credit, hit_comp.path_idx)
-                            })
-                            .collect_vec();
+                            (credit, hit_comp.path_idx)
+                        })
+                        .collect_vec();
 
-                        let mut value =
-                            CompValue::base(credit_inv.credits(&comp.comp));
+                    let mut value = CompValue::base(credit_inv.credits(&comp.comp));
 
-                        for (c, idx) in local_merge_credits {
-                            if c > Credit::from_integer(0) {
-                                value.shortcuts.push((idx, c));
-                            }
+                    for (c, idx) in local_merge_credits {
+                        if c > Credit::from_integer(0) {
+                            value.shortcuts.push((idx, c));
                         }
+                    }
 
-                        value
+                    value
                     //}
                 }
             }
@@ -354,12 +347,16 @@ impl PseudoCycle {
                                     || (comp.comp.is_adjacent(&n2, in_node)
                                         && comp.comp.is_adjacent(&n1, out_node)))
                             {
+                                // double shortcut this comp
                                 credit_inv.credits(&hit_comp.comp) + other_shortcut
                             } else if npc.is_nice_pair(n1, n2) {
+                                // single shortcut this comp
                                 credit_inv.credits(&hit_comp.comp) + other_shortcut
                                     - Credit::from_integer(1)
                             } else {
-                                credit_inv.credits(&hit_comp.comp) + other_shortcut - Credit::from_integer(2)
+                                // no shortcut in this comp
+                                credit_inv.credits(&hit_comp.comp) + other_shortcut
+                                    - Credit::from_integer(2)
                             };
                             (credit, hit_comp.path_idx)
                         })
@@ -379,9 +376,7 @@ impl PseudoCycle {
             CompType::Cycle(_) if comp.used => {
                 assert!(comp.comp.is_c5());
                 if in_node != out_node {
-                    CompValue::base(
-                        credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5),
-                    )
+                    CompValue::base(credit_inv.two_ec_credit(4) + credit_inv.two_ec_credit(5))
                 } else {
                     CompValue::base(credit_inv.credits(&comp.comp))
                 }
