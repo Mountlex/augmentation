@@ -276,7 +276,7 @@ impl PseudoCycle {
                                     Credit::from_integer(0)
                                 };
 
-                                let credit = if !comp.comp.is_adjacent(&n1, &n2)
+                                let credit = if !npc.is_nice_pair(n1, n2)
                                 {
                                     // in this case we cannot shortcut C4
                                     credit_inv.credits(&hit_comp.comp) - Credit::from_integer(2)
