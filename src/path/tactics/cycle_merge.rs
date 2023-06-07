@@ -325,6 +325,7 @@ impl PseudoCycle {
                             let n1 = e1.endpoint_at(comp.path_idx).unwrap();
                             let n2 = e2.endpoint_at(comp.path_idx).unwrap();
 
+                            // one edge hits upper, the other hits lower
                             (upper.contains(&n1) && lower.contains(&n2))
                                 || (upper.contains(&n2) && lower.contains(&n1))
                         })
@@ -354,11 +355,11 @@ impl PseudoCycle {
                                         && comp.comp.is_adjacent(&n1, out_node)))
                             {
                                 credit_inv.credits(&hit_comp.comp) + other_shortcut
-                            } else if comp.comp.is_adjacent(&n1, &n2) {
+                            } else if npc.is_nice_pair(n1, n2) {
                                 credit_inv.credits(&hit_comp.comp) + other_shortcut
                                     - Credit::from_integer(1)
                             } else {
-                                credit_inv.credits(&hit_comp.comp) + other_shortcut
+                                credit_inv.credits(&hit_comp.comp) + other_shortcut - Credit::from_integer(2)
                             };
                             (credit, hit_comp.path_idx)
                         })
@@ -386,30 +387,6 @@ impl PseudoCycle {
                 }
             }
             CompType::Large => CompValue::base(credit_inv.credits(&comp.comp)),
-            // CompType::Complex => {
-            //     let complex = if lower_complex {
-            //         credit_inv.complex_comp()
-            //     } else {
-            //         Credit::from_integer(0)
-            //     };
-            //     if nice_pair {
-            //         complex
-            //             + complex_cycle_value_base(
-            //                 credit_inv,
-            //                 &comp.comp.graph(),
-            //                 *in_node,
-            //                 *out_node,
-            //             )
-            //     } else {
-            //         complex
-            //             + complex_cycle_value_base(
-            //                 credit_inv,
-            //                 &comp.comp.graph(),
-            //                 *in_node,
-            //                 *out_node,
-            //             )
-            //     }
-            // }
             _ => panic!(),
         }
     }
