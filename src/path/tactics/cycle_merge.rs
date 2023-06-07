@@ -145,7 +145,6 @@ impl PseudoCycle {
         match comp.comp.comp_type() {
             CompType::Cycle(4) => {
                 if nice_pair {
-                    
                     if comp.comp.is_adjacent(in_node, out_node) {
                         let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
                             .filter(|(e1, e2)| {
@@ -192,6 +191,7 @@ impl PseudoCycle {
                             .collect_vec();
 
                         let mut value = CompValue::base(
+                            // +1 for shortcutting this component
                             credit_inv.credits(&comp.comp) + Credit::from_integer(1),
                         );
 
@@ -204,51 +204,53 @@ impl PseudoCycle {
                         value
                     } else {
                         CompValue::base(
+                            // +1 for shortcutting this component
                             credit_inv.credits(&comp.comp) + Credit::from_integer(1),
                         )
                     }
                 } else {
-                    //return credit_inv.credits(&comp.comp);
-                    // case of no nice pair
-                    if in_node != out_node {
-                        // we can always shortcut C4 in this case
-                        let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
-                            .filter(|(e1, e2)| {
-                                // pair of edges that hits the same comp but not this cycle
-                                e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
-                                    && !cycle_indices
-                                        .contains(&e2.other_idx(comp.path_idx).unwrap())
-                            })
-                            .map(|(e1, e2)| {
-                                let hit_comp = path_comps
-                                    .iter()
-                                    .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
-                                    .unwrap();
-                                let credit = if npc.is_nice_pair(
-                                    e1.endpoint_at(hit_comp.path_idx).unwrap(),
-                                    e2.endpoint_at(hit_comp.path_idx).unwrap(),
-                                ) {
-                                    credit_inv.credits(&hit_comp.comp) // we make two shortcuts
-                                } else {
-                                    credit_inv.credits(&hit_comp.comp) - Credit::from_integer(1)
-                                    // we make only one shortcut
-                                };
-                                (credit, hit_comp.path_idx)
-                            })
-                            .collect_vec();
+                    // Cannot shortcut C4 with cycle in and out
+                    // if in_node != out_node {
+                    //     // cannot be adjacent in this case!
+                    //     let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
+                    //         .filter(|(e1, e2)| {
+                    //             // pair of edges that hits the same comp but not this cycle
+                    //             e1.other_idx(comp.path_idx) == e2.other_idx(comp.path_idx)
+                    //                 && !cycle_indices
+                    //                     .contains(&e2.other_idx(comp.path_idx).unwrap())
+                    //         })
+                    //         .map(|(e1, e2)| {
+                    //             let hit_comp = path_comps
+                    //                 .iter()
+                    //                 .find(|c| c.path_idx == e2.other_idx(comp.path_idx).unwrap())
+                    //                 .unwrap();
+                    //             let credit = if npc.is_nice_pair(
+                    //                 e1.endpoint_at(hit_comp.path_idx).unwrap(),
+                    //                 e2.endpoint_at(hit_comp.path_idx).unwrap(),
+                    //             ) {
+                    //                 credit_inv.credits(&hit_comp.comp) // we make two shortcuts, so pay nothing for new edges
+                    //             } else {
+                    //                 credit_inv.credits(&hit_comp.comp) - Credit::from_integer(1)
+                    //                 // we make only one shortcut and only pay one new edge
+                    //             };
+                    //             (credit, hit_comp.path_idx)
+                    //         })
+                    //         .collect_vec();
 
-                        let mut value =
-                            CompValue::base(credit_inv.credits(&comp.comp));
+                    //     let mut value =
+                    //         CompValue::base(credit_inv.credits(&comp.comp)); // no base shortcut
 
-                        for (c, idx) in local_merge_credits {
-                            if c > Credit::from_integer(0) {
-                                value.shortcuts.push((idx, c));
-                            }
-                        }
+                    //     for (c, idx) in local_merge_credits {
+                    //         if c > Credit::from_integer(0) {
+                    //             value.shortcuts.push((idx, c));
+                    //         }
+                    //     }
 
-                        value
-                    } else {
+                    //     value
+                    // } else {
                         // in_node == out_node
+
+                        // either in == out or !adj(in, out)
                         let local_merge_credits = iproduct!(incident_edges.clone(), incident_edges)
                             .filter(|(e1, e2)| {
                                 // pair of edges that hits the same comp but not this cycle
@@ -274,8 +276,7 @@ impl PseudoCycle {
                                     Credit::from_integer(0)
                                 };
 
-                                let credit = if (n1 == *in_node || n2 == *in_node)
-                                    && !comp.comp.is_adjacent(&n1, &n2)
+                                let credit = if !comp.comp.is_adjacent(&n1, &n2)
                                 {
                                     // in this case we cannot shortcut C4
                                     credit_inv.credits(&hit_comp.comp) - Credit::from_integer(2)
@@ -301,7 +302,7 @@ impl PseudoCycle {
                         }
 
                         value
-                    }
+                    //}
                 }
             }
             CompType::Cycle(_) if !comp.used => {
