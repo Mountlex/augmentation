@@ -204,11 +204,8 @@ pub fn path_extension_enumerator(
                                                 if out.is_comp() {
                                                     // this is the case where the next component is a large
                                                     true
-                                                } else if !matched.contains(&out) {
-                                                    // the in-out edge was also a matching edge
-                                                    true
                                                 } else {
-                                                    false
+                                                    !matched.contains(&out)
                                                 }
                                             } else {
                                                 true

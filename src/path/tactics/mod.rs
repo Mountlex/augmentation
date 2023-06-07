@@ -28,14 +28,14 @@ impl TacticTrait for Tactic {
 
     fn prove(&self, stack: &mut Instance) -> PathProofNode {
         let proof = match self {
-            Tactic::FastLongerPath(finite) => {
+            Tactic::FastLongerPath(_finite) => {
                 let outside = stack.out_edges();
                 let path_comps = stack.path_nodes().collect_vec();
                 let last = path_comps.first().unwrap();
-                if last.comp.is_c6() || last.comp.is_c7() {
-                    if outside.iter().any(|n| last.comp.contains(&n)) {
-                        return PathProofNode::new_leaf("fast_longer_path".into(), true)
-                    }
+                if (last.comp.is_c6() || last.comp.is_c7())
+                    && outside.iter().any(|n| last.comp.contains(n))
+                {
+                    return PathProofNode::new_leaf("fast_longer_path".into(), true);
                 }
                 PathProofNode::new_leaf("no fast_longer_path".into(), false)
             }

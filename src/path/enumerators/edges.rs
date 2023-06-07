@@ -102,7 +102,7 @@ fn check_comp_three_matching(
 fn check_comp_config(
     instance: &Instance,
     nodes_to_pidx: &Vec<Option<Pidx>>,
-    finite: bool,
+    _finite: bool,
 ) -> Option<(Box<dyn Iterator<Item = InstPart>>, String)> {
     let path_comps = instance.path_nodes().collect_vec();
     let comp = path_comps.first().unwrap();
@@ -131,12 +131,13 @@ fn check_comp_config(
         .filter(|n| n != &comp.in_node.unwrap())
         .collect_vec();
 
-    if incident_edges.len() == 1 && incident_out_edges.len() == 0 && incident_back_edges.len() == 0 {
-        if comp.comp.is_c7()  {
+    if incident_edges.len() == 1 && incident_out_edges.is_empty() && incident_back_edges.is_empty()
+    {
+        if comp.comp.is_c7() {
             let in_node = comp.in_node.unwrap();
             let nodes = comp.comp.nodes();
             assert!(nodes[0] == in_node);
-    
+
             let configs = vec![
                 vec![nodes[1], nodes[2]],
                 vec![nodes[1], nodes[6]],
@@ -147,79 +148,76 @@ fn check_comp_config(
                 vec![nodes[2], nodes[4]],
                 vec![nodes[3], nodes[4]],
             ];
-    
+
             let mut all_cases: Box<dyn Iterator<Item = InstPart>> = Box::new(std::iter::empty());
             for config in configs {
                 let edge_iter = full_edge_iterator(config, complement.clone(), true, true, true);
                 let iter = to_cases_mul(edge_iter, nodes_to_pidx, instance, true);
                 all_cases = Box::new(all_cases.chain(iter));
             }
-            return Some((all_cases, "C7 config".into()))
+            return Some((all_cases, "C7 config".into()));
         }
 
-    if comp.comp.is_c6()  {
-        let in_node = comp.in_node.unwrap();
-        let nodes = comp.comp.nodes();
-        assert!(nodes[0] == in_node);
+        if comp.comp.is_c6() {
+            let in_node = comp.in_node.unwrap();
+            let nodes = comp.comp.nodes();
+            assert!(nodes[0] == in_node);
 
-        let configs = vec![
-            vec![nodes[1], nodes[2]],
-            vec![nodes[1], nodes[5]],
-            vec![nodes[1], nodes[4]],
-            vec![nodes[1], nodes[3]],
-            vec![nodes[2], nodes[4]],
-        ];
+            let configs = vec![
+                vec![nodes[1], nodes[2]],
+                vec![nodes[1], nodes[5]],
+                vec![nodes[1], nodes[4]],
+                vec![nodes[1], nodes[3]],
+                vec![nodes[2], nodes[4]],
+            ];
 
-        let mut all_cases: Box<dyn Iterator<Item = InstPart>> = Box::new(std::iter::empty());
-        for config in configs {
-            let edge_iter = full_edge_iterator(config, complement.clone(), true, true, true);
-            let iter = to_cases_mul(edge_iter, nodes_to_pidx, instance, true);
-            all_cases = Box::new(all_cases.chain(iter));
+            let mut all_cases: Box<dyn Iterator<Item = InstPart>> = Box::new(std::iter::empty());
+            for config in configs {
+                let edge_iter = full_edge_iterator(config, complement.clone(), true, true, true);
+                let iter = to_cases_mul(edge_iter, nodes_to_pidx, instance, true);
+                all_cases = Box::new(all_cases.chain(iter));
+            }
+            return Some((all_cases, "C6 config".into()));
         }
-        return Some((all_cases, "C6 config".into()))
+
+        if comp.comp.is_c5() {
+            let in_node = comp.in_node.unwrap();
+            let nodes = comp.comp.nodes();
+            assert!(nodes[0] == in_node);
+
+            let configs = vec![
+                vec![nodes[1], nodes[2]],
+                vec![nodes[1], nodes[4]],
+                vec![nodes[1], nodes[3]],
+                vec![nodes[4], nodes[2]],
+                //vec![nodes[2], nodes[3]],
+            ];
+
+            let mut all_cases: Box<dyn Iterator<Item = InstPart>> = Box::new(std::iter::empty());
+            for config in configs {
+                let edge_iter = full_edge_iterator(config, complement.clone(), true, true, true);
+                let iter = to_cases_mul(edge_iter, nodes_to_pidx, instance, true);
+                all_cases = Box::new(all_cases.chain(iter));
+            }
+            return Some((all_cases, "C5 config".into()));
+        }
+
+        if comp.comp.is_c4() {
+            let in_node = comp.in_node.unwrap();
+            let nodes = comp.comp.nodes();
+            assert!(nodes[0] == in_node);
+
+            let configs = vec![vec![nodes[1], nodes[2]], vec![nodes[1], nodes[3]]];
+
+            let mut all_cases: Box<dyn Iterator<Item = InstPart>> = Box::new(std::iter::empty());
+            for config in configs {
+                let edge_iter = full_edge_iterator(config, complement.clone(), true, true, true);
+                let iter = to_cases_mul(edge_iter, nodes_to_pidx, instance, true);
+                all_cases = Box::new(all_cases.chain(iter));
+            }
+            return Some((all_cases, "C4 config".into()));
+        }
     }
-
-    if comp.comp.is_c5()  {
-        let in_node = comp.in_node.unwrap();
-        let nodes = comp.comp.nodes();
-        assert!(nodes[0] == in_node);
-
-        let configs = vec![
-            vec![nodes[1], nodes[2]],
-            vec![nodes[1], nodes[4]],
-            vec![nodes[1], nodes[3]],
-            vec![nodes[4], nodes[2]],
-            //vec![nodes[2], nodes[3]],
-        ];
-
-        let mut all_cases: Box<dyn Iterator<Item = InstPart>> = Box::new(std::iter::empty());
-        for config in configs {
-            let edge_iter = full_edge_iterator(config, complement.clone(), true, true, true);
-            let iter = to_cases_mul(edge_iter, nodes_to_pidx, instance, true);
-            all_cases = Box::new(all_cases.chain(iter));
-        }
-        return Some((all_cases, "C5 config".into()))
-    }
-
-    if comp.comp.is_c4()  {
-        let in_node = comp.in_node.unwrap();
-        let nodes = comp.comp.nodes();
-        assert!(nodes[0] == in_node);
-
-        let configs = vec![
-            vec![nodes[1], nodes[2]],
-            vec![nodes[1], nodes[3]],
-        ];
-
-        let mut all_cases: Box<dyn Iterator<Item = InstPart>> = Box::new(std::iter::empty());
-        for config in configs {
-            let edge_iter = full_edge_iterator(config, complement.clone(), true, true, true);
-            let iter = to_cases_mul(edge_iter, nodes_to_pidx, instance, true);
-            all_cases = Box::new(all_cases.chain(iter));
-        }
-        return Some((all_cases, "C4 config".into()))
-    }
-}
     None
 }
 
@@ -242,7 +240,7 @@ fn check_three_matching(
 
             if let Some(iter) = ensure_three_matching(comp_nodes, instance, finite) {
                 let iter = to_cases(iter, nodes_to_pidx, instance, true);
-                return Some((iter, format!("3-Matching of first pathnodes")));
+                return Some((iter, "3-Matching of first pathnodes".to_string()));
             }
         }
     } else {
@@ -256,7 +254,7 @@ fn check_three_matching(
 
             if let Some(iter) = ensure_three_matching(comp_nodes, instance, finite) {
                 let iter = to_cases(iter, nodes_to_pidx, instance, true);
-                return Some((iter, format!("3-Matching of first pathnodes")));
+                return Some((iter, "3-Matching of first pathnodes".to_string()));
             }
         }
     }
@@ -476,7 +474,7 @@ fn check_four_matching(
             if left_size >= 10 && !left_large {
                 if let Some(iter) = ensure_k_matching(comp_nodes, instance, 4, finite) {
                     let iter = to_cases(iter, nodes_to_pidx, instance, true);
-                    return Some((iter, format!("4-Matching")));
+                    return Some((iter, "4-Matching".to_string()));
                 }
             }
         }
@@ -499,7 +497,7 @@ fn check_four_matching(
             if left_size >= 10 && !left_large {
                 if let Some(iter) = ensure_k_matching(comp_nodes, instance, 4, finite) {
                     let iter = to_cases(iter, nodes_to_pidx, instance, true);
-                    return Some((iter, format!("4-Matching")));
+                    return Some((iter, "4-Matching".to_string()));
                 }
             }
         }
@@ -1297,9 +1295,7 @@ impl Iterator for FullEdgeIterator {
             }
         }
 
-        if self.current_node_config.is_none() {
-            return None;
-        }
+        self.current_node_config.as_ref()?;
 
         if let Some(hit_iter) = &mut self.hit_iter {
             if let Some(hits) = hit_iter.next() {
@@ -1312,33 +1308,30 @@ impl Iterator for FullEdgeIterator {
                         .zip(hits.iter().cloned())
                         .collect_vec(),
                 );
-            } else {
-                if let Some(sources) = self.source_iter.as_mut().unwrap().next() {
-                    self.current_node_config = Some(sources);
-                    if self.matching {
-                        self.hit_iter =
-                            Some(Box::new(self.hits.clone().into_iter().combinations(len)))
-                    } else {
-                        self.hit_iter = Some(Box::new(
-                            self.hits
-                                .clone()
-                                .into_iter()
-                                .combinations_with_replacement(len),
-                        ))
-                    }
-                    let hits = self.hit_iter.as_mut().unwrap().next().unwrap();
-                    return Some(
-                        self.current_node_config
-                            .as_mut()
-                            .unwrap()
-                            .iter()
-                            .cloned()
-                            .zip(hits.iter().cloned())
-                            .collect_vec(),
-                    );
+            } else if let Some(sources) = self.source_iter.as_mut().unwrap().next() {
+                self.current_node_config = Some(sources);
+                if self.matching {
+                    self.hit_iter = Some(Box::new(self.hits.clone().into_iter().combinations(len)))
                 } else {
-                    return None;
+                    self.hit_iter = Some(Box::new(
+                        self.hits
+                            .clone()
+                            .into_iter()
+                            .combinations_with_replacement(len),
+                    ))
                 }
+                let hits = self.hit_iter.as_mut().unwrap().next().unwrap();
+                return Some(
+                    self.current_node_config
+                        .as_mut()
+                        .unwrap()
+                        .iter()
+                        .cloned()
+                        .zip(hits.iter().cloned())
+                        .collect_vec(),
+                );
+            } else {
+                return None;
             }
         }
 

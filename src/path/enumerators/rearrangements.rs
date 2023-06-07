@@ -136,23 +136,23 @@ pub fn enumerate_rearrangements(
 
         // TODO maybe unnecessary
         let path_comps = instance.path_nodes().collect_vec();
-      
-            let extension_rev = Extension {
-                start: path_comps.first().unwrap().path_idx,
-                start_out: path_comps.first().unwrap().in_node.unwrap(),
-                end: path_comps.last().unwrap().path_idx,
-                end_in: path_comps.last().unwrap().out_node.unwrap(),
-                inner: path_comps
-                    .iter()
-                    .skip(1)
-                    .take(path_comps.len() - 2)
-                    .map(|comp| InOutNode {
-                        in_node: comp.out_node.unwrap(),
-                        idx: comp.path_idx,
-                        out_node: comp.in_node.unwrap(),
-                    })
-                    .collect_vec(),
-            };
+
+        let extension_rev = Extension {
+            start: path_comps.first().unwrap().path_idx,
+            start_out: path_comps.first().unwrap().in_node.unwrap(),
+            end: path_comps.last().unwrap().path_idx,
+            end_in: path_comps.last().unwrap().out_node.unwrap(),
+            inner: path_comps
+                .iter()
+                .skip(1)
+                .take(path_comps.len() - 2)
+                .map(|comp| InOutNode {
+                    in_node: comp.out_node.unwrap(),
+                    idx: comp.path_idx,
+                    out_node: comp.in_node.unwrap(),
+                })
+                .collect_vec(),
+        };
 
         Box::new(iter.chain(std::iter::once(extension_rev)))
     }

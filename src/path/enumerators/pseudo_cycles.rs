@@ -111,7 +111,7 @@ fn pseudo_cycles_of_length(
             // for any combination...
             product_of_first(sets_of_in_between_edges).flat_map(move |edges| {
                 // this now defines one pseudo cycle in the pattern
-                
+
                 let cycle_indices = &perm;
 
                 // at most one credit gaining edge

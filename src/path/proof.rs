@@ -82,7 +82,7 @@ fn progress(finite: bool) -> ProofExpr {
     or5(
         expr(Tactic::LocalMerge),
         expr(Tactic::Pendant),
-       expr(Tactic::FastLongerPath(finite)),
+        expr(Tactic::FastLongerPath(finite)),
         expr(Tactic::LongerPath(finite)),
         any(
             Enumerator::PseudoCycle(finite),

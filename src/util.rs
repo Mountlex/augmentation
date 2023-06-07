@@ -47,8 +47,9 @@ pub fn product_of_first<T: Clone + Copy + 'static>(
         let edges8 = edges.remove(0);
 
         Box::new(
-            iproduct!(edges0, edges1, edges2, edges3, edges4, edges5, edges6, edges7, edges8)
-                .map(|(e1, e2, e3, e4, e5, e6, e7, e8, e9)| vec![e1, e2, e3, e4, e5, e6, e7, e8, e9]),
+            iproduct!(edges0, edges1, edges2, edges3, edges4, edges5, edges6, edges7, edges8).map(
+                |(e1, e2, e3, e4, e5, e6, e7, e8, e9)| vec![e1, e2, e3, e4, e5, e6, e7, e8, e9],
+            ),
         )
     } else if length == 8 {
         let edges0 = edges.remove(0);

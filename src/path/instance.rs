@@ -314,22 +314,17 @@ impl Instance {
     }
 
     pub fn all_rem_edges(&self) -> Vec<HalfAbstractEdge> {
-        self
-            .inst_parts()
+        self.inst_parts()
             .flat_map(|part| part.rem_edges.iter())
             .cloned()
             .collect_vec()
-
-      
     }
 
     pub fn non_rem_edges(&self) -> Vec<EdgeId> {
-        self
-            .inst_parts()
+        self.inst_parts()
             .flat_map(|part| part.non_rem_edges.iter())
             .cloned()
             .collect_vec()
-      
     }
 
     pub fn new_rem_ids(&self, n: usize) -> Vec<EdgeId> {
@@ -396,7 +391,7 @@ impl Instance {
     pub fn all_nodes(&self) -> impl Iterator<Item = &'_ Node> {
         self.inst_parts()
             .flat_map(|part| part.path_nodes.iter())
-            .flat_map(|comp| comp.comp.nodes().into_iter())
+            .flat_map(|comp| comp.comp.nodes().iter())
     }
 
     pub fn contractability_checked(&self) -> impl Iterator<Item = &'_ Pidx> {
