@@ -327,7 +327,7 @@ impl Instance {
             .collect_vec()
     }
 
-    pub fn new_rem_ids(&self, n: usize) -> Vec<EdgeId> {
+    pub fn new_rem_id(&self) -> EdgeId {
         let rem_edges: EdgeId = self
             .inst_parts()
             .flat_map(|part| part.rem_edges.iter())
@@ -342,13 +342,9 @@ impl Instance {
             .max()
             .unwrap_or(EdgeId(0));
 
-        let mut prev = non_rem_edges.max(rem_edges);
-        let mut res = vec![];
-        for _ in 0..n {
-            prev = prev.inc();
-            res.push(prev);
-        }
-        res
+        let prev = non_rem_edges.max(rem_edges);
+        
+        prev.inc()
     }
 
     pub fn pseudo_cycle(&self) -> Option<&PseudoCycle> {

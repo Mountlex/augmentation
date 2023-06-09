@@ -631,13 +631,20 @@ fn to_cases_with_edge_cost_mul(
     let good_out = instance.good_out().into_iter().cloned().collect_vec();
 
     let nodes_to_pidx = nodes_to_pidx.clone();
-    let instance = instance.clone();
+
+    let new_rem_id = instance.new_rem_id();
+ 
 
     let iter = Box::new(iter.flat_map(move |new_edges| {
         let mut part = InstPart::empty();
 
-        let len = new_edges.len();
-        let new_rem_ids = instance.new_rem_ids(len);
+        let mut temp = new_rem_id;
+        let mut new_rem_ids = vec![];
+        for _ in 0..new_edges.len() {
+            temp = temp.inc();
+            new_rem_ids.push(temp);
+        }
+        
         for ((node, hit), id) in new_edges.into_iter().zip(new_rem_ids.into_iter()) {
             match hit {
                 Hit::Outside => part.out_edges.push(node),
