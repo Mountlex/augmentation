@@ -82,6 +82,8 @@ impl PseudoCycle {
         //     })
         //     .map(|(i, _)| i);
 
+        let rem_edges = instance.rem_edges();
+
         let values = self
             .cycle
             .iter()
@@ -92,7 +94,11 @@ impl PseudoCycle {
                         self.comp_value(comp, in_node, out_node, npc, all_edges, instance)
                     }
                     CycleComp::Rem => {
-                        CompValue::base(instance.context.inv.two_ec_credit(4)) // non shortcutable C4
+                        if rem_edges.len() >= 2 {
+                            CompValue::base(instance.context.inv.two_ec_credit(5)) // TODO here either shortcut C4 or even more credit
+                        } else {
+                            CompValue::base(instance.context.inv.two_ec_credit(4)) // non shortcutable C4
+                        }
                     }
                 }
             })
