@@ -35,6 +35,27 @@ impl TacticTrait for Tactic {
                 if (last.comp.is_c6() || last.comp.is_c7())
                     && outside.iter().any(|n| last.comp.contains(n))
                 {
+                    // let all_edges = stack.all_edges();
+                    // let outside = stack.out_edges();
+                    // let path_comps = stack.path_nodes().collect_vec();
+                    // let rem_edges = stack.rem_edges();
+    
+                    // let mut contract_checked = stack.contractability_checked();
+                    // let msg = format!(
+                    //     "Instance: [{}][{}] o=[{}] rem=[{}] contr=[{}] non_rem=[{}] all_rem=[{}]",
+                    //     path_comps.iter().join(", "),
+                    //     all_edges.iter().join(","),
+                    //     outside.iter().join(","),
+                    //     rem_edges.iter().join(","),
+                    //     contract_checked.join(","),
+                    //     stack.non_rem_edges().iter().join(","),
+                    //     stack.all_rem_edges().iter().join(",")
+                    // );
+    
+                    
+                    //     log::info!("fast_longer_nice_path for: {}", msg);
+                    
+
                     return PathProofNode::new_leaf("fast_longer_path".into(), true);
                 }
                 PathProofNode::new_leaf("no fast_longer_path".into(), false)
@@ -58,7 +79,7 @@ impl TacticTrait for Tactic {
                 //  println!("{}", stack.get_profile(true));
 
                 let msg = format!(
-                    "Instance: [{}][{}][{}][{}] contr[{}] non_rem[{}] all_rem[{}]",
+                    "Instance: [{}][{}] o=[{}] rem=[{}] contr=[{}] non_rem=[{}] all_rem=[{}]",
                     path_comps.iter().join(", "),
                     all_edges.iter().join(","),
                     outside.iter().join(","),

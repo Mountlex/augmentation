@@ -151,7 +151,7 @@ fn check_comp_config(
 
             let mut all_cases: Box<dyn Iterator<Item = InstPart>> = Box::new(std::iter::empty());
             for config in configs {
-                let edge_iter = full_edge_iterator(config, complement.clone(), true, true, true);
+                let edge_iter = full_edge_iterator(config, complement.clone(), false, true, true);
                 let iter = to_cases_mul(edge_iter, nodes_to_pidx, instance, true);
                 all_cases = Box::new(all_cases.chain(iter));
             }
@@ -173,7 +173,7 @@ fn check_comp_config(
 
             let mut all_cases: Box<dyn Iterator<Item = InstPart>> = Box::new(std::iter::empty());
             for config in configs {
-                let edge_iter = full_edge_iterator(config, complement.clone(), true, true, true);
+                let edge_iter = full_edge_iterator(config, complement.clone(), false, true, true); // TODO no outside edges!
                 let iter = to_cases_mul(edge_iter, nodes_to_pidx, instance, true);
                 all_cases = Box::new(all_cases.chain(iter));
             }

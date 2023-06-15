@@ -54,25 +54,25 @@ fn split_cases(finite: bool, options: PathProofOptions, depth: u8) -> ProofExpr 
         if finite {
             expr(Tactic::TacticsExhausted(true))
         } else {
-            and(
-                // finite case
-                all_opt_par(
-                    OptEnumerator::PathNode,
-                    map(
-                        Mapper::ToFiniteInstance,
-                        prove_progress(true, options, depth),
-                    ),
-                    expr(Tactic::TacticsExhausted(true)),
-                    options.sc,
-                ),
+            // and(
+            //     // finite case
+            //     all_opt_par(
+            //         OptEnumerator::PathNode,
+            //         map(
+            //             Mapper::ToFiniteInstance,
+            //             prove_progress(true, options, depth),
+            //         ),
+            //         expr(Tactic::TacticsExhausted(true)),
+            //         options.sc,
+            //     ),
                 // infinite case
                 all_opt_par(
                     OptEnumerator::PathNode,
                     prove_progress(false, options, depth),
                     expr(Tactic::TacticsExhausted(false)),
                     options.sc,
-                ),
-            )
+                )
+            // )
         },
         options.sc,
     )
@@ -80,9 +80,9 @@ fn split_cases(finite: bool, options: PathProofOptions, depth: u8) -> ProofExpr 
 
 fn progress(finite: bool) -> ProofExpr {
     or5(
+        expr(Tactic::FastLongerPath(finite)),
         expr(Tactic::LocalMerge),
         expr(Tactic::Pendant),
-        expr(Tactic::FastLongerPath(finite)),
         expr(Tactic::LongerPath(finite)),
         any(
             Enumerator::PseudoCycle(finite),
