@@ -95,7 +95,7 @@ impl PseudoCycle {
                     }
                     CycleComp::Rem => {
                         if rem_edges.len() >= 3 {
-                            CompValue::base(instance.context.inv.two_ec_credit(5)) // TODO here either shortcut C4 or even more credit
+                            CompValue::base(instance.context.inv.two_ec_credit(4)) // TODO here either shortcut C4 or even more credit
                         } else {
                             CompValue::base(instance.context.inv.two_ec_credit(4)) // non shortcutable C4
                         }
