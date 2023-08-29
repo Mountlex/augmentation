@@ -82,7 +82,6 @@ impl PseudoCycle {
         //     })
         //     .map(|(i, _)| i);
 
-        let rem_edges = instance.rem_edges();
 
         let values = self
             .cycle
