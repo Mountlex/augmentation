@@ -1,4 +1,3 @@
-#![feature(drain_filter)]
 
 use std::{fmt::Display, fs::OpenOptions, path::PathBuf};
 

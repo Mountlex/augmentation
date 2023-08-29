@@ -248,12 +248,13 @@ impl Instance {
             .filter(|e| e.cost < Credit::from_integer(1))
             .cloned()
             .collect_vec();
+
         if !cheap_edges.is_empty() {
-            implied_edges.drain_filter(|e| {
-                cheap_edges.iter().any(|e2| {
+            implied_edges = implied_edges.into_iter().filter(|e| {
+                !cheap_edges.iter().any(|e2| {
                     e.cost > e2.cost && e2.node_incident(&e.n1) && e2.node_incident(&e.n2)
                 })
-            });
+            }).collect();
         }
 
         let nodes = self.path_nodes().collect_vec();
