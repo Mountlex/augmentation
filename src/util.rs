@@ -35,7 +35,42 @@ pub fn product_of_first<T: Clone + Copy + 'static>(
     mut edges: Vec<Vec<T>>,
 ) -> Box<dyn Iterator<Item = Vec<T>>> {
     let length = edges.len();
-    if length == 9 {
+    if length == 11 {
+        let edges0 = edges.remove(0);
+        let edges1 = edges.remove(0);
+        let edges2 = edges.remove(0);
+        let edges3 = edges.remove(0);
+        let edges4 = edges.remove(0);
+        let edges5 = edges.remove(0);
+        let edges6 = edges.remove(0);
+        let edges7 = edges.remove(0);
+        let edges8 = edges.remove(0);
+        let edges9 = edges.remove(0);
+        let edges10 = edges.remove(0);
+
+        Box::new(
+            iproduct!(edges0, edges1, edges2, edges3, edges4, edges5, edges6, edges7, edges8, edges9, edges10).map(
+                |(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11)| vec![e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11],
+            ),
+        )
+    } else if length == 10 {
+        let edges0 = edges.remove(0);
+        let edges1 = edges.remove(0);
+        let edges2 = edges.remove(0);
+        let edges3 = edges.remove(0);
+        let edges4 = edges.remove(0);
+        let edges5 = edges.remove(0);
+        let edges6 = edges.remove(0);
+        let edges7 = edges.remove(0);
+        let edges8 = edges.remove(0);
+        let edges9 = edges.remove(0);
+
+        Box::new(
+            iproduct!(edges0, edges1, edges2, edges3, edges4, edges5, edges6, edges7, edges8, edges9).map(
+                |(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10)| vec![e1, e2, e3, e4, e5, e6, e7, e8, e9, e10],
+            ),
+        )
+    } else if length == 9 {
         let edges0 = edges.remove(0);
         let edges1 = edges.remove(0);
         let edges2 = edges.remove(0);
