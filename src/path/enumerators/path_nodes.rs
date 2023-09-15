@@ -101,6 +101,10 @@ fn split_cases_by_required_nice_pairs(mut path_comp: PathComp) -> impl Iterator<
             path_comp.initial_nps.push((in_node, out_node));
         }
 
+        if comp.is_c5() {
+            path_comp.initial_nps.push((in_node, out_node));
+        }
+
         if comp.is_c5() && !used && idx.is_prelast() {
             //
             //    out
