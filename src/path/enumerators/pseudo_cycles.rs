@@ -32,7 +32,7 @@ pub fn enumerate_pseudo_cycles(
     }
 
     let mut iter: Box<dyn Iterator<Item = PseudoCycle>> = Box::new(std::iter::empty());
-    for i in 3..=(pattern_comps.len() + 1) {
+    for i in 3..=(pattern_comps.len() + 1).min(10) {
         // enumerate all cycles of size i
         let fixed_edge_iter = pseudo_cycles_of_length(
             pattern_comps.clone(),
