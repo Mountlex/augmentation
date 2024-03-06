@@ -127,14 +127,14 @@ impl Component {
         }
     }
 
-    pub fn fixed_node(&self) -> Option<Node> {
+    pub fn fixed_node(&self) -> Node {
         match self {
-            Component::C7(nodes) => Some(nodes[0]),
-            Component::C6(nodes) => Some(nodes[0]),
-            Component::C5(nodes) => Some(nodes[0]),
-            Component::C4(nodes) => Some(nodes[0]),
-            Component::C3(nodes) => Some(nodes[0]),
-            Component::Large(node) => Some(*node),
+            Component::C7(nodes) => nodes[0],
+            Component::C6(nodes) => nodes[0],
+            Component::C5(nodes) => nodes[0],
+            Component::C4(nodes) => nodes[0],
+            Component::C3(nodes) => nodes[0],
+            Component::Large(node) => *node,
         }
     }
 

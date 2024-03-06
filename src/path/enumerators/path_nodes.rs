@@ -37,7 +37,7 @@ pub fn path_comp_enumerator(instance: &Instance) -> Box<dyn Iterator<Item = Inst
         let new_node_idx = pattern_comps.last().unwrap().path_idx.prec();
 
         // new comp has a fixed out node
-        let out_nodes = vec![comp.fixed_node().unwrap()];
+        let out_nodes = vec![comp.fixed_node()];
 
         // new comp has a list of possible in nodes
         let in_nodes = comp.in_nodes().to_vec(); //comp.matching_nodes().to_vec();

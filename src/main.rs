@@ -19,10 +19,15 @@ mod path;
 mod proof_tree;
 mod types;
 
+
+
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Hash)]
 pub enum Node {
+    /// Represents a single vertex (with id)
     Node(u32),
+    /// Represents a 2EC (with id) such as a LARGE
     Comp(u32),
+    /// Represents an outgoing edge to some REMaining part
     Rem,
 }
 
@@ -143,7 +148,6 @@ struct Path {
 
 #[derive(clap::ValueEnum, Clone)]
 enum LastComp {
-    //C3,
     C4,
     C5,
     C6,
@@ -156,72 +160,20 @@ fn main() -> anyhow::Result<()> {
     setup_logging(false)?;
 
     match cli {
-        //Cli::Tree(local) => prove_local(local),
+        //Cli::Tree(local) => prove_local(local), // the tree case is no longer needed
         Cli::Path(path) => prove_path(path),
     }
 
     Ok(())
 }
 
-// fn prove_local(tree: Tree) {
-//     let inv = CreditInv::new(Credit::new(tree.c_numer, tree.c_demon));
-
-//     let leaf_comps = vec![large(), complex_tree(), complex_path()];
-
-//     let comps = if inv.c < Credit::new(2, 7) {
-//         vec![
-//             large(),
-//             complex_tree(),
-//             complex_path(),
-//             c3(),
-//             c4(),
-//             c5(),
-//             c6(),
-//             c7(),
-//         ]
-//     } else {
-//         vec![
-//             large(),
-//             complex_tree(),
-//             complex_path(),
-//             c3(),
-//             c4(),
-//             c5(),
-//             c6(),
-//         ]
-//     };
-
-//     if tree.parallel {
-//         leaf_comps.into_par_iter().for_each(|leaf_comp| {
-//             prove_tree_case(
-//                 comps.clone(),
-//                 leaf_comp,
-//                 &inv,
-//                 tree.output_dir.clone(),
-//                 tree.output_depth,
-//                 tree.sc,
-//             )
-//         });
-//     } else {
-//         for leaf_comp in leaf_comps {
-//             prove_tree_case(
-//                 comps.clone(),
-//                 leaf_comp,
-//                 &inv,
-//                 tree.output_dir.clone(),
-//                 tree.output_depth,
-//                 tree.sc,
-//             )
-//         }
-//     }
-// }
 
 fn prove_path(path: Path) {
     let inv = CreditInv::new(Rational64::new(path.c_numer, path.c_demon).into());
 
     let comps = if inv.c < Credit::new(2, 7) {
+        // if c < 2/7, we also need C7
         vec![
-            //c3(),
             c4(),
             c5(),
             c6(),
@@ -229,8 +181,8 @@ fn prove_path(path: Path) {
             large(),
         ]
     } else {
+        // otherwise not
         vec![
-            //c3(),
             c4(),
             c5(),
             c6(),
@@ -239,7 +191,6 @@ fn prove_path(path: Path) {
     };
 
     let last_comp = match path.last_comp {
-        //LastComp::C3 => c3(),
         LastComp::C4 => c4(),
         LastComp::C5 => c5(),
         LastComp::C6 => c6(),

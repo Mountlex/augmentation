@@ -54,25 +54,25 @@ fn split_cases(finite: bool, options: PathProofOptions, depth: u8) -> ProofExpr 
         if finite {
             expr(Tactic::TacticsExhausted(true))
         } else {
-            // and(
-            //     // finite case
-            //     all_opt_par(
-            //         OptEnumerator::PathNode,
-            //         map(
-            //             Mapper::ToFiniteInstance,
-            //             prove_progress(true, options, depth),
-            //         ),
-            //         expr(Tactic::TacticsExhausted(true)),
-            //         options.sc,
-            //     ),
+            and(
+                // finite case
+                all_opt_par(
+                    OptEnumerator::PathNode,
+                    map(
+                        Mapper::ToFiniteInstance,
+                        prove_progress(true, options, depth),
+                    ),
+                    expr(Tactic::TacticsExhausted(true)),
+                    options.sc,
+                ),
                 // infinite case
                 all_opt_par(
                     OptEnumerator::PathNode,
                     prove_progress(false, options, depth),
                     expr(Tactic::TacticsExhausted(false)),
                     options.sc,
-                )
-            // )
+                ),
+            )
         },
         options.sc,
     )
@@ -116,6 +116,7 @@ pub struct PathProofOptions {
     pub sc: bool,
 }
 
+/// Starts the proof for a specific last component
 pub fn prove_nice_path_progress(
     comps: Vec<Component>,
     last_comp: Component,
@@ -132,7 +133,7 @@ pub fn prove_nice_path_progress(
         .into_iter()
         .flat_map(|comp| {
             if comp.is_c5() {
-                vec![PathNode::Unused(comp.clone()), PathNode::Used(comp)]
+                vec![PathNode::Unused(comp.clone()), PathNode::Used(comp)] // C5 can be used or unused
             } else {
                 vec![PathNode::Unused(comp)]
             }
@@ -169,39 +170,31 @@ fn compute_initial_cases(
     mut depth: u8,
     credit_inv: CreditInv,
 ) -> Vec<Instance> {
-    let comp = last_node.get_comp().clone();
+    let comp = last_node.get_comp().clone(); // last component
+    let in_node = comp.fixed_node();
 
-    let in_nodes = if comp.fixed_node().is_some() {
-        vec![comp.fixed_node().unwrap()]
-    } else {
-        comp.nodes().to_vec()
+    // last comp
+    let path_comp = PathComp {
+        in_node: Some(in_node),
+        out_node: None,
+        comp: comp.clone(),
+        used: last_node.is_used(),
+        path_idx: Pidx::Last,
+        initial_nps: comp.edges(),
     };
 
-    let mut cases = in_nodes
-        .into_iter()
-        .map(|in_node| {
-            // last comp
-            let path_comp = PathComp {
-                in_node: Some(in_node),
-                out_node: None,
-                comp: comp.clone(),
-                used: last_node.is_used(),
-                path_idx: Pidx::Last,
-                initial_nps: comp.edges(),
-            };
-            let mut instance = Instance {
-                stack: vec![],
-                context: InstanceContext {
-                    inv: credit_inv.clone(),
-                    comps: nodes.clone(),
-                },
-            };
-            instance.push(StackElement::Inst(InstPart::new_path_comp(path_comp)));
+    // the initial case only contains the last component
+    let mut initial_case = Instance {
+        stack: vec![],
+        context: InstanceContext {
+            inv: credit_inv.clone(),
+            comps: nodes.clone(),
+        },
+    };
+    initial_case.push(StackElement::Inst(InstPart::new_path_comp(path_comp)));
 
-            instance
-        })
-        .collect_vec();
-
+    // expand cases based on given depth
+    let mut cases = vec![initial_case];
     while depth > 1 {
         cases = cases
             .into_iter()

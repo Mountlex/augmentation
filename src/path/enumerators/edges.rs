@@ -34,7 +34,7 @@ pub fn edge_enumerator(
         finite,
         vec![
             Box::new(check_comp_config),
-            Box::new(check_gainful_edges),
+            //Box::new(check_gainful_edges),
             Box::new(check_comp_three_matching),
             Box::new(check_three_matching),
             Box::new(check_four_matching),
@@ -1180,8 +1180,11 @@ fn edge_iterator(
 
 #[derive(Clone, Copy)]
 enum Hit {
+    // Edge goes outside of nice path
     Outside,
+    // Edge hits somewhere later in the nice path, which we do not have enumerated yet
     RemPath,
+    // Edge hits a specific already enumerated node
     Node(Node),
 }
 
