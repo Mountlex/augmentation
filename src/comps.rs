@@ -67,7 +67,7 @@ pub enum Component {
 
 impl Component {
     pub fn is_cycle(&self) -> bool {
-        self.is_c3() || self.is_c4() || self.is_c5() || self.is_c6() || self.is_c7()
+        self.is_c4() || self.is_c5() || self.is_c6() || self.is_c7()
     }
 
     pub fn is_c7(&self) -> bool {
@@ -85,9 +85,6 @@ impl Component {
         matches!(self, Component::C4(_))
     }
 
-    pub fn is_c3(&self) -> bool {
-        matches!(self, Component::C3(_))
-    }
 
     pub fn paths_between(&self, v: &Node, u: &Node) -> (Vec<Node>, Vec<Node>) {
         let nodes = self.nodes().to_owned();

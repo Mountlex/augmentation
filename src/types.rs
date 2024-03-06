@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::{path::Pidx, Credit, Node};
 
+/// An edge between two path nodes, incident to n1 and n2
 #[derive(Copy, Clone, Debug)]
 pub struct Edge {
     pub n1: Node,
