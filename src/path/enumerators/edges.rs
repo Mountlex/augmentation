@@ -4,10 +4,7 @@ use crate::comps::Component;
 use crate::path::{instance::InstPart, instance::Instance};
 use crate::util::hamiltonian_paths;
 use crate::{
-    path::{
-        proof::check_progress, HalfAbstractEdge, PathComp,
-        Pidx,
-    },
+    path::{proof::check_progress, HalfAbstractEdge, PathComp, Pidx},
     types::Edge,
     Credit, Node,
 };
@@ -96,7 +93,6 @@ fn check_comp_three_matching(
     }
     None
 }
-
 
 // Check the edge configuration of the last component of the nice path, and add edges if necessary
 fn check_comp_config(
@@ -633,7 +629,6 @@ fn to_cases_with_edge_cost_mul(
     let nodes_to_pidx = nodes_to_pidx.clone();
 
     let new_rem_id = instance.new_rem_id();
- 
 
     let iter = Box::new(iter.flat_map(move |new_edges| {
         let mut part = InstPart::empty();
@@ -644,7 +639,7 @@ fn to_cases_with_edge_cost_mul(
             temp = temp.inc();
             new_rem_ids.push(temp);
         }
-        
+
         for ((node, hit), id) in new_edges.into_iter().zip(new_rem_ids.into_iter()) {
             match hit {
                 Hit::Outside => part.out_edges.push(node),

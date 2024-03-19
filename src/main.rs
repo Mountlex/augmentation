@@ -1,4 +1,3 @@
-
 use std::{fmt::Display, fs::OpenOptions, path::PathBuf};
 
 use clap::{arg, Parser};
@@ -18,8 +17,6 @@ mod logic;
 mod path;
 mod proof_tree;
 mod types;
-
-
 
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Hash)]
 pub enum Node {
@@ -100,7 +97,6 @@ enum Cli {
     Path(Path),
 }
 
-
 #[derive(Parser)]
 struct Path {
     c_numer: i64,
@@ -149,28 +145,16 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-
 fn prove_path(path: Path) {
     let inv = CreditInv::new(Rational64::new(path.c_numer, path.c_demon).into());
 
     // list of possible component types
     let comps = if inv.c < Credit::new(2, 7) {
         // if c < 2/7, we also need C7
-        vec![
-            c4(),
-            c5(),
-            c6(),
-            c7(),
-            large(),
-        ]
+        vec![c4(), c5(), c6(), c7(), large()]
     } else {
         // otherwise not
-        vec![
-            c4(),
-            c5(),
-            c6(),
-            large(),
-        ]
+        vec![c4(), c5(), c6(), large()]
     };
 
     let last_comp = match path.last_comp {

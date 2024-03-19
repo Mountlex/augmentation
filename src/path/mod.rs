@@ -18,7 +18,6 @@ use crate::Node;
 
 use crate::comps::*;
 
-
 pub type PathProofNode = ProofNode;
 
 #[derive(Clone, Debug)]
@@ -167,7 +166,6 @@ pub enum Pidx {
 }
 
 impl Pidx {
-
     fn is_prelast(&self) -> bool {
         matches!(self, Pidx::Prelast)
     }

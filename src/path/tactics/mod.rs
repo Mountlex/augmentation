@@ -9,7 +9,6 @@ mod local_merge;
 mod longer_path;
 mod pendant_rewire;
 
-
 #[derive(Debug, Clone)]
 pub enum Tactic {
     LongerPath(bool),
@@ -33,7 +32,7 @@ impl TacticTrait for Tactic {
                 if (last.comp.is_c6() || last.comp.is_c7())
                     && outside.iter().any(|n| last.comp.contains(n))
                 {
-                    // if the last component is a c6 or c7, we can just extend the nice path, as we have no requirements on the in and out of c6 and c7s.                
+                    // if the last component is a c6 or c7, we can just extend the nice path, as we have no requirements on the in and out of c6 and c7s.
                     return PathProofNode::new_leaf("fast_longer_path".into(), true);
                 }
                 PathProofNode::new_leaf("no fast_longer_path".into(), false)

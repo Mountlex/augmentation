@@ -83,7 +83,6 @@ impl PseudoCycle {
         //     })
         //     .map(|(i, _)| i);
 
-
         let values = self
             .cycle
             .iter()

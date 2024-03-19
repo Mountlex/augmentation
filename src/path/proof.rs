@@ -244,10 +244,10 @@ fn prove_last_node(
         .map(|mut case| {
             // build the expression tree statically
             let expr = prove_progress(false, options, options.max_depth);
-            
+
             // evaluate the expression tree
             let mut proof = expr.prove(&mut case);
-            
+
             // get the outcome
             let outcome = proof.eval();
             let profile = case.get_profile(outcome.success());

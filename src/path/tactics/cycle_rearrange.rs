@@ -31,7 +31,7 @@ pub fn check_path_rearrangement(instance: &Instance, finite: bool) -> PathProofN
             CompType::Cycle(7),
             CompType::Cycle(6),
         ];
-        
+
         let old_type = old_last_comp.comp_type();
         let new_type = new_last_comp.comp_type();
 

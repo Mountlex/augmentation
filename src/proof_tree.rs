@@ -43,7 +43,6 @@ pub struct LeafNode {
     outcome: Outcome,
 }
 
-
 #[derive(Clone)]
 pub enum ProofNode {
     Leaf(LeafNode),
@@ -140,16 +139,12 @@ impl ProofNode {
         }
     }
 
-   
-
     pub fn add_child(&mut self, child: ProofNode) {
         match self {
             ProofNode::All(node) | ProofNode::Any(node) => node.childs.push(child),
             _ => panic!(),
         }
     }
-
-   
 
     pub fn eval_and_prune(&mut self) -> Outcome {
         match self {

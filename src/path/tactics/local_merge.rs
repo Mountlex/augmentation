@@ -97,8 +97,6 @@ pub fn check_local_merge(instance: &Instance) -> PathProofNode {
     }
 }
 
-
-
 fn merge(
     left: &PathComp,
     right: &PathComp,
@@ -212,4 +210,3 @@ fn merge2(
 
     PathProofNode::new_leaf("Local merge impossible".into(), false)
 }
-

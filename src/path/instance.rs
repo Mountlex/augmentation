@@ -233,8 +233,6 @@ impl Instance {
             .collect_vec()
     }
 
-
-
     pub fn all_edges(&self) -> Vec<Edge> {
         let mut implied_edges = self.implied_edges().cloned().collect_vec();
 
@@ -339,7 +337,7 @@ impl Instance {
             .unwrap_or(EdgeId(0));
 
         let prev = non_rem_edges.max(rem_edges);
-        
+
         prev.inc()
     }
 
