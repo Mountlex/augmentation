@@ -43,7 +43,7 @@ pub trait EnumeratorTrait: Clone + Send + Sync {
 pub trait TacticTrait: Clone + Send + Sync {
     type Inst: InstanceTrait;
 
-    fn prove(&self, stack: &mut Self::Inst) -> ProofNode<<Self::Inst as InstanceTrait>::Payload>;
+    fn prove(&self, stack: &mut Self::Inst) -> ProofNode;
 }
 
 pub trait MapperTrait: Clone + Send + Sync {
@@ -68,7 +68,7 @@ where
     T: TacticTrait<Inst = I>,
     M: MapperTrait<Inst = I>,
 {
-    pub fn prove(&self, stack: &mut I) -> ProofNode<I::Payload> {
+    pub fn prove(&self, stack: &mut I) -> ProofNode {
         match self {
             Expression::Quantor(q) => q.prove(stack),
             Expression::Tactic(t) => t.prove(stack),
@@ -105,7 +105,7 @@ where
 
 #[derive(Debug, Clone)]
 pub enum Quantor<E, OE, T, M> {
-    All(E, Box<Expression<E, OE, T, M>>, bool),
+    //All(E, Box<Expression<E, OE, T, M>>, bool),
     AllOpt(
         OE,
         Box<Expression<E, OE, T, M>>,
@@ -131,17 +131,17 @@ impl<
 {
     fn formula(&self) -> &Box<Expression<E, OE, T, M>> {
         match self {
-            Quantor::All(_, t, _) => t,
+            // Quantor::All(_, t, _) => t,
             Quantor::AllOpt(_, t, _, _) => t,
             Quantor::AllOptPar(_, t, _, _) => t,
             Quantor::Any(_, t) => t,
         }
     }
 
-    fn prove(&self, stack: &mut I) -> ProofNode<I::Payload> {
+    fn prove(&self, stack: &mut I) -> ProofNode {
         let mut enum_msg = String::new();
         let (case_iterator, otherwise) = match self {
-            Quantor::All(e, _, _sc) => (Some(e.get_iter(stack)), None),
+            //Quantor::All(e, _, _sc) => (Some(e.get_iter(stack)), None),
             Quantor::Any(e, _) => (Some(e.get_iter(stack)), None),
             Quantor::AllOpt(e, _, otherwise, _) | Quantor::AllOptPar(e, _, otherwise, _) => {
                 if let Some((cases, msg)) = e.try_iter(stack) {
@@ -156,7 +156,7 @@ impl<
 
         if let Some(case_iterator) = case_iterator {
             let mut proof = match self {
-                Quantor::All(e, _, _) => ProofNode::new_all(e.msg().to_string()),
+                //Quantor::All(e, _, _) => ProofNode::new_all(e.msg().to_string()),
                 Quantor::AllOpt(e, _, _, _) => ProofNode::new_all(e.msg().to_string()),
                 Quantor::AllOptPar(e, _, _, _) => ProofNode::new_all(e.msg().to_string()),
                 Quantor::Any(e, _) => ProofNode::new_any(e.msg().to_string()),
@@ -206,7 +206,7 @@ impl<
                             panic!("We should not be in this case.")
                         }
                         Quantor::AllOpt(_, _, _, sc) => !res && *sc,
-                        Quantor::All(_, _, sc) => !res && *sc,
+                        // Quantor::All(_, _, sc) => !res && *sc,
                         Quantor::Any(_, _) => res,
                     };
 
@@ -286,12 +286,12 @@ pub fn expr<E, OE, T, M>(tactic: T) -> Expression<E, OE, T, M> {
     Expression::Tactic(tactic)
 }
 
-pub fn all_sc<E, OE, T, M>(
-    enumerator: E,
-    expr: Expression<E, OE, T, M>,
-) -> Expression<E, OE, T, M> {
-    Expression::Quantor(Quantor::All(enumerator, Box::new(expr), true))
-}
+// pub fn all_sc<E, OE, T, M>(
+//     enumerator: E,
+//     expr: Expression<E, OE, T, M>,
+// ) -> Expression<E, OE, T, M> {
+//     Expression::Quantor(Quantor::All(enumerator, Box::new(expr), true))
+// }
 
 // pub fn all(enumerator: Enumerator, expr: Expression<E,OE,T,M>, sc: bool) -> Expression<E,OE,T,M> {
 //     Expression::Quantor(Quantor::All(enumerator, Box::new(expr), sc))

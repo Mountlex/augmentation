@@ -993,9 +993,9 @@ fn handle_contractable_components(
                             .filter(|f| f != &&node)
                             .cloned()
                             .collect_vec();
-                        return edge_iterator(other_free_nodes, complement.clone(), true, !finite)
+                        edge_iterator(other_free_nodes, complement.clone(), true, !finite)
                             .map(|h| vec![(node, hit), h])
-                            .collect_vec();
+                            .collect_vec()
                     } else {
                         vec![vec![(node, hit)]]
                     }

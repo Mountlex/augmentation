@@ -323,7 +323,7 @@ fn is_adjacent_in_cycle(nodes: &[Node], v1: &Node, v2: &Node) -> bool {
 }
 
 fn nodes_to_edges(nodes: &[Node]) -> Vec<(Node, Node)> {
-    vec![nodes, &[nodes[0]]]
+    [nodes, &[nodes[0]]]
         .concat()
         .windows(2)
         .map(|w| (w[0], w[1]))

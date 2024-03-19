@@ -36,7 +36,7 @@ pub fn enumerate_rearrangements(
             .unwrap();
 
         // [<max_idx>,<max_idx + 1>....,new_last]
-        let path1 = vec![pc.cycle.split_at(max_idx).1, pc.cycle.split_at(max_idx).0].concat();
+        let path1 = [pc.cycle.split_at(max_idx).1, pc.cycle.split_at(max_idx).0].concat();
         let extension1 = Extension {
             start: path1[0].1.to_idx(),
             start_out: path1[0].2,
@@ -59,7 +59,7 @@ pub fn enumerate_rearrangements(
         let mut p2 = pc.cycle.split_at(max_idx + 1).1.to_vec();
         p1.reverse();
         p2.reverse();
-        let mut path2 = vec![p1, p2].concat();
+        let mut path2 = [p1, p2].concat();
         fix_in_out_direction(&mut path2);
         let extension2 = Extension {
             start: path2[0].1.to_idx(),
@@ -88,7 +88,7 @@ pub fn enumerate_rearrangements(
         // every comp of pc could be the begin!
         let iter = (0..len).flat_map(move |max_idx| {
             // [<max_idx>,<max_idx + 1>....,new_last]
-            let path1 = vec![pc.cycle.split_at(max_idx).1, pc.cycle.split_at(max_idx).0].concat();
+            let path1 = [pc.cycle.split_at(max_idx).1, pc.cycle.split_at(max_idx).0].concat();
             let extension1 = Extension {
                 start: path1[0].1.to_idx(),
                 start_out: path1[0].2,
@@ -111,7 +111,7 @@ pub fn enumerate_rearrangements(
             let mut p2 = pc.cycle.split_at(max_idx + 1).1.to_vec();
             p1.reverse();
             p2.reverse();
-            let mut path2 = vec![p1, p2].concat();
+            let mut path2 = [p1, p2].concat();
             fix_in_out_direction(&mut path2);
             let extension2 = Extension {
                 start: path2[0].1.to_idx(),

@@ -12,16 +12,14 @@ use itertools::Itertools;
 pub use proof::prove_nice_path_progress;
 pub use proof::PathProofOptions;
 
-use crate::logic::InstanceTrait;
 use crate::proof_tree::ProofNode;
 use crate::Credit;
 use crate::Node;
 
 use crate::comps::*;
 
-use self::instance::Instance;
 
-pub type PathProofNode = ProofNode<<Instance as InstanceTrait>::Payload>;
+pub type PathProofNode = ProofNode;
 
 #[derive(Clone, Debug)]
 pub struct PathComp {

@@ -11,7 +11,7 @@ pub fn hamiltonian_paths(v1: Node, v2: Node, nodes: &[Node]) -> Vec<Vec<Node>> {
         .cloned()
         .filter(|v| v != &v1 && v != &v2)
         .permutations(nodes.len() - 2)
-        .map(|middle| vec![vec![v1], middle, vec![v2]].concat())
+        .map(|middle| [vec![v1], middle, vec![v2]].concat())
         .collect_vec()
 }
 

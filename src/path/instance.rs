@@ -200,7 +200,7 @@ impl Instance {
                     .iter()
                     .flat_map(|c| c.initial_nps.clone())
                     .collect_vec();
-                vec![initial_nps, part.nice_pairs.clone()].concat()
+                [initial_nps, part.nice_pairs.clone()].concat()
             })
             .collect_vec();
         NicePairConfig { nice_pairs }
@@ -245,11 +245,11 @@ impl Instance {
             .collect_vec();
 
         if !cheap_edges.is_empty() {
-            implied_edges = implied_edges.into_iter().filter(|e| {
+            implied_edges.retain(|e| {
                 !cheap_edges.iter().any(|e2| {
                     e.cost > e2.cost && e2.node_incident(&e.n1) && e2.node_incident(&e.n2)
                 })
-            }).collect();
+            });
         }
 
         let nodes = self.path_nodes().collect_vec();

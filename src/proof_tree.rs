@@ -19,56 +19,50 @@ impl Outcome {
 }
 
 #[derive(Clone)]
-pub struct InnerNode<T> {
+pub struct InnerNode {
     msg: String,
-    payload: Option<T>,
     outcome: Option<Outcome>,
-    childs: Vec<ProofNode<T>>,
+    childs: Vec<ProofNode>,
 }
 #[derive(Clone)]
-pub struct OrNode<T> {
+pub struct OrNode {
     outcome: Option<Outcome>,
-    child1: Box<ProofNode<T>>,
-    child2: Box<ProofNode<T>>,
+    child1: Box<ProofNode>,
+    child2: Box<ProofNode>,
 }
 #[derive(Clone)]
-pub struct InfoNode<T> {
+pub struct InfoNode {
     msg: String,
-    payload: Option<T>,
     outcome: Option<Outcome>,
-    child: Box<ProofNode<T>>,
+    child: Box<ProofNode>,
 }
 
 #[derive(Clone)]
-pub struct LeafNode<T> {
+pub struct LeafNode {
     msg: String,
-    payload: Option<T>,
     outcome: Outcome,
 }
 
-pub type DefaultProofNode = ProofNode<()>;
 
 #[derive(Clone)]
-pub enum ProofNode<T> {
-    Leaf(LeafNode<T>),
-    Info(InfoNode<T>),
-    All(InnerNode<T>),
-    Or(OrNode<T>),
-    Any(InnerNode<T>),
+pub enum ProofNode {
+    Leaf(LeafNode),
+    Info(InfoNode),
+    All(InnerNode),
+    Or(OrNode),
+    Any(InnerNode),
 }
 
-impl<T: Clone> ProofNode<T> {
+impl ProofNode {
     pub fn new_leaf(msg: String, success: bool) -> Self {
         if success {
             ProofNode::Leaf(LeafNode {
                 msg,
-                payload: None,
                 outcome: Outcome::True,
             })
         } else {
             ProofNode::Leaf(LeafNode {
                 msg,
-                payload: None,
                 outcome: Outcome::False,
             })
         }
@@ -78,13 +72,11 @@ impl<T: Clone> ProofNode<T> {
         if tight {
             ProofNode::Leaf(LeafNode {
                 msg,
-                payload: None,
                 outcome: Outcome::Tight,
             })
         } else {
             ProofNode::Leaf(LeafNode {
                 msg,
-                payload: None,
                 outcome: Outcome::True,
             })
         }
@@ -93,7 +85,6 @@ impl<T: Clone> ProofNode<T> {
     pub fn new_all(msg: String) -> Self {
         ProofNode::All(InnerNode {
             msg,
-            payload: None,
             outcome: None,
             childs: vec![],
         })
@@ -102,22 +93,20 @@ impl<T: Clone> ProofNode<T> {
     pub fn new_any(msg: String) -> Self {
         ProofNode::Any(InnerNode {
             msg,
-            payload: None,
             outcome: None,
             childs: vec![],
         })
     }
 
-    pub fn new_info(msg: String, child: ProofNode<T>) -> Self {
+    pub fn new_info(msg: String, child: ProofNode) -> Self {
         ProofNode::Info(InfoNode {
             msg,
             outcome: None,
-            payload: None,
             child: child.into(),
         })
     }
 
-    pub fn new_or(child1: ProofNode<T>, child2: ProofNode<T>) -> Self {
+    pub fn new_or(child1: ProofNode, child2: ProofNode) -> Self {
         ProofNode::Or(OrNode {
             outcome: None,
             child1: child1.into(),
@@ -125,10 +114,9 @@ impl<T: Clone> ProofNode<T> {
         })
     }
 
-    pub fn new_and(child1: ProofNode<T>, child2: ProofNode<T>) -> Self {
+    pub fn new_and(child1: ProofNode, child2: ProofNode) -> Self {
         ProofNode::All(InnerNode {
             msg: "and".into(),
-            payload: None,
             outcome: None,
             childs: vec![child1, child2],
         })
@@ -152,47 +140,16 @@ impl<T: Clone> ProofNode<T> {
         }
     }
 
-    pub fn add_payload(&mut self, payload: T) {
-        match self {
-            ProofNode::Leaf(node) => node.payload = Some(payload),
-            ProofNode::Info(node) => node.payload = Some(payload),
-            ProofNode::All(node) => node.payload = Some(payload),
-            ProofNode::Any(node) => node.payload = Some(payload),
-            _ => {}
-        }
-    }
+   
 
-    pub fn add_child(&mut self, child: ProofNode<T>) {
+    pub fn add_child(&mut self, child: ProofNode) {
         match self {
             ProofNode::All(node) | ProofNode::Any(node) => node.childs.push(child),
             _ => panic!(),
         }
     }
 
-    pub fn get_payloads(&self, payloads: &mut Vec<T>) {
-        let payload = match self {
-            ProofNode::Leaf(node) => &node.payload,
-            ProofNode::Info(node) => &node.payload,
-            ProofNode::All(node) => &node.payload,
-            ProofNode::Any(node) => &node.payload,
-            _ => &None,
-        };
-
-        if let Some(payload) = payload {
-            payloads.push(payload.clone())
-        }
-
-        match self {
-            ProofNode::All(node) => node.childs.iter().for_each(|n| n.get_payloads(payloads)),
-            ProofNode::Any(node) => node.childs.iter().for_each(|n| n.get_payloads(payloads)),
-            ProofNode::Or(node) => {
-                node.child1.get_payloads(payloads);
-                node.child2.get_payloads(payloads);
-            }
-            ProofNode::Info(node) => node.child.get_payloads(payloads),
-            ProofNode::Leaf(_) => {}
-        }
-    }
+   
 
     pub fn eval_and_prune(&mut self) -> Outcome {
         match self {
@@ -395,7 +352,7 @@ impl<T: Clone> ProofNode<T> {
     }
 }
 
-impl<T> Display for ProofNode<T> {
+impl Display for ProofNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ProofNode::Leaf(node) => match node.outcome {
