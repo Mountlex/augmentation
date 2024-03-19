@@ -99,7 +99,6 @@ fn pseudo_cycles_of_length(
         .permutations(length)
         .filter(|perm| perm.iter().min() == perm.first())
         .flat_map(move |perm| {
-            let length = length;
             let first = perm[0].clone();
             let sets_of_in_between_edges = vec![perm.clone(), vec![first]]
                 .concat()

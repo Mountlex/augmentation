@@ -44,7 +44,7 @@ impl Display for PseudoCycle {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CycleComp {
     PathComp(Pidx),
     Rem,

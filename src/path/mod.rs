@@ -161,7 +161,7 @@ impl NicePairConfig {
     }
 }
 
-#[derive(Copy, Clone, Debug, Hash)]
+#[derive(Copy, Clone, Debug)]
 pub enum Pidx {
     Last,
     Prelast,
