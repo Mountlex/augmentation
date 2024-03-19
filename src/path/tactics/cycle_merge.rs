@@ -13,6 +13,7 @@ use crate::{
     Credit, Node,
 };
 
+/// Tactic which tries to merge the current pseudo cycle
 pub fn check_cycle_merge(instance: &Instance) -> PathProofNode {
     let pc = instance.pseudo_cycle().unwrap();
     let all_edges = instance.all_edges();

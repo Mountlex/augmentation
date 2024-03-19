@@ -233,12 +233,7 @@ impl Instance {
             .collect_vec()
     }
 
-    pub fn used_for_credit_gain(&self) -> Vec<Node> {
-        self.inst_parts()
-            .flat_map(|part| part.used_for_credit_gain.iter())
-            .cloned()
-            .collect_vec()
-    }
+
 
     pub fn all_edges(&self) -> Vec<Edge> {
         let mut implied_edges = self.implied_edges().cloned().collect_vec();

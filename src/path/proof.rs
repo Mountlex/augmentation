@@ -152,6 +152,7 @@ pub fn prove_nice_path_progress(
     let proof_cases = last_nodes;
 
     proof_cases.into_iter().for_each(|last_node| {
+        // start a separate proof for every possible last node
         prove_last_node(
             nodes.clone(),
             last_node,
@@ -241,8 +242,13 @@ fn prove_last_node(
     let proofs: Vec<PathProofNode> = cases
         .into_par_iter()
         .map(|mut case| {
+            // build the expression tree statically
             let expr = prove_progress(false, options, options.max_depth);
+            
+            // evaluate the expression tree
             let mut proof = expr.prove(&mut case);
+            
+            // get the outcome
             let outcome = proof.eval();
             let profile = case.get_profile(outcome.success());
 

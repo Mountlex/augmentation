@@ -6,8 +6,7 @@ use crate::{
     path::{instance::Instance, NicePairConfig, PathComp},
 };
 
-// checked
-
+/// Tactic which checks whether the current rearrangement is a feasible nice path.
 pub fn check_path_rearrangement(instance: &Instance, finite: bool) -> PathProofNode {
     let rearrangement = instance.rearrangement().unwrap();
 

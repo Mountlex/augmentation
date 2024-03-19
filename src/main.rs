@@ -97,27 +97,9 @@ pub type Graph = petgraph::graphmap::UnGraphMap<Node, EdgeType>;
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 enum Cli {
-    //Tree(Tree),
     Path(Path),
 }
 
-#[derive(Parser)]
-struct Tree {
-    c_numer: i64,
-    c_demon: i64,
-
-    #[clap(short, long, default_value = "proofs_tree")]
-    output_dir: PathBuf,
-
-    #[clap(short = 'd', long = "depth", default_value = "2")]
-    output_depth: usize,
-
-    #[clap(short, long)]
-    parallel: bool,
-
-    #[clap(short, long)]
-    sc: bool,
-}
 
 #[derive(Parser)]
 struct Path {
@@ -171,6 +153,7 @@ fn main() -> anyhow::Result<()> {
 fn prove_path(path: Path) {
     let inv = CreditInv::new(Rational64::new(path.c_numer, path.c_demon).into());
 
+    // list of possible component types
     let comps = if inv.c < Credit::new(2, 7) {
         // if c < 2/7, we also need C7
         vec![

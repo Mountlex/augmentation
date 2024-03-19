@@ -11,6 +11,7 @@ use crate::{
     Credit, Node,
 };
 
+/// Enumerates all possible pseudo cycles in the current instance.
 pub fn enumerate_pseudo_cycles(
     instance: &Instance,
     bounded: bool,

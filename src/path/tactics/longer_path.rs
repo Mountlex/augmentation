@@ -14,8 +14,7 @@ use crate::{
 
 use super::cycle_rearrange::check_fixed_extension_feasible;
 
-// checked
-
+/// Check if we can find a longer nice path based on the currently enumerates edges
 pub fn check_longer_nice_path(instance: &Instance, finite: bool) -> PathProofNode {
     let all_outside = instance.out_edges();
     let all_edges = instance.all_edges();

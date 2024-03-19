@@ -10,6 +10,95 @@ use crate::{
     Credit,
 };
 
+/// Check whether any two or three components can be merged together to a LARGE
+pub fn check_local_merge(instance: &Instance) -> PathProofNode {
+    let all_edges = instance.all_edges();
+    //let last_added_edge = instance.last_single_edge();
+    let all_comps = instance.path_nodes().cloned().collect_vec();
+    let npc = instance.npc();
+
+    let res = all_comps
+        .iter()
+        .tuple_combinations::<(_, _)>()
+        // .filter(|(left, right)| {
+        //     if let Some(edge) = last_added_edge {
+        //         edge.between_path_nodes(left.path_idx, right.path_idx)
+        //     } else {
+        //         true
+        //     }
+        // })
+        .find_map(|(left, right)| {
+            let edges_between = all_edges
+                .iter()
+                .filter(|e| e.between_path_nodes(left.path_idx, right.path_idx))
+                .cloned()
+                .collect_vec();
+            if edges_between.len() >= 2 {
+                let mut res = merge(left, right, &edges_between, &npc, &instance.context);
+                if res.eval().success() {
+                    return Some(res);
+                }
+            }
+            None
+        });
+
+    if res.is_some() {
+        res.unwrap()
+    } else {
+        let res = all_comps
+            .iter()
+            .permutations(3)
+            // .filter(|(left, right)| {
+            //     if let Some(edge) = last_added_edge {
+            //         edge.between_path_nodes(left.path_idx, right.path_idx)
+            //     } else {
+            //         true
+            //     }
+            // })
+            .find_map(|perm| {
+                let left = perm[0];
+                let middle = perm[1];
+                let right = perm[2];
+                let edges_between1 = all_edges
+                    .iter()
+                    .filter(|e| e.between_path_nodes(left.path_idx, middle.path_idx))
+                    .cloned()
+                    .collect_vec();
+                let edges_between2 = all_edges
+                    .iter()
+                    .filter(|e| e.between_path_nodes(middle.path_idx, right.path_idx))
+                    .cloned()
+                    .collect_vec();
+                if edges_between1.len() >= 2 && edges_between2.len() >= 2 {
+                    let mut res = merge2(
+                        left,
+                        middle,
+                        right,
+                        &edges_between1,
+                        &edges_between2,
+                        &npc,
+                        &instance.context,
+                    );
+                    if res.eval().success() {
+                        return Some(res);
+                    }
+                }
+                None
+            });
+
+        if res.is_some() {
+            res.unwrap()
+        } else {
+            PathProofNode::new_leaf(
+                "No local merge found between any two zoomed nodes".into(),
+                false,
+            )
+        }
+    }
+}
+
+
+
 fn merge(
     left: &PathComp,
     right: &PathComp,
@@ -124,88 +213,3 @@ fn merge2(
     PathProofNode::new_leaf("Local merge impossible".into(), false)
 }
 
-pub fn check_local_merge(instance: &Instance) -> PathProofNode {
-    let all_edges = instance.all_edges();
-    //let last_added_edge = instance.last_single_edge();
-    let all_comps = instance.path_nodes().cloned().collect_vec();
-    let npc = instance.npc();
-
-    let res = all_comps
-        .iter()
-        .tuple_combinations::<(_, _)>()
-        // .filter(|(left, right)| {
-        //     if let Some(edge) = last_added_edge {
-        //         edge.between_path_nodes(left.path_idx, right.path_idx)
-        //     } else {
-        //         true
-        //     }
-        // })
-        .find_map(|(left, right)| {
-            let edges_between = all_edges
-                .iter()
-                .filter(|e| e.between_path_nodes(left.path_idx, right.path_idx))
-                .cloned()
-                .collect_vec();
-            if edges_between.len() >= 2 {
-                let mut res = merge(left, right, &edges_between, &npc, &instance.context);
-                if res.eval().success() {
-                    return Some(res);
-                }
-            }
-            None
-        });
-
-    if res.is_some() {
-        res.unwrap()
-    } else {
-        let res = all_comps
-            .iter()
-            .permutations(3)
-            // .filter(|(left, right)| {
-            //     if let Some(edge) = last_added_edge {
-            //         edge.between_path_nodes(left.path_idx, right.path_idx)
-            //     } else {
-            //         true
-            //     }
-            // })
-            .find_map(|perm| {
-                let left = perm[0];
-                let middle = perm[1];
-                let right = perm[2];
-                let edges_between1 = all_edges
-                    .iter()
-                    .filter(|e| e.between_path_nodes(left.path_idx, middle.path_idx))
-                    .cloned()
-                    .collect_vec();
-                let edges_between2 = all_edges
-                    .iter()
-                    .filter(|e| e.between_path_nodes(middle.path_idx, right.path_idx))
-                    .cloned()
-                    .collect_vec();
-                if edges_between1.len() >= 2 && edges_between2.len() >= 2 {
-                    let mut res = merge2(
-                        left,
-                        middle,
-                        right,
-                        &edges_between1,
-                        &edges_between2,
-                        &npc,
-                        &instance.context,
-                    );
-                    if res.eval().success() {
-                        return Some(res);
-                    }
-                }
-                None
-            });
-
-        if res.is_some() {
-            res.unwrap()
-        } else {
-            PathProofNode::new_leaf(
-                "No local merge found between any two zoomed nodes".into(),
-                false,
-            )
-        }
-    }
-}

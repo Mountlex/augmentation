@@ -169,9 +169,7 @@ pub enum Pidx {
 }
 
 impl Pidx {
-    fn is_last(&self) -> bool {
-        matches!(self, Pidx::Last)
-    }
+
     fn is_prelast(&self) -> bool {
         matches!(self, Pidx::Prelast)
     }

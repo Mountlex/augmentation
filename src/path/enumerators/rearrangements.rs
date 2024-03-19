@@ -9,8 +9,8 @@ use crate::{
     Node,
 };
 
-// checked
 
+/// Enumerates all possible rearrangements based on the current pseudo cycle on the stack.
 pub fn enumerate_rearrangements(
     instance: &Instance,
     finite: bool,
