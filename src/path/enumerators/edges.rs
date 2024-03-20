@@ -32,7 +32,7 @@ pub fn edge_enumerator(
             Box::new(check_comp_config),
             Box::new(check_comp_three_matching),
             Box::new(check_three_matching),
-            //Box::new(check_four_matching),
+            Box::new(check_four_matching),
             Box::new(check_comp_contractability),
         ],
     );
