@@ -32,7 +32,7 @@ pub fn edge_enumerator(
             Box::new(check_comp_config),
             Box::new(check_comp_three_matching),
             Box::new(check_three_matching),
-            Box::new(check_four_matching),
+            //Box::new(check_four_matching),
             Box::new(check_comp_contractability),
         ],
     );
@@ -1162,9 +1162,9 @@ fn edge_iterator(
     with_rem: bool,
 ) -> Box<dyn Iterator<Item = (Node, Hit)>> {
     let mut hits = hit_set.into_iter().map(Hit::Node).collect_vec();
-    if with_outside {
-        hits.push(Hit::Outside);
-    }
+    // if with_outside {
+    //     hits.push(Hit::Outside);
+    // }
     if with_rem {
         hits.push(Hit::RemPath);
     }
@@ -1231,15 +1231,15 @@ fn full_edge_iterator(
     matching: bool,
 ) -> Box<dyn Iterator<Item = Vec<(Node, Hit)>>> {
     let mut hits = hit_set.into_iter().map(Hit::Node).collect_vec();
-    if with_outside {
-        if matching {
-            for _ in &node_set {
-                hits.push(Hit::Outside);
-            }
-        } else {
-            hits.push(Hit::Outside);
-        }
-    }
+    // if with_outside {
+    //     if matching {
+    //         for _ in &node_set {
+    //             hits.push(Hit::Outside);
+    //         }
+    //     } else {
+    //         hits.push(Hit::Outside);
+    //     }
+    // }
     if with_rem {
         if matching {
             for _ in &node_set {
