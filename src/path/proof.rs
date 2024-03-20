@@ -54,46 +54,46 @@ fn split_cases(finite: bool, options: PathProofOptions, depth: u8) -> ProofExpr 
         if finite {
             expr(Tactic::TacticsExhausted(true))
         } else {
-            and(
+            //and(
                 // finite case
-                all_opt_par(
-                    OptEnumerator::PathNode,
-                    map(
-                        Mapper::ToFiniteInstance,
-                        prove_progress(true, options, depth),
-                    ),
-                    expr(Tactic::TacticsExhausted(true)),
-                    options.sc,
-                ),
+                // all_opt_par(
+                //     OptEnumerator::PathNode,
+                //     map(
+                //         Mapper::ToFiniteInstance,
+                //         prove_progress(true, options, depth),
+                //     ),
+                //     expr(Tactic::TacticsExhausted(true)),
+                //     options.sc,
+                // ),
                 // infinite case
                 all_opt_par(
                     OptEnumerator::PathNode,
                     prove_progress(false, options, depth),
                     expr(Tactic::TacticsExhausted(false)),
                     options.sc,
-                ),
-            )
+                )
+            //)
         },
         options.sc,
     )
 }
 
 fn progress(finite: bool) -> ProofExpr {
-    or5(
-        expr(Tactic::FastLongerPath(finite)),
+    or3(
+        //expr(Tactic::FastLongerPath(finite)),
         expr(Tactic::LocalMerge),
         expr(Tactic::Pendant),
-        expr(Tactic::LongerPath(finite)),
+        //expr(Tactic::LongerPath(finite)),
         any(
             Enumerator::PseudoCycle(finite),
             or(
                 expr(Tactic::CycleMerge),
                 any(
                     Enumerator::Rearrangments(finite),
-                    or(
+                    //or(
                         expr(Tactic::Rearrangable(finite)),
-                        expr(Tactic::LongerPath(finite)),
-                    ),
+                        //expr(Tactic::LongerPath(finite)),
+                    //),
                 ),
             ),
         ),
