@@ -79,7 +79,7 @@ pub fn check_fixed_extension_feasible(
 ) -> PathProofNode {
     // extension: [start.out -- 1.in:1.out -- 2.in:2.out -- end.in]
 
-    // check for inner zoomed nodes of extension that they fulfill nice path properties
+    // check for inner nodes of extension that they fulfill nice path properties
     for (i, inner) in extension.inner.iter().enumerate() {
         let in_node = inner.in_node;
         let idx = inner.idx;

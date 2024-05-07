@@ -233,22 +233,23 @@ impl Instance {
             .collect_vec()
     }
 
-    pub fn all_edges(&self) -> Vec<Edge> {
+    /// All edges in the instance expect the component edges
+    pub fn all_inter_comp_edges(&self) -> Vec<Edge> {
         let mut implied_edges = self.implied_edges().cloned().collect_vec();
 
-        let cheap_edges = implied_edges
-            .iter()
-            .filter(|e| e.cost < Credit::from_integer(1))
-            .cloned()
-            .collect_vec();
+        // let cheap_edges = implied_edges
+        //     .iter()
+        //     .filter(|e| e.cost < Credit::from_integer(1))
+        //     .cloned()
+        //     .collect_vec();
 
-        if !cheap_edges.is_empty() {
-            implied_edges.retain(|e| {
-                !cheap_edges.iter().any(|e2| {
-                    e.cost > e2.cost && e2.node_incident(&e.n1) && e2.node_incident(&e.n2)
-                })
-            });
-        }
+        // if !cheap_edges.is_empty() {
+        //     implied_edges.retain(|e| {
+        //         !cheap_edges.iter().any(|e2| {
+        //             e.cost > e2.cost && e2.node_incident(&e.n1) && e2.node_incident(&e.n2)
+        //         })
+        //     });
+        // }
 
         let nodes = self.path_nodes().collect_vec();
         for w in nodes.windows(2) {
@@ -419,7 +420,7 @@ impl Display for StackElement {
 impl Display for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut path_comps = self.path_nodes();
-        let all_edges = self.all_edges();
+        let all_edges = self.all_inter_comp_edges();
         let outside = self.out_edges();
         let rem_edges = self.rem_edges();
         let added_np = self

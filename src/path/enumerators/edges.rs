@@ -103,7 +103,7 @@ fn check_comp_config(
     let path_comps = instance.path_nodes().collect_vec();
     let comp = path_comps.first().unwrap();
     let incident_edges = instance
-        .all_edges()
+        .all_inter_comp_edges()
         .into_iter()
         .filter(|e| e.path_incident(comp.path_idx))
         .collect_vec();
@@ -621,7 +621,7 @@ fn to_cases_with_edge_cost_mul(
     cost: Credit,
     matching: bool,
 ) -> Box<dyn Iterator<Item = InstPart>> {
-    let all_edges = instance.all_edges();
+    let all_edges = instance.all_inter_comp_edges();
 
     let good_edges = instance.good_edges().into_iter().cloned().collect_vec();
     let good_out = instance.good_out().into_iter().cloned().collect_vec();
@@ -699,7 +699,7 @@ fn handle_contractable_components(
 ) -> Option<Box<dyn Iterator<Item = InstPart>>> {
     let comp = &path_comp.comp;
 
-    let all_edges = instance.all_edges();
+    let all_edges = instance.all_inter_comp_edges();
     let outside = instance.out_edges();
     let path_comps = instance.path_nodes().collect_vec();
     let rem_edges = instance.rem_edges();
@@ -1048,7 +1048,7 @@ fn ensure_k_matching(
         .map(|e| e.source)
         .filter(|n| set1.contains(n))
         .collect_vec();
-    let pattern_edges = instance.all_edges();
+    let pattern_edges = instance.all_inter_comp_edges();
     let pattern_edges_between_sets = pattern_edges
         .iter()
         .filter(|e| e.one_sided_nodes_incident(&set1))

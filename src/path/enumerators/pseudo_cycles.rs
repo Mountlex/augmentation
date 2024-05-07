@@ -17,7 +17,7 @@ pub fn enumerate_pseudo_cycles(
     bounded: bool,
 ) -> Box<dyn Iterator<Item = PseudoCycle>> {
     let pattern_comps = instance.path_nodes().cloned().collect_vec();
-    let pattern_edges = instance.all_edges();
+    let pattern_edges = instance.all_inter_comp_edges();
     let mut back_edges = instance.rem_edges();
     let last_comp = pattern_comps.last().cloned().unwrap();
     back_edges.push(HalfAbstractEdge {

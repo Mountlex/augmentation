@@ -45,7 +45,7 @@ impl TacticTrait for Tactic {
             }
             Tactic::Pendant => pendant_rewire::check_pendant_node(stack),
             Tactic::TacticsExhausted(finite) => {
-                let all_edges = stack.all_edges();
+                let all_edges = stack.all_inter_comp_edges();
                 let outside = stack.out_edges();
                 let path_comps = stack.path_nodes().collect_vec();
                 let rem_edges = stack.rem_edges();
