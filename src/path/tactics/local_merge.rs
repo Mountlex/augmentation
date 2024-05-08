@@ -157,16 +157,8 @@ fn merge2(
 
     for buy1 in edges_between1.iter().powerset().filter(|p| p.len() == 2) {
         for buy2 in edges_between2.iter().powerset().filter(|p| p.len() == 2) {
-            // if buy1
-            //     .iter()
-            //     .chain(buy2.iter())
-            //     .filter(|e| e.cost < Credit::from_integer(1))
-            //     .count()
-            //     <= 1
-            // {
             let buy_cost: Credit = buy1.iter().map(|e| e.cost).sum::<Credit>()
                 + buy2.iter().map(|e| e.cost).sum::<Credit>();
-            //assert_eq!(buy_cost, Credit::from_integer(2));
             let l1 = left_comp.incident(buy1[0]).unwrap();
             let l2 = left_comp.incident(buy1[1]).unwrap();
             let ml1 = middle_comp.incident(buy1[0]).unwrap();
@@ -198,7 +190,6 @@ fn merge2(
                     credits == req_credits,
                 );
             }
-            //}
         }
     }
 
