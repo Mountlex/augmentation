@@ -20,13 +20,17 @@ use crate::comps::*;
 
 pub type PathProofNode = ProofNode;
 
+/// Represents a component in the nice path. 
 #[derive(Clone, Debug)]
 pub struct PathComp {
+    /// the component struct; it stores the nodes
     comp: Component,
     in_node: Option<Node>,
+    /// the out node. Note that the last component has no out node, thus, it is equal to None.
     out_node: Option<Node>,
     used: bool,
     path_idx: Pidx,
+    /// The initial nice pairs is are all nice pairs of this component which are present when the instance was created. In particular, this list includes all edges if the component is a C4,C5,C6 or C7.
     initial_nps: Vec<(Node, Node)>,
 }
 
